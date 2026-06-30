@@ -24,9 +24,8 @@ body {
   font-weight: 600;
   letter-spacing: 0.01em;
 }
-.brand-logo { height: 30px; width: auto; display: block; }
+.brand-logo { height: 50px; width: auto; display: block; }
 .login-logo-wrap { display: flex; justify-content: center; margin-bottom: 22px; }
-.login-logo-wrap .brand-logo { height: 44px; }
 .page { max-width: 960px; margin: 0 auto; padding: 36px 16px 80px; }
 .card {
   background: var(--card);
