@@ -130,13 +130,13 @@ function renderCalendar() {
 
     const badges = evts.map(ev => {
       if (ev.type === "appt") {
-        return `<span class="cal-badge appt" title="${escapeHtml(ev.label)}"><i class="bi bi-calendar-check"></i></span>`;
+        return `<span class="cal-badge appt" data-tooltip="${escapeHtml(ev.label)}"><i class="bi bi-calendar-check"></i></span>`;
       }
       const iconMap = { completed: "check-lg", locked: "lock-fill" };
       const inner   = ev.status === "available"
         ? String(ev.stepNum)
         : `<i class="bi bi-${iconMap[ev.status] || "circle"}"></i>`;
-      return `<span class="cal-badge step ${ev.status}" title="${escapeHtml(ev.title)}">${inner}</span>`;
+      return `<span class="cal-badge step ${ev.status}" data-tooltip="${escapeHtml(ev.title)}">${inner}</span>`;
     }).join("");
 
     cells += `

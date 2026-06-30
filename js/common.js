@@ -79,3 +79,36 @@ function updateCarouselCharts(prefix) {
   state.renderFns.wheel(prefix + "Wheel", prefix + "WheelLegend", snap.summary);
   state.renderFns.bar(prefix + "Bar", snap.summary);
 }
+
+// ── Shared tooltip ────────────────────────────────────────────────────────────
+// Use data-tooltip="text" on any element. The tooltip follows the cursor
+// and works inside grid/flex containers where CSS ::after fails.
+(function() {
+  let tip = null;
+  function getTip() {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.id = "portal-tooltip";
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+  document.addEventListener("mouseover", function(e) {
+    const el = e.target.closest("[data-tooltip]");
+    if (!el) return;
+    const t = getTip();
+    t.textContent = el.dataset.tooltip;
+    t.style.display = "block";
+  });
+  document.addEventListener("mousemove", function(e) {
+    if (!tip || tip.style.display === "none") return;
+    tip.style.left = (e.clientX + 12) + "px";
+    tip.style.top  = (e.clientY - 28) + "px";
+  });
+  document.addEventListener("mouseout", function(e) {
+    const el = e.target.closest("[data-tooltip]");
+    if (el && !el.contains(e.relatedTarget)) {
+      if (tip) tip.style.display = "none";
+    }
+  });
+})();

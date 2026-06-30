@@ -168,7 +168,7 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .cal-badge.sess-badge { background: var(--gradient); color: #fff; padding: 1px 7px; border-radius: 10px; }
 .cal-badge.prog-badge { background: #f3e8ff; color: #7e22ce; padding: 0; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: help; position: relative; }
 .cal-badge.prog-badge .bi { margin-right: 0; font-size: 11px; }
-.cal-badge.prog-badge[title]:hover::after { content: attr(title); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; font-size: 11px; font-weight: 500; white-space: nowrap; padding: 4px 8px; border-radius: 6px; pointer-events: none; z-index: 10; max-width: 220px; white-space: normal; text-align: center; }
+#portal-tooltip { display: none; position: fixed; background: #1e293b; color: #fff; font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 6px; pointer-events: none; z-index: 9999; max-width: 240px; line-height: 1.4; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 .note-text { white-space: pre-wrap; }
 
 /* Portal nav */

@@ -293,7 +293,7 @@ function sessRenderCalendar() {
     if (key === todayKey) classes.push("today");
     if (key === sessSelectedDay) classes.push("selected");
     const progBadges = progItems.map(p =>
-      `<span class="cal-badge prog-badge" title="${escapeHtml(p.programName + " · " + p.title)}">
+      `<span class="cal-badge prog-badge" data-tooltip="${escapeHtml(p.programName + " · " + p.title)}">
         <i class="bi bi-play-circle-fill"></i>
       </span>`
     ).join("");
