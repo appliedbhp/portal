@@ -8,8 +8,8 @@ function initPlanSection(root) {
     <div class="card">
       <h1><i class="bi bi-flag-fill"></i>Goals &amp; Plan</h1>
       <table class="summary-table">
-        <thead><tr><th>Date</th><th>Goal #</th><th>Obj #</th><th>Domain</th><th>Objective</th><th>Target Date</th>${isProvider ? "<th></th>" : ""}</tr></thead>
-        <tbody id="plan-body"><tr><td colspan="${isProvider ? 7 : 6}">Loading...</td></tr></tbody>
+        <thead><tr><th>Date</th><th>Goal #</th><th>Obj #</th><th>Domain</th><th>Objective</th><th>Measure</th><th>Target Date</th>${isProvider ? "<th></th>" : ""}</tr></thead>
+        <tbody id="plan-body"><tr><td colspan="${isProvider ? 8 : 7}">Loading...</td></tr></tbody>
       </table>
     </div>
 
@@ -20,6 +20,7 @@ function initPlanSection(root) {
       <div class="row"><label>Objective #</label><input id="plan-objNum" type="text" placeholder="1"></div>
       <div class="row"><label>Domain</label><input id="plan-goalDomain" type="text" placeholder="e.g. Executive Function"></div>
       <div class="row"><label>Objective (short)</label><input id="plan-objective" type="text" style="max-width:520px;" placeholder="Short objective label"></div>
+      <div class="row"><label>Measure</label><input id="plan-measure" type="text" style="max-width:520px;" placeholder="e.g. % independent completion"></div>
       <div class="row"><label>Target Date</label><input id="plan-dateTarget" type="date"></div>
       <button onclick="addGoal()"><i class="bi bi-save-fill"></i> Save Goal</button>
       <div id="plan-status"></div>
@@ -30,13 +31,13 @@ function initPlanSection(root) {
 }
 
 async function loadPlan(isProvider) {
-  const colspan = isProvider ? 7 : 6;
+  const colspan = isProvider ? 8 : 7;
   try {
     const { goals } = await apiCall("getPlan", {});
     document.getElementById("plan-body").innerHTML = goals.length
       ? goals.map(g => `<tr>
           <td>${escapeHtml(g.datePlan)}</td><td>${escapeHtml(g.goalNum)}</td><td>${escapeHtml(g.objNum)}</td>
-          <td>${escapeHtml(g.goalDomain)}</td><td>${escapeHtml(g.objective)}</td><td>${escapeHtml(g.dateTarget)}</td>
+          <td>${escapeHtml(g.goalDomain)}</td><td>${escapeHtml(g.objective)}</td><td>${escapeHtml(g.measure)}</td><td>${escapeHtml(g.dateTarget)}</td>
           ${isProvider ? `<td><button class="secondary" onclick="deleteGoal('${escapeAttr(g.goalId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}
         </tr>`).join("")
       : `<tr><td colspan="${colspan}">No goals on file yet.</td></tr>`;
@@ -54,17 +55,18 @@ async function addGoal() {
   const objNum = document.getElementById("plan-objNum").value.trim();
   const goalDomain = document.getElementById("plan-goalDomain").value.trim();
   const objective = document.getElementById("plan-objective").value.trim();
+  const measure = document.getElementById("plan-measure").value.trim();
   const dateTarget = document.getElementById("plan-dateTarget").value;
 
-  if (!goalNum || !objNum || !goalDomain || !objective) {
+  if (!goalNum || !objNum || !goalDomain || !objective || !measure) {
     setStatus("plan-status", "Please fill in all fields except Target Date.", "error");
     return;
   }
   setStatus("plan-status", "Saving...", "loading");
   try {
-    await apiCall("addGoal", { goalNum, objNum, goalDomain, objective, dateTarget });
+    await apiCall("addGoal", { goalNum, objNum, goalDomain, objective, measure, dateTarget });
     setStatus("plan-status", "Goal saved.", "success");
-    ["plan-goalNum", "plan-objNum", "plan-goalDomain", "plan-objective", "plan-dateTarget"].forEach(id => document.getElementById(id).value = "");
+    ["plan-goalNum", "plan-objNum", "plan-goalDomain", "plan-objective", "plan-measure", "plan-dateTarget"].forEach(id => document.getElementById(id).value = "");
     loadPlan(true);
   } catch (e) {
     setStatus("plan-status", "Error: " + e.message, "error");

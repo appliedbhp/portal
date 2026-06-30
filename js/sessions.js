@@ -36,14 +36,28 @@ function initSessionsSection(root) {
         <label>Note</label>
         <textarea id="sess-noteText" style="min-height:160px;" placeholder="Session note..."></textarea>
       </div>
-      <div class="field-hint"><i class="bi bi-clock-fill"></i> Date/time will be recorded automatically as the current date and time when you save.</div>
+      <div class="row">
+        <label>Date &amp; Time</label>
+        <input id="sess-dateTime" type="datetime-local">
+      </div>
+      <div class="field-hint"><i class="bi bi-clock-fill"></i> Pre-filled with right now — change it if you're logging a note for an earlier session.</div>
       <button onclick="addSession()"><i class="bi bi-save-fill"></i> Save Session Note</button>
       <div id="sess-status"></div>
     </div>
     ` : ""}
   `;
   loadSessions();
-  if (isProvider) loadNoteTemplates();
+  if (isProvider) {
+    loadNoteTemplates();
+    document.getElementById("sess-dateTime").value = sessNowForInput_();
+  }
+}
+
+// "YYYY-MM-DDTHH:mm" in local time, the format <input type="datetime-local"> expects.
+function sessNowForInput_() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 function sessSwitchView(view) {
@@ -97,16 +111,23 @@ function sessCopyPrevious() {
 
 async function addSession() {
   const noteText = document.getElementById("sess-noteText").value.trim();
+  const localDateTime = document.getElementById("sess-dateTime").value; // "YYYY-MM-DDTHH:mm"
   if (!noteText) {
     setStatus("sess-status", "Please enter note text.", "error");
     return;
   }
+  if (!localDateTime) {
+    setStatus("sess-status", "Please set a date and time.", "error");
+    return;
+  }
+  const dateTime = localDateTime.replace("T", " ");
   setStatus("sess-status", "Saving...", "loading");
   try {
-    await apiCall("addSession", { noteText });
+    await apiCall("addSession", { noteText, dateTime });
     setStatus("sess-status", "Session note saved.", "success");
     document.getElementById("sess-noteText").value = "";
     document.getElementById("sess-templateSelect").value = "";
+    document.getElementById("sess-dateTime").value = sessNowForInput_();
     loadSessions();
   } catch (e) {
     setStatus("sess-status", "Error: " + e.message, "error");

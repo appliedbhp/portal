@@ -15,10 +15,14 @@ function initProgressSection(root) {
       <h2><i class="bi bi-plus-circle-fill"></i>Add a Progress Entry</h2>
       <div class="row">
         <label>Objective</label>
-        <select id="prog-objText" style="max-width:520px;"><option value="">Loading goals...</option></select>
+        <select id="prog-objText" style="max-width:520px;" onchange="progSyncMeasure()"><option value="">Loading goals...</option></select>
       </div>
       <div class="row"><label>Date</label><input id="prog-date" type="date"></div>
-      <div class="row"><label>Measure</label><input id="prog-measure" type="text" placeholder="e.g. % independent completion"></div>
+      <div class="row">
+        <label>Measure</label>
+        <input id="prog-measure" type="text" readonly style="background:#f0f1f5;">
+      </div>
+      <div class="field-hint"><i class="bi bi-info-circle-fill"></i> Measure is defined on the goal itself (Goals &amp; Plan) — pick an objective above to fill it in.</div>
       <div class="row"><label>Score</label><input id="prog-score" type="text" placeholder="e.g. 80"></div>
       <button onclick="addProgress()"><i class="bi bi-save-fill"></i> Save Entry</button>
       <div id="prog-status"></div>
@@ -28,16 +32,28 @@ function initProgressSection(root) {
   loadProgressObjectiveOptions();
 }
 
+let progGoals = [];
+
 async function loadProgressObjectiveOptions() {
   const select = document.getElementById("prog-objText");
   try {
     const { goals } = await apiCall("getPlan", {});
+    progGoals = goals;
     select.innerHTML = goals.length
       ? goals.map(g => `<option value="${escapeHtml(g.objText)}">${escapeHtml(g.objective)}</option>`).join("")
       : `<option value="">No goals on file — add one in Goals & Plan first</option>`;
+    progSyncMeasure();
   } catch (e) {
     select.innerHTML = `<option value="">Error loading goals</option>`;
   }
+}
+
+// Measure is defined per-goal (tbl_plan.MEASURE), not typed per progress
+// entry — keeps every entry against the same objective consistent.
+function progSyncMeasure() {
+  const objText = document.getElementById("prog-objText").value;
+  const goal = progGoals.find(g => g.objText === objText);
+  document.getElementById("prog-measure").value = goal ? (goal.measure || "") : "";
 }
 
 async function loadProgress() {
