@@ -138,6 +138,12 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .section-title::after { content: ""; flex: 1; height: 1px; background: var(--border); }
 .comment-cell { white-space: pre-wrap; max-width: 320px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.checkbox-row input[type="checkbox"] { width: auto; flex-shrink: 0; }
+.checkbox-row label {
+  display: inline; text-transform: none; font-weight: 500; font-size: 13px;
+  color: var(--text); margin: 0; cursor: pointer;
+}
+.checkbox-row label a { color: var(--primary); font-weight: 600; }
 
 /* Session notes calendar */
 .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
