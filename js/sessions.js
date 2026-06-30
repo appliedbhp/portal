@@ -37,10 +37,14 @@ function initSessionsSection(root) {
         <textarea id="sess-noteText" style="min-height:160px;" placeholder="Session note..."></textarea>
       </div>
       <div class="row">
-        <label>Date &amp; Time</label>
+        <label>Start Time</label>
         <input id="sess-dateTime" type="datetime-local">
       </div>
-      <div class="field-hint"><i class="bi bi-clock-fill"></i> Pre-filled with right now — change it if you're logging a note for an earlier session.</div>
+      <div class="row">
+        <label>End Time</label>
+        <input id="sess-endTime" type="datetime-local">
+      </div>
+      <div class="field-hint"><i class="bi bi-clock-fill"></i> Start is pre-filled with right now; set an end time to record session duration. Both are editable.</div>
       <button onclick="addSession()"><i class="bi bi-save-fill"></i> Save Session Note</button>
       <div id="sess-status"></div>
     </div>
@@ -112,26 +116,40 @@ function sessCopyPrevious() {
 async function addSession() {
   const noteText = document.getElementById("sess-noteText").value.trim();
   const localDateTime = document.getElementById("sess-dateTime").value; // "YYYY-MM-DDTHH:mm"
+  const localEndTime = document.getElementById("sess-endTime").value;
   if (!noteText) {
     setStatus("sess-status", "Please enter note text.", "error");
     return;
   }
   if (!localDateTime) {
-    setStatus("sess-status", "Please set a date and time.", "error");
+    setStatus("sess-status", "Please set a start time.", "error");
+    return;
+  }
+  if (localEndTime && localEndTime < localDateTime) {
+    setStatus("sess-status", "End time must be after start time.", "error");
     return;
   }
   const dateTime = localDateTime.replace("T", " ");
+  const endTime = localEndTime ? localEndTime.replace("T", " ") : "";
   setStatus("sess-status", "Saving...", "loading");
   try {
-    await apiCall("addSession", { noteText, dateTime });
+    await apiCall("addSession", { noteText, dateTime, endTime });
     setStatus("sess-status", "Session note saved.", "success");
     document.getElementById("sess-noteText").value = "";
     document.getElementById("sess-templateSelect").value = "";
     document.getElementById("sess-dateTime").value = sessNowForInput_();
+    document.getElementById("sess-endTime").value = "";
     loadSessions();
   } catch (e) {
     setStatus("sess-status", "Error: " + e.message, "error");
   }
+}
+
+// "1h 25m" / "45m" style display.
+function sessFormatDuration(mins) {
+  if (mins == null) return "—";
+  const h = Math.floor(mins / 60), m = mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
 async function deleteSession(sessionId) {
@@ -158,10 +176,12 @@ function sessRenderList() {
   }
   body.innerHTML = `
     <table class="summary-table">
-      <thead><tr><th>Date/Time</th><th>Assessor</th><th>Note</th>${isProvider ? "<th></th>" : ""}</tr></thead>
+      <thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Assessor</th><th>Note</th>${isProvider ? "<th></th>" : ""}</tr></thead>
       <tbody>
         ${sessSessions.map(s => `<tr>
           <td>${escapeHtml(s.dateTime)}</td>
+          <td>${escapeHtml(s.endTime || "—")}</td>
+          <td>${sessFormatDuration(s.durationMin)}</td>
           <td>${escapeHtml(s.assessor)}</td>
           <td class="note-text">${escapeHtml(s.noteText)}</td>
           ${isProvider ? `<td><button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}
@@ -179,10 +199,17 @@ function sessRenderCalendar() {
   const monthLabel = sessCalDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
   const byDay = {};
+  let monthMinutes = 0;
+  let monthSessionCount = 0;
   sessSessions.forEach(s => {
     const day = (s.dateTime || "").slice(0, 10);
     if (!byDay[day]) byDay[day] = [];
     byDay[day].push(s);
+    const [y, m] = day.split("-").map(Number);
+    if (y === year && (m - 1) === month) {
+      monthSessionCount++;
+      if (s.durationMin != null) monthMinutes += s.durationMin;
+    }
   });
 
   const firstOfMonth = new Date(year, month, 1);
@@ -212,6 +239,10 @@ function sessRenderCalendar() {
       <h3>${monthLabel}</h3>
       <button class="secondary icon-btn" onclick="sessCalStep(1)"><i class="bi bi-chevron-right"></i></button>
     </div>
+    <div class="stat-grid">
+      ${statCard("calendar2-week", "Sessions This Month", monthSessionCount)}
+      ${statCard("hourglass-split", "Total Time This Month", sessFormatDuration(monthMinutes))}
+    </div>
     <div class="cal-grid">
       ${dow.map(d => `<div class="cal-dow">${d}</div>`).join("")}
       ${cells}
@@ -240,10 +271,12 @@ function sessRenderDayDetail(key, sessions, isProvider) {
   el.innerHTML = `
     <div class="section-title"><h3><i class="bi bi-calendar-event"></i> ${escapeHtml(key)}</h3></div>
     <table class="summary-table">
-      <thead><tr><th>Time</th><th>Assessor</th><th>Note</th>${isProvider ? "<th></th>" : ""}</tr></thead>
+      <thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Assessor</th><th>Note</th>${isProvider ? "<th></th>" : ""}</tr></thead>
       <tbody>
         ${sessions.map(s => `<tr>
           <td>${escapeHtml((s.dateTime || "").slice(11))}</td>
+          <td>${escapeHtml((s.endTime || "").slice(11) || "—")}</td>
+          <td>${sessFormatDuration(s.durationMin)}</td>
           <td>${escapeHtml(s.assessor)}</td>
           <td class="note-text">${escapeHtml(s.noteText)}</td>
           ${isProvider ? `<td><button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}

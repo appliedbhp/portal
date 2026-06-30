@@ -6,7 +6,7 @@
 - `tbl_plan` `OBJ_TEXT` column: replace the per-row formula with a single `ARRAYFORMULA` in row 2 that covers the whole column (referencing `GOAL_DOMAIN`/`OBJECTIVE` etc.), so new rows added by the portal pick it up automatically without the script writing to that cell.
 - `data_win`: confirm the `DATE_ASSESSMENT` column exists (added in the first build).
 - **New `tbl_providers` sheet** — one row per provider/clinician who should be able to log in and access *any* client by Client ID. Columns: `PROVIDER_ID`, `LICENSE_KEY`, `PIN`, `SALT`, `PASS`, `ACTIVE`. Fill in `PROVIDER_ID` (a username, e.g. your name or email), `LICENSE_KEY`, a 5-digit `PIN`, and `ACTIVE` = `TRUE` for each provider; leave `SALT`/`PASS` blank — they're filled in automatically on first login. This is separate from `tbl_license`, which is per-client.
-- **New `data_sessions` sheet** — columns: `CLIENT_ID`, `SESSION_ID`, `DATE_TIME`, `ASSESSOR`, `NOTE_TEXT`. Leave empty — the portal appends rows here when a provider saves a session note. `DATE_TIME` is always set by the script to the current date/time, never typed.
+- **New `data_sessions` sheet** — columns: `CLIENT_ID`, `SESSION_ID`, `DATE_TIME`, `END_TIME`, `ASSESSOR`, `NOTE_TEXT`. Leave empty — the portal appends rows here when a provider saves a session note. `DATE_TIME` defaults to "now" and `END_TIME` is optional, both editable in the form; duration is computed from the difference.
 - **New `tbl_note_templates` sheet** — columns: `TEMPLATE_ID`, `TEMPLATE_NAME`, `TEMPLATE_TEXT`. You fill this in manually with reusable note templates (e.g. `TEMPLATE_ID` = a short code, `TEMPLATE_NAME` = what shows in the dropdown, `TEMPLATE_TEXT` = the boilerplate note text). Global — not per-client.
 
 ## 2. Deploy the Apps Script backend
