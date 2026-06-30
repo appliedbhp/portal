@@ -218,6 +218,26 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .rec-tier-tagline { font-size: 13px; margin-top: 8px; max-width: 420px; line-height: 1.5; }
 .rec-print-header { display: none; }
 
+/* Calendar */
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-month-label { font-weight: 700; font-size: 15px; }
+.cal-legend { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.cal-legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-dow { font-size: 11px; font-weight: 700; text-align: center; color: var(--muted); padding: 4px 0; text-transform: uppercase; letter-spacing: .04em; }
+.cal-cell { min-height: 52px; border-radius: 6px; padding: 4px; background: var(--surface); display: flex; flex-direction: column; gap: 2px; }
+.cal-cell.empty { background: transparent; }
+.cal-cell.today { outline: 2px solid var(--primary); outline-offset: -2px; }
+.cal-day-num { font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1; }
+.cal-cell.today .cal-day-num { color: var(--primary); }
+.cal-badges { display: flex; flex-wrap: wrap; gap: 2px; }
+.cal-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 10px; font-weight: 700; }
+.cal-badge .bi { margin-right: 0; font-size: 10px; }
+.cal-badge.appt { background: #dbeafe; color: #1d4ed8; }
+.cal-badge.step.available { background: #fef3c7; color: #92400e; }
+.cal-badge.step.completed { background: #dcfce7; color: #166534; }
+.cal-badge.step.locked { background: var(--border); color: var(--muted); }
+
 /* Appointments */
 .appt-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .appt-card:last-child { border-bottom: none; }
