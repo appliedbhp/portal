@@ -225,6 +225,55 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .appt-name { font-weight: 600; font-size: 15px; }
 .appt-meta { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .appt-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* Programs — progress bar */
+.prog-progress-bar { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.prog-progress-fill { height: 100%; background: var(--primary); border-radius: 99px; transition: width 0.4s ease; }
+
+/* Programs — step list */
+.prog-layout { display: grid; grid-template-columns: 260px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 700px) { .prog-layout { grid-template-columns: 1fr; } }
+.prog-steps { padding: 12px !important; }
+.step-item { display: flex; align-items: flex-start; gap: 12px; padding: 10px 12px; border-radius: 8px; cursor: default; }
+.step-item.available, .step-item.completed { cursor: pointer; }
+.step-item.available:hover, .step-item.completed:hover { background: var(--surface); }
+.step-item.active { background: var(--surface); }
+.step-item .bi { margin-right: 0; margin-top: 2px; flex-shrink: 0; font-size: 16px; }
+.step-item.completed .bi { color: var(--primary); }
+.step-item.available .bi { color: var(--accent, #f59e0b); }
+.step-item.locked .bi { color: var(--muted); }
+.step-title { font-size: 13px; font-weight: 600; line-height: 1.4; }
+.step-item.locked .step-title { color: var(--muted); }
+.step-sublabel { font-size: 11px; color: var(--muted); display: block; margin-top: 2px; }
+
+/* Activity card */
+.activity-card { }
+.activity-body { }
+.activity-intro { font-size: 15px; line-height: 1.7; color: var(--text); margin-bottom: 20px; }
+.activity-video { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 10px; background: #000; margin-bottom: 24px; }
+.activity-video iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 10px; }
+.activity-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.activity-reflection { margin-top: 20px; }
+.activity-submit { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+.activity-previous-response { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+.activity-response-label { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+
+/* Program admin — step review */
+.step-review-list { display: flex; flex-direction: column; gap: 4px; }
+.step-review-item { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.step-review-header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: default; }
+.step-review-header .bi { margin-right: 0; flex-shrink: 0; }
+.step-review-item.completed .step-review-header { cursor: pointer; }
+.step-review-item.completed .step-review-header:hover { background: var(--surface); }
+.step-review-item.completed .bi { color: var(--primary); }
+.step-review-item.locked .bi, .step-review-item.locked .step-review-title { color: var(--muted); }
+.step-review-title { flex: 1; font-size: 13px; font-weight: 600; }
+.step-status-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; text-transform: capitalize; }
+.step-status-badge.completed { background: #dcfce7; color: #166534; }
+.step-status-badge.available { background: #fef9c3; color: #854d0e; }
+.step-status-badge.locked { background: var(--surface); color: var(--muted); }
+.step-chevron { margin-right: 0; margin-left: auto; font-size: 12px; transition: transform 0.2s; }
+.step-review-body { padding: 12px 14px 14px; background: var(--surface); border-top: 1px solid var(--border); }
 .rec-tier-meta { text-align: right; }
 .conf-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .conf-high { background: #d1fae5; color: #065f46; }

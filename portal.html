@@ -44,7 +44,13 @@
     <div class="sidebar-group">
       <div class="sidebar-group-title">Insights</div>
       <button class="sidebar-link" data-section="recommendation" onclick="showSection('recommendation')" id="recNavBtn"><i class="bi bi-stars"></i> Package Rec</button>
+      <button class="sidebar-link" data-section="program-admin" onclick="showSection('program-admin')" id="programAdminNavBtn"><i class="bi bi-collection-play-fill"></i> Programs</button>
       <button class="sidebar-link" data-section="appointments" onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i> Appointments</button>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">My Journey</div>
+      <button class="sidebar-link" data-section="programs" onclick="showSection('programs')" id="programsNavBtn"><i class="bi bi-play-circle-fill"></i> My Program</button>
     </div>
   </aside>
 
@@ -59,6 +65,8 @@
       <div id="section-sessions" class="section"></div>
       <div id="section-recommendation" class="section"></div>
       <div id="section-appointments" class="section"></div>
+      <div id="section-programs" class="section"></div>
+      <div id="section-program-admin" class="section"></div>
     </div>
   </div>
 </div>
@@ -74,6 +82,8 @@
 <script src="js/sessions.js"></script>
 <script src="js/recommendation.js"></script>
 <script src="js/appointments.js"></script>
+<script src="js/programs.js"></script>
+<script src="js/program-admin.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -82,6 +92,8 @@ if (isProvider() && !getClientId()) {
 document.getElementById("whoami").textContent = `${getClientId()} — ${getAssessorName()} (${getRole()})`;
 if (isProvider()) document.getElementById("switchClientBtn").style.display = "inline-block";
 if (getRole() !== "provider") document.getElementById("recNavBtn").style.display = "none";
+if (getRole() !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
+if (getRole() === "provider") document.getElementById("programsNavBtn").style.display = "none";
 
 function switchClient() {
   setProviderClient("");
@@ -101,7 +113,9 @@ const SECTION_INIT = {
   scores: initScoresSection,
   sessions: initSessionsSection,
   recommendation: initRecommendationSection,
-  appointments: initAppointmentsSection
+  appointments: initAppointmentsSection,
+  programs: initProgramsSection,
+  "program-admin": initProgramAdminSection
 };
 const initialized = {};
 
