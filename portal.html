@@ -12,6 +12,7 @@
 
 <header class="portal-header no-print">
   <div class="brand">
+    <button class="secondary icon-btn" onclick="toggleSidebar()" title="Toggle navigation" style="background:rgba(255,255,255,0.12); color:#fff; border-color:rgba(255,255,255,0.4);"><i class="bi bi-list"></i></button>
     <img class="brand-logo" src="https://d1yei2z3i6k35z.cloudfront.net/15694166/695009dabcbb1_LogoWhite.png" alt="Applied Behavioral Health Practice">
     <span class="brand-title">Applied Behavioral Health Practice</span>
   </div>
@@ -22,26 +23,41 @@
   </div>
 </header>
 
-<nav class="portal-nav no-print">
-  <button data-section="roadmap" onclick="showSection('roadmap')"><i class="bi bi-signpost-split-fill"></i> Roadmap Assessment</button>
-  <button data-section="win" onclick="showSection('win')"><i class="bi bi-heart-pulse-fill"></i> What I Need</button>
-  <button data-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
-  <button data-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i> Progress</button>
-  <button data-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i> Standardized Scores</button>
-  <button data-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i> Session Notes</button>
-</nav>
+<div class="app-shell">
+  <aside class="sidebar no-print" id="sidebar">
+    <button class="sidebar-link" data-section="home" onclick="showSection('home')"><i class="bi bi-house-fill"></i> Home</button>
 
-<div class="page">
-  <div id="section-roadmap" class="section"></div>
-  <div id="section-win" class="section"></div>
-  <div id="section-plan" class="section"></div>
-  <div id="section-progress" class="section"></div>
-  <div id="section-scores" class="section"></div>
-  <div id="section-sessions" class="section"></div>
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Assessments</div>
+      <button class="sidebar-link" data-section="roadmap" onclick="showSection('roadmap')"><i class="bi bi-signpost-split-fill"></i> Roadmap</button>
+      <button class="sidebar-link" data-section="win" onclick="showSection('win')"><i class="bi bi-heart-pulse-fill"></i> What I Need</button>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title">Records</div>
+      <button class="sidebar-link" data-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
+      <button class="sidebar-link" data-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i> Progress</button>
+      <button class="sidebar-link" data-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i> Standardized Scores</button>
+      <button class="sidebar-link" data-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i> Session Notes</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <div class="page">
+      <div id="section-home" class="section"></div>
+      <div id="section-roadmap" class="section"></div>
+      <div id="section-win" class="section"></div>
+      <div id="section-plan" class="section"></div>
+      <div id="section-progress" class="section"></div>
+      <div id="section-scores" class="section"></div>
+      <div id="section-sessions" class="section"></div>
+    </div>
+  </div>
 </div>
 
 <script src="js/api.js"></script>
 <script src="js/common.js"></script>
+<script src="js/home.js"></script>
 <script src="js/roadmap.js"></script>
 <script src="js/win.js"></script>
 <script src="js/plan.js"></script>
@@ -61,7 +77,12 @@ function switchClient() {
   window.location.href = "login.html";
 }
 
+function toggleSidebar() {
+  document.getElementById("sidebar").classList.toggle("collapsed");
+}
+
 const SECTION_INIT = {
+  home: initHomeSection,
   roadmap: initRoadmapSection,
   win: initWinSection,
   plan: initPlanSection,
@@ -73,15 +94,18 @@ const initialized = {};
 
 function showSection(name) {
   document.querySelectorAll(".section").forEach(el => el.classList.remove("active"));
-  document.querySelectorAll(".portal-nav button").forEach(b => b.classList.toggle("active", b.dataset.section === name));
+  document.querySelectorAll(".sidebar-link").forEach(b => b.classList.toggle("active", b.dataset.section === name));
   document.getElementById("section-" + name).classList.add("active");
   if (!initialized[name]) {
     initialized[name] = true;
     SECTION_INIT[name](document.getElementById("section-" + name));
+  } else if (name === "home") {
+    // Home's numbers can go stale while you work in other sections — refresh on every visit.
+    initHomeSection(document.getElementById("section-home"));
   }
 }
 
-showSection("roadmap");
+showSection("home");
 </script>
 </body>
 </html>

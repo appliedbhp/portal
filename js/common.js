@@ -9,7 +9,7 @@ function setStatus(id, msg, type) {
   el.innerHTML = `<div class="alert alert-${type === "loading" ? "info" : type}"><i class="bi bi-${STATUS_ICONS[type] || "info-circle-fill"}"></i><span>${msg}</span></div>`;
 }
 
-const DOMAIN_PALETTE = ["#4e79a7", "#f28e2b", "#59a14f", "#e15759", "#76b7b2", "#edc948", "#b07aa1", "#ff9da7"];
+const DOMAIN_PALETTE = ["#3185fc", "#06b6d4", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#14b8a6", "#ec4899"];
 const domainColorMap = {};
 function colorForDomain(domain) {
   if (!domainColorMap[domain]) {

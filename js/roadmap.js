@@ -330,7 +330,7 @@ function rmRenderWheelChart(canvasId, legendId, summary) {
   destroyChart(canvasId);
   chartInstances[canvasId] = new Chart(document.getElementById(canvasId).getContext("2d"), {
     type: "radar",
-    data: { labels, datasets: [{ label: "Mean Score", data, borderColor: "#3b6df0", backgroundColor: hexToRgba("#3b6df0", 0.22), pointBackgroundColor: pointColors, pointBorderColor: "#fff", pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8, borderWidth: 3 }] },
+    data: { labels, datasets: [{ label: "Mean Score", data, borderColor: "#3185fc", backgroundColor: hexToRgba("#3185fc", 0.22), pointBackgroundColor: pointColors, pointBorderColor: "#fff", pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8, borderWidth: 3 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 }, pointLabels: { font: { size: 11, weight: 600 }, callback: l => rmShortSubdomainLabel(l) } } },

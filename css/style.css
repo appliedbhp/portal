@@ -170,11 +170,37 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .portal-header .who { font-size: 13px; color: rgba(255,255,255,0.85); }
 .portal-header button.secondary { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.4); }
 .portal-header button.secondary:hover { background: rgba(255,255,255,0.22); }
-nav.portal-nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 14px 24px 0; max-width: 960px; margin: 0 auto; }
-nav.portal-nav button { background: #fff; color: var(--text); border: 1px solid var(--border); font-weight: 600; }
-nav.portal-nav button.active { background: var(--gradient); color: #fff; border-color: var(--primary); }
+.app-shell { display: flex; align-items: flex-start; }
+.sidebar {
+  width: 230px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border);
+  padding: 18px 12px; box-sizing: border-box; overflow: hidden; white-space: nowrap;
+  transition: width 0.18s ease, padding 0.18s ease;
+  position: sticky; top: 65px; height: calc(100vh - 65px);
+}
+.sidebar.collapsed { width: 0; padding-left: 0; padding-right: 0; border-right: none; }
+.sidebar-group { margin-bottom: 20px; }
+.sidebar-group-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding: 0 10px; margin-bottom: 8px; }
+.sidebar-link {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  background: none; border: none; border-radius: 8px; padding: 10px;
+  font-weight: 600; font-size: 14px; color: var(--text); cursor: pointer;
+}
+.sidebar-link:hover { background: #eef4ff; }
+.sidebar-link.active { background: var(--gradient); color: #fff; }
+.sidebar-link i { font-size: 16px; width: 18px; text-align: center; flex-shrink: 0; }
+.main-content { flex: 1; min-width: 0; }
+.main-content .page { max-width: 880px; }
 .section { display: none; }
 .section.active { display: block; }
+.home-tile {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--border);
+  border-radius: 10px; background: #fbfcfe; cursor: pointer; text-align: left; width: 100%;
+}
+.home-tile:hover { background: #eef4ff; border-color: var(--primary); }
+.home-tile i { font-size: 20px; color: var(--primary); flex-shrink: 0; }
+.home-tile .home-tile-label { font-weight: 700; font-size: 14px; }
+.home-tile .home-tile-sub { font-size: 12px; color: var(--muted); }
+.home-tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 14px; }
 
 @media print {
   .no-print { display: none !important; }
