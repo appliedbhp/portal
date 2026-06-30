@@ -18,24 +18,48 @@
     <input type="password" name="password" autocomplete="new-password" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
 
     <div class="row">
-      <label>License Key</label>
-      <input id="licenseKey" type="text" placeholder="Your license key">
-    </div>
-    <div class="row">
       <label>Client ID</label>
-      <input id="clientId" type="text" placeholder="e.g. C-1042">
+      <input id="clientId" type="text" placeholder="e.g. C-1042" onblur="checkStatus()">
     </div>
-    <div class="row">
-      <label>5-Digit PIN</label>
-      <input id="pin" class="pin" type="text" inputmode="numeric" pattern="\d*" maxlength="5" placeholder="•••••"
-        autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
-        data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+
+    <!-- Returning-user login: shown once we know this Client ID already has a password. -->
+    <div id="loginFields" style="display:none;">
+      <div class="row">
+        <label>Password</label>
+        <input id="loginPassword" type="password" placeholder="Your password" autocomplete="current-password">
+      </div>
+      <button onclick="login()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
     </div>
-    <div class="row">
-      <label>Your Name (assessor/parent)</label>
+
+    <!-- First-time setup: shown when this Client ID has no password yet. -->
+    <div id="setupFields" style="display:none;">
+      <div class="field-hint"><i class="bi bi-info-circle-fill"></i> First time logging in — verify your License Key and PIN, then set a password.</div>
+      <div class="row">
+        <label>License Key</label>
+        <input id="licenseKey" type="text" placeholder="Your license key">
+      </div>
+      <div class="row">
+        <label>5-Digit PIN</label>
+        <input id="pin" class="pin" type="text" inputmode="numeric" pattern="\d*" maxlength="5" placeholder="•••••"
+          autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+          data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+      </div>
+      <div class="row">
+        <label>New Password</label>
+        <input id="newPassword" type="password" placeholder="Choose a password" autocomplete="new-password">
+      </div>
+      <div class="row">
+        <label>Confirm Password</label>
+        <input id="confirmPassword" type="password" placeholder="Re-enter password" autocomplete="new-password">
+      </div>
+      <button onclick="setupPassword()"><i class="bi bi-key-fill"></i> Set Password &amp; Log In</button>
+    </div>
+
+    <div class="row" id="assessorRow" style="display:none;">
+      <label>Your Name</label>
       <input id="assessorName" type="text" placeholder="Your name">
     </div>
-    <button onclick="login()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
+
     <div id="status"></div>
   </div>
 </div>
@@ -43,13 +67,72 @@
 <script src="js/common.js"></script>
 <script src="js/api.js"></script>
 <script>
-async function login() {
-  const licenseKey = document.getElementById("licenseKey").value.trim();
+let statusKnown = false;
+
+async function checkStatus() {
   const clientId = document.getElementById("clientId").value.trim();
+  document.getElementById("loginFields").style.display = "none";
+  document.getElementById("setupFields").style.display = "none";
+  document.getElementById("assessorRow").style.display = "none";
+  statusKnown = false;
+  if (!clientId) return;
+
+  setStatus("status", "Checking...", "loading");
+  try {
+    const res = await apiCallNoCreds("checkClientStatus", { clientId });
+    setStatus("status", "", null);
+    statusKnown = true;
+    document.getElementById("assessorRow").style.display = "block";
+    if (res.hasPassword) {
+      document.getElementById("loginFields").style.display = "block";
+    } else {
+      document.getElementById("setupFields").style.display = "block";
+    }
+  } catch (e) {
+    setStatus("status", e.message, "error");
+  }
+}
+
+// checkClientStatus doesn't need credentials yet (that's the point of it),
+// so this bypasses apiCall's getCreds() merge.
+async function apiCallNoCreds(action, params) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign({ action }, params))
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+
+async function login() {
+  const clientId = document.getElementById("clientId").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const assessorName = document.getElementById("assessorName").value.trim();
+  if (!clientId || !password || !assessorName) {
+    setStatus("status", "Please fill in all fields.", "error");
+    return;
+  }
+  setStatus("status", "Logging in...", "loading");
+  try {
+    const res = await apiCallNoCreds("login", { clientId, password });
+    setCreds({ clientId, password, assessorName, role: res.role });
+    window.location.href = "portal.html";
+  } catch (e) {
+    setStatus("status", e.message, "error");
+  }
+}
+
+async function setupPassword() {
+  const clientId = document.getElementById("clientId").value.trim();
+  const licenseKey = document.getElementById("licenseKey").value.trim();
   const pin = document.getElementById("pin").value.trim();
+  const newPassword = document.getElementById("newPassword").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
   const assessorName = document.getElementById("assessorName").value.trim();
 
-  if (!licenseKey || !clientId || !pin || !assessorName) {
+  if (!clientId || !licenseKey || !pin || !newPassword || !assessorName) {
     setStatus("status", "Please fill in all fields.", "error");
     return;
   }
@@ -57,18 +140,30 @@ async function login() {
     setStatus("status", "PIN must be exactly 5 digits.", "error");
     return;
   }
+  if (newPassword.length < 8) {
+    setStatus("status", "Password must be at least 8 characters.", "error");
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    setStatus("status", "Passwords do not match.", "error");
+    return;
+  }
 
-  setStatus("status", "Verifying...", "loading");
-  setCreds({ licenseKey, clientId, pin, assessorName });
+  setStatus("status", "Setting up your password...", "loading");
   try {
-    await apiCall("verifyClient", {});
+    const res = await apiCallNoCreds("setupPassword", { clientId, licenseKey, pin, newPassword });
+    setCreds({ clientId, password: newPassword, assessorName, role: res.role });
     window.location.href = "portal.html";
   } catch (e) {
-    clearCreds();
     setStatus("status", e.message, "error");
   }
 }
-document.addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter" || !statusKnown) return;
+  if (document.getElementById("loginFields").style.display === "block") login();
+  else setupPassword();
+});
 </script>
 </body>
 </html>

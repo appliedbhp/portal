@@ -41,7 +41,7 @@
 <script src="js/scores.js"></script>
 <script>
 requireLogin();
-document.getElementById("whoami").textContent = `${getClientId()} — ${getAssessorName()}`;
+document.getElementById("whoami").textContent = `${getClientId()} — ${getAssessorName()} (${getRole()})`;
 
 const SECTION_INIT = {
   roadmap: initRoadmapSection,

@@ -30,7 +30,7 @@ function getCreds() {
   const raw = sessionStorage.getItem(SESSION_KEY);
   if (!raw) return {};
   const c = JSON.parse(raw);
-  return { licenseKey: c.licenseKey, clientId: c.clientId, pin: c.pin, assessorName: c.assessorName };
+  return { clientId: c.clientId, password: c.password, assessorName: c.assessorName };
 }
 
 function getClientId() {
@@ -39,6 +39,12 @@ function getClientId() {
 
 function getAssessorName() {
   return getCreds().assessorName || "";
+}
+
+function getRole() {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return "parent";
+  return JSON.parse(raw).role || "parent";
 }
 
 function clearCreds() {

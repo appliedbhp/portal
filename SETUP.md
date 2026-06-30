@@ -1,22 +1,34 @@
 # Client Portal — Setup
 
-## 1. Deploy the Apps Script backend
+## 1. Sheet changes (do these before redeploying Code.gs)
+- `tbl_license`: confirm `SALT` column exists (next to `PASS`); add a new `ROLE` column with value `provider` or `parent` for each client row.
+- `tbl_plan`: add a `GOAL_ID` column (any header position is fine — the script finds columns by name).
+- `tbl_plan` `OBJ_TEXT` column: replace the per-row formula with a single `ARRAYFORMULA` in row 2 that covers the whole column (referencing `GOAL_DOMAIN`/`OBJECTIVE` etc.), so new rows added by the portal pick it up automatically without the script writing to that cell.
+- `data_win`: confirm the `DATE_ASSESSMENT` column exists (added in the first build).
+
+## 2. Deploy the Apps Script backend
 1. Open the Google Sheet, then **Extensions > Apps Script**.
-2. Delete the default `Code.gs` content and paste in the contents of `../apps-script/Code.gs`.
-3. Add the `DATE_ASSESSMENT` column to the `data_win` sheet (header row), if not already present.
-4. **Deploy > New deployment > Web app**. Set "Execute as: Me" and "Who has access: Anyone". Deploy and copy the Web App URL.
-5. Paste that URL into `js/api.js`, replacing `PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE`.
+2. Replace `Code.gs` with the contents of `../apps-script/Code.gs`.
+3. **Deploy > Manage deployments > Edit (pencil) > New version > Deploy** (re-deploying a *new version* is required after code changes — just saving isn't enough for the live Web App URL to pick up changes).
+4. The Web App URL stays the same across versions, so `js/api.js`'s `API_URL` doesn't need to change after the first deploy.
 
-## 2. Test the backend directly
+## 3. Test the backend directly
 ```bash
-curl -X POST "YOUR_WEB_APP_URL" \
-  -H "Content-Type: text/plain;charset=utf-8" \
-  -d '{"action":"verifyClient","licenseKey":"123456789","clientId":"C-EXAMPLE","pin":"12345"}'
+# First-time setup
+curl -X POST "YOUR_WEB_APP_URL" -H "Content-Type: text/plain;charset=utf-8" \
+  -d '{"action":"setupPassword","clientId":"C-EXAMPLE","licenseKey":"123456789","pin":"12345","newPassword":"testpass123"}'
+
+# Returning login
+curl -X POST "YOUR_WEB_APP_URL" -H "Content-Type: text/plain;charset=utf-8" \
+  -d '{"action":"login","clientId":"C-EXAMPLE","password":"testpass123"}'
 ```
-Should return `{"ok":true}`. Try `C-EXAMPLE2` (inactive license) and confirm it's rejected.
+Both should return `{"ok":true,"role":"provider"}` (or `"parent"`, depending on the ROLE column). Confirm a wrong password and an inactive client (`C-EXAMPLE2`) are rejected.
 
-## 3. Host the portal
-Push this `portal/` folder to a GitHub repo and enable GitHub Pages (Settings > Pages > deploy from branch). Your login page will be at `https://<you>.github.io/<repo>/login.html`.
+## 4. Host on Cloudflare Pages (portal.getadhd.care)
+1. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**, select `appliedbhp/portal`.
+2. Build settings: no build command, output directory `/` (static files, no build step).
+3. After the first deploy, go to the project's **Custom domains** tab → **Add domain** → `portal.getadhd.care`. Cloudflare auto-creates the DNS record if the `getadhd.care` zone is already on this account.
+4. Once `https://portal.getadhd.care/login.html` works, you can turn off GitHub Pages (repo Settings → Pages → Source: None) to avoid having two live copies.
 
-## 4. Lock down the Sheet
-Once steps 1–3 are verified end-to-end, change the Sheet's sharing to **private** (only you). The Apps Script Web App keeps working regardless, since it runs under your account.
+## 5. Lock down the Sheet
+Once everything above is verified end-to-end, change the Sheet's sharing to **private** (only you). The Apps Script Web App keeps working regardless, since it runs under your account.
