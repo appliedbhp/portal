@@ -26,6 +26,11 @@ function initRoadmapSection(root) {
       <div id="rm-status"></div>
     </div>
 
+    <div id="rm-history" class="card">
+      <h2><i class="bi bi-clock-history"></i>Past Assessments</h2>
+      <div id="rm-historyBody">Loading...</div>
+    </div>
+
     <div id="rm-assessment" class="card" style="display:none;">
       <div class="scale-legend no-print">
         <strong><i class="bi bi-info-circle-fill"></i> Rating Scale</strong>
@@ -75,6 +80,45 @@ function initRoadmapSection(root) {
       <div class="btn-row no-print" style="margin-top:20px;"><button onclick="window.print()"><i class="bi bi-printer-fill"></i> Print to PDF</button></div>
     </div>
   `;
+  rmLoadHistory();
+}
+
+async function rmBuildSnapshotsFromHistory() {
+  const domainMap = await getSubdomainDomainMap();
+  const { history } = await apiCall("getHistory", { type: "roadmap" });
+  const byKey = {};
+  history.forEach(h => {
+    if (!byKey[h.assessmentKey]) byKey[h.assessmentKey] = { date: h.date, level: h.level, summary: [] };
+    byKey[h.assessmentKey].summary.push({ domain: h.domain || domainMap[h.subdomain] || "Uncategorized", subdomain: h.subdomain, total: h.total, mean: h.mean });
+  });
+  const order = Object.keys(byKey).sort((a, b) => (byKey[a].date || "").localeCompare(byKey[b].date || ""));
+  return order.map(k => ({ key: k, date: byKey[k].date, level: byKey[k].level, summary: byKey[k].summary }));
+}
+
+async function rmLoadHistory() {
+  const body = document.getElementById("rm-historyBody");
+  try {
+    const snapshots = await rmBuildSnapshotsFromHistory();
+    if (snapshots.length === 0) {
+      body.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>No assessments on file yet for this client.</span></div>';
+      return;
+    }
+    body.innerHTML = `
+      <div class="section-title"><h3><i class="bi bi-pie-chart-fill"></i> Domain / Subdomain Wheel</h3></div>
+      <div id="rm-histNav" class="carousel-nav no-print"></div>
+      <div class="chart-wrap"><canvas id="rm-histWheel"></canvas></div>
+      <div id="rm-histWheelLegend" class="domain-legend"></div>
+      <div class="section-title"><h3><i class="bi bi-bar-chart-fill"></i> Subdomain Totals (0-25)</h3></div>
+      <div class="chart-wrap wide"><canvas id="rm-histBar"></canvas></div>
+      <div id="rm-histTrendSection"></div>
+    `;
+    setupCarousel("rm-hist", snapshots, snapshots.length - 1, { wheel: rmRenderWheelChart, bar: rmRenderBarChart });
+    if (snapshots.length > 1) {
+      rmRenderDomainTrend(snapshots, "rm-histTrendSection", "rm-histTrend");
+    }
+  } catch (e) {
+    body.innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Could not load history: ${escapeHtml(e.message)}</span></div>`;
+  }
 }
 
 function rmShow(id) {
@@ -179,6 +223,7 @@ async function rmSubmit() {
     const { assessmentKey, date } = await apiCall("submitRoadmap", { level, summary: roadmapLastSummary });
     setStatus("rm-submitStatus", `Saved! Assessment key: ${assessmentKey}`, "success");
     await rmShowResults(level, assessmentKey, date);
+    rmLoadHistory();
   } catch (e) {
     setStatus("rm-submitStatus", "Error: " + e.message, "error");
   }

@@ -15,6 +15,11 @@ function initWinSection(root) {
       <div id="win-status"></div>
     </div>
 
+    <div id="win-history" class="card">
+      <h2><i class="bi bi-clock-history"></i>Past Assessments</h2>
+      <div id="win-historyBody">Loading...</div>
+    </div>
+
     <div id="win-assessment" class="card" style="display:none;">
       <div class="scale-legend no-print">
         <strong><i class="bi bi-info-circle-fill"></i> Rating Scale</strong>
@@ -63,6 +68,45 @@ function initWinSection(root) {
       <div class="btn-row no-print" style="margin-top:20px;"><button onclick="window.print()"><i class="bi bi-printer-fill"></i> Print to PDF</button></div>
     </div>
   `;
+  winLoadHistory();
+}
+
+async function winBuildSnapshotsFromHistory() {
+  await getWinDomainNumberMap();
+  const { history } = await apiCall("getHistory", { type: "win" });
+  const byKey = {};
+  history.forEach(h => {
+    if (!byKey[h.assessmentKey]) byKey[h.assessmentKey] = { date: h.date, summary: [] };
+    byKey[h.assessmentKey].summary.push({ domainNumber: h.domainNumber, domain: h.domain, total: h.total, mean: h.mean, comments: h.comments });
+  });
+  const order = Object.keys(byKey).sort((a, b) => (byKey[a].date || "").localeCompare(byKey[b].date || ""));
+  return order.map(k => ({ key: k, date: byKey[k].date, summary: byKey[k].summary }));
+}
+
+async function winLoadHistory() {
+  const body = document.getElementById("win-historyBody");
+  try {
+    const snapshots = await winBuildSnapshotsFromHistory();
+    if (snapshots.length === 0) {
+      body.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>No assessments on file yet for this client.</span></div>';
+      return;
+    }
+    body.innerHTML = `
+      <div class="section-title"><h3><i class="bi bi-pie-chart-fill"></i> Domain Wheel</h3></div>
+      <div id="win-histNav" class="carousel-nav no-print"></div>
+      <div class="chart-wrap"><canvas id="win-histWheel"></canvas></div>
+      <div id="win-histWheelLegend" class="domain-legend"></div>
+      <div class="section-title"><h3><i class="bi bi-bar-chart-fill"></i> Domain Totals (4-20)</h3></div>
+      <div class="chart-wrap wide"><canvas id="win-histBar"></canvas></div>
+      <div id="win-histTrendSection"></div>
+    `;
+    setupCarousel("win-hist", snapshots, snapshots.length - 1, { wheel: winRenderWheelChart, bar: winRenderBarChart });
+    if (snapshots.length > 1) {
+      winRenderDomainTrend(snapshots, "win-histTrendSection", "win-histTrend");
+    }
+  } catch (e) {
+    body.innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Could not load history: ${escapeHtml(e.message)}</span></div>`;
+  }
 }
 
 function winShow(id) {
@@ -168,6 +212,7 @@ async function winSubmit() {
     const { assessmentKey, date } = await apiCall("submitWin", { summary: winLastSummary });
     setStatus("win-submitStatus", `Saved! Assessment key: ${assessmentKey}`, "success");
     await winShowResults(assessmentKey, date);
+    winLoadHistory();
   } catch (e) {
     setStatus("win-submitStatus", "Error: " + e.message, "error");
   }
