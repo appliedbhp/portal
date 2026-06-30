@@ -1,7 +1,7 @@
 // Talks to the Google Apps Script Web App backend (see apps-script/Code.gs).
 // IMPORTANT: set this to your deployed Web App URL after running
 // Deploy > New deployment > Web app in the Apps Script editor.
-const API_URL = "https://script.google.com/macros/s/AKfycbwihJ1f2x5S6zyRQaoMRBCmjksZC_jFgs83k4CweU3vO8XFfqTG-EHr9aqOBpCdswWm/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwtKb9UqSeBy4FKiI-VZK2EOpwm2ZCe8eWMgnAF0WkZB5FgBOEpjicvFDG59Dlft61i/exec";
 
 // Posting with text/plain avoids a CORS preflight request, which Apps
 // Script Web Apps cannot answer (no OPTIONS handler available).
