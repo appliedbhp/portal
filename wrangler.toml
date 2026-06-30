@@ -1,0 +1,7 @@
+name = "portal"
+compatibility_date = "2026-06-30"
+
+# Pure static site (HTML/CSS/JS, no server-side Worker code) — Cloudflare
+# serves everything in this directory directly as static assets.
+[assets]
+directory = "./"
