@@ -13,7 +13,10 @@
 <header class="portal-header no-print">
   <div class="brand"><i class="bi bi-shield-lock-fill"></i> Client Portal</div>
   <div class="who" id="whoami"></div>
-  <button class="secondary" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Log Out</button>
+  <div class="btn-row" style="margin:0;">
+    <button id="switchClientBtn" class="secondary" onclick="switchClient()" style="display:none;"><i class="bi bi-arrow-left-right"></i> Switch Client</button>
+    <button class="secondary" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Log Out</button>
+  </div>
 </header>
 
 <nav class="portal-nav no-print">
@@ -41,7 +44,16 @@
 <script src="js/scores.js"></script>
 <script>
 requireLogin();
+if (isProvider() && !getClientId()) {
+  window.location.href = "login.html";
+}
 document.getElementById("whoami").textContent = `${getClientId()} — ${getAssessorName()} (${getRole()})`;
+if (isProvider()) document.getElementById("switchClientBtn").style.display = "inline-block";
+
+function switchClient() {
+  setProviderClient("");
+  window.location.href = "login.html";
+}
 
 const SECTION_INIT = {
   roadmap: initRoadmapSection,

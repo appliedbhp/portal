@@ -26,25 +26,49 @@ function setCreds(creds) {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds));
 }
 
+// Two kinds of session: a client session (clientId+password, scoped to one
+// client) or a provider session (providerId+providerPassword, plus whichever
+// clientId they've currently selected to view/edit — switchable without
+// re-login via setProviderClient()).
 function getCreds() {
   const raw = sessionStorage.getItem(SESSION_KEY);
   if (!raw) return {};
   const c = JSON.parse(raw);
+  if (c.asProvider) {
+    return { asProvider: true, providerId: c.providerId, providerPassword: c.providerPassword, clientId: c.clientId };
+  }
   return { clientId: c.clientId, password: c.password, assessorName: c.assessorName };
+}
+
+function isProvider() {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  return !!(raw && JSON.parse(raw).asProvider);
 }
 
 function getClientId() {
   return getCreds().clientId || "";
 }
 
+function setProviderClient(clientId) {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return;
+  const c = JSON.parse(raw);
+  c.clientId = clientId;
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(c));
+}
+
 function getAssessorName() {
-  return getCreds().assessorName || "";
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return "";
+  const c = JSON.parse(raw);
+  return c.asProvider ? (c.providerId || "") : (c.assessorName || "");
 }
 
 function getRole() {
   const raw = sessionStorage.getItem(SESSION_KEY);
   if (!raw) return "parent";
-  return JSON.parse(raw).role || "parent";
+  const c = JSON.parse(raw);
+  return c.asProvider ? "provider" : (c.role || "parent");
 }
 
 function clearCreds() {

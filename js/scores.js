@@ -13,6 +13,7 @@ const ESQR_FIELDS = [
 ];
 
 function initScoresSection(root) {
+  const isProvider = getRole() === "provider";
   root.innerHTML = `
     <div class="card">
       <h1><i class="bi bi-clipboard2-data-fill"></i>Standardized Scores</h1>
@@ -26,12 +27,14 @@ function initScoresSection(root) {
       </table>
     </div>
 
+    ${isProvider ? `
     <div class="card">
       <h2><i class="bi bi-plus-circle-fill"></i>Add Scores</h2>
       <div id="scores-form"></div>
       <button onclick="addScores()"><i class="bi bi-save-fill"></i> Save Scores</button>
       <div id="scores-status"></div>
     </div>
+    ` : ""}
   `;
   scoresSwitchTab("brief");
 }
@@ -49,9 +52,12 @@ function scoresSwitchTab(type) {
 
   const fields = scoresFieldsFor(type);
   document.getElementById("scores-head").innerHTML = `<tr><th>Date</th><th>Assessor</th>${fields.map(f => `<th>${f[1]}</th>`).join("")}</tr>`;
-  document.getElementById("scores-form").innerHTML = fields.map(f =>
-    `<div class="row"><label>${f[1]}</label><input id="scores-field-${f[0]}" type="text" placeholder="0-100" style="max-width:160px;"></div>`
-  ).join("");
+  const formEl = document.getElementById("scores-form");
+  if (formEl) {
+    formEl.innerHTML = fields.map(f =>
+      `<div class="row"><label>${f[1]}</label><input id="scores-field-${f[0]}" type="text" placeholder="0-100" style="max-width:160px;"></div>`
+    ).join("");
+  }
 
   loadScores();
 }

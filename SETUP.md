@@ -5,6 +5,7 @@
 - `tbl_plan`: add a `GOAL_ID` column (any header position is fine — the script finds columns by name).
 - `tbl_plan` `OBJ_TEXT` column: replace the per-row formula with a single `ARRAYFORMULA` in row 2 that covers the whole column (referencing `GOAL_DOMAIN`/`OBJECTIVE` etc.), so new rows added by the portal pick it up automatically without the script writing to that cell.
 - `data_win`: confirm the `DATE_ASSESSMENT` column exists (added in the first build).
+- **New `tbl_providers` sheet** — one row per provider/clinician who should be able to log in and access *any* client by Client ID. Columns: `PROVIDER_ID`, `LICENSE_KEY`, `PIN`, `SALT`, `PASS`, `ACTIVE`. Fill in `PROVIDER_ID` (a username, e.g. your name or email), `LICENSE_KEY`, a 5-digit `PIN`, and `ACTIVE` = `TRUE` for each provider; leave `SALT`/`PASS` blank — they're filled in automatically on first login. This is separate from `tbl_license`, which is per-client.
 
 ## 2. Deploy the Apps Script backend
 1. Open the Google Sheet, then **Extensions > Apps Script**.
