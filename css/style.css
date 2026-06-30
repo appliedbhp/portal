@@ -1,13 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --primary: #2f7d6e;
-  --primary-dark: #1f5b4f;
-  --accent: #4fb6a3;
-  --gradient: linear-gradient(135deg, #1f5b4f 0%, #2f7d6e 45%, #4fb6a3 100%);
-  --bg: #f4f7f6;
+  --primary: #3185fc;
+  --primary-dark: #1f63c4;
+  --accent: #3185fc;
+  --gradient: #3185fc;
+  --bg: #f4f7fb;
   --card: #ffffff;
-  --border: #e1e8e6;
+  --border: #e1e6ee;
   --text: #1f2430;
   --muted: #6b7280;
   --radius: 12px;
@@ -24,6 +24,9 @@ body {
   font-weight: 600;
   letter-spacing: 0.01em;
 }
+.brand-logo { height: 30px; width: auto; display: block; }
+.login-logo-wrap { display: flex; justify-content: center; margin-bottom: 22px; }
+.login-logo-wrap .brand-logo { height: 44px; }
 .page { max-width: 960px; margin: 0 auto; padding: 36px 16px 80px; }
 .card {
   background: var(--card);
