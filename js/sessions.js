@@ -4,9 +4,12 @@
 
 let sessSessions = [];
 let sessNoteTemplates = [];
+let sessGoals = [];
 let sessView = "list"; // "list" | "calendar"
 let sessCalDate = new Date(); // current month being viewed in calendar mode
 let sessSelectedDay = null; // "YYYY-MM-DD" of the day expanded in calendar mode
+
+const GOALS_BLOCK_HEADING = "Goals Addressed This Session:";
 
 function initSessionsSection(root) {
   const isProvider = getRole() === "provider";
@@ -33,6 +36,10 @@ function initSessionsSection(root) {
         <button class="secondary" onclick="sessCopyPrevious()"><i class="bi bi-clipboard-fill"></i> Copy from Previous Session</button>
       </div>
       <div class="row">
+        <label>Goals Addressed This Session</label>
+        <div id="sess-goalsChecklist">Loading goals...</div>
+      </div>
+      <div class="row">
         <label>Note</label>
         <textarea id="sess-noteText" style="min-height:160px;" placeholder="Session note..."></textarea>
       </div>
@@ -53,8 +60,45 @@ function initSessionsSection(root) {
   loadSessions();
   if (isProvider) {
     loadNoteTemplates();
+    loadSessionGoals();
     document.getElementById("sess-dateTime").value = sessNowForInput_();
   }
+}
+
+async function loadSessionGoals() {
+  const el = document.getElementById("sess-goalsChecklist");
+  try {
+    const { goals } = await apiCall("getPlan", {});
+    sessGoals = goals;
+    el.innerHTML = goals.length
+      ? goals.map((g, i) => `
+          <div class="checkbox-row" style="margin-bottom:8px;">
+            <input type="checkbox" id="sess-goal-${i}" data-objective="${escapeAttr(g.objective)}" onchange="sessSyncGoalsBlock()">
+            <label for="sess-goal-${i}">${escapeHtml(g.objective)}</label>
+          </div>
+        `).join("")
+      : '<div class="field-hint"><i class="bi bi-info-circle-fill"></i> No goals on file for this client yet.</div>';
+  } catch (e) {
+    el.innerHTML = `<div class="field-hint"><i class="bi bi-exclamation-triangle-fill"></i> Could not load goals: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// Keeps a "Goals Addressed This Session:" block in sync with whichever
+// checkboxes are checked, without disturbing the rest of the note text.
+// The block always lives at the very top of the textarea.
+function sessSyncGoalsBlock() {
+  const box = document.getElementById("sess-noteText");
+  const checked = Array.from(document.querySelectorAll("#sess-goalsChecklist input:checked")).map(cb => cb.dataset.objective);
+
+  const blockRe = new RegExp(`^${GOALS_BLOCK_HEADING}\\n(?:- .*\\n)*\\n?`);
+  const rest = box.value.replace(blockRe, "");
+
+  if (checked.length === 0) {
+    box.value = rest;
+    return;
+  }
+  const block = `${GOALS_BLOCK_HEADING}\n${checked.map(o => `- ${o}`).join("\n")}\n\n`;
+  box.value = block + rest;
 }
 
 // "YYYY-MM-DDTHH:mm" in local time, the format <input type="datetime-local"> expects.
@@ -137,6 +181,7 @@ async function addSession() {
     setStatus("sess-status", "Session note saved.", "success");
     document.getElementById("sess-noteText").value = "";
     document.getElementById("sess-templateSelect").value = "";
+    document.querySelectorAll("#sess-goalsChecklist input:checked").forEach(cb => { cb.checked = false; });
     document.getElementById("sess-dateTime").value = sessNowForInput_();
     document.getElementById("sess-endTime").value = "";
     loadSessions();
