@@ -23,6 +23,8 @@ body {
   font-family: "Lora", Georgia, serif;
   font-weight: 600;
   letter-spacing: 0.01em;
+  font-size: 18px;
+  white-space: nowrap;
 }
 .brand-logo { height: 50px; width: auto; display: block; }
 .login-logo-wrap { display: flex; justify-content: center; margin-bottom: 22px; }

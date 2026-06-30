@@ -33,6 +33,11 @@
       <button id="mode-provider" class="secondary" onclick="setMode('provider')">I'm a Provider</button>
     </div>
 
+    <div class="checkbox-row" style="margin-bottom:20px;">
+      <input type="checkbox" id="privacyAck">
+      <label for="privacyAck">I have read and understood the <a href="https://www.getadhd.care/privacy" target="_blank" rel="noopener">Privacy Policy</a></label>
+    </div>
+
     <!-- ===== Client mode ===== -->
     <div id="clientMode">
       <div class="row">
@@ -127,6 +132,17 @@ function setMode(mode) {
   setStatus("status", "", null);
 }
 
+// Required on every login/setup submission (not just once) — the box
+// un-checks itself on each page load since it's a plain checkbox with no
+// persisted state.
+function requirePrivacyAck() {
+  if (!document.getElementById("privacyAck").checked) {
+    setStatus("status", "Please confirm you've read the Privacy Policy before continuing.", "error");
+    return false;
+  }
+  return true;
+}
+
 // ---- Client login ----
 
 async function checkStatus() {
@@ -168,6 +184,7 @@ async function login() {
     setStatus("status", "Please fill in all fields.", "error");
     return;
   }
+  if (!requirePrivacyAck()) return;
   setStatus("status", "Logging in...", "loading");
   try {
     const res = await apiCallNoCreds("login", { clientId, password });
@@ -193,6 +210,7 @@ async function setupPassword() {
   if (!/^\d{5}$/.test(pin)) { setStatus("status", "PIN must be exactly 5 digits.", "error"); return; }
   if (newPassword.length < 8) { setStatus("status", "Password must be at least 8 characters.", "error"); return; }
   if (newPassword !== confirmPassword) { setStatus("status", "Passwords do not match.", "error"); return; }
+  if (!requirePrivacyAck()) return;
 
   setStatus("status", "Setting up your password...", "loading");
   try {
@@ -229,6 +247,7 @@ async function providerLogin() {
     setStatus("status", "Please fill in all fields.", "error");
     return;
   }
+  if (!requirePrivacyAck()) return;
   setStatus("status", "Logging in...", "loading");
   try {
     await apiCallNoCreds("providerLogin", { providerId, providerPassword });
@@ -254,6 +273,7 @@ async function providerSetupPassword() {
   if (!/^\d{5}$/.test(pin)) { setStatus("status", "PIN must be exactly 5 digits.", "error"); return; }
   if (newPassword.length < 8) { setStatus("status", "Password must be at least 8 characters.", "error"); return; }
   if (newPassword !== confirmPassword) { setStatus("status", "Passwords do not match.", "error"); return; }
+  if (!requirePrivacyAck()) return;
 
   setStatus("status", "Setting up your password...", "loading");
   try {
