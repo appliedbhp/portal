@@ -25,6 +25,7 @@
   <button data-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
   <button data-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i> Progress</button>
   <button data-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i> Standardized Scores</button>
+  <button data-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i> Session Notes</button>
 </nav>
 
 <div class="page">
@@ -33,6 +34,7 @@
   <div id="section-plan" class="section"></div>
   <div id="section-progress" class="section"></div>
   <div id="section-scores" class="section"></div>
+  <div id="section-sessions" class="section"></div>
 </div>
 
 <script src="js/api.js"></script>
@@ -42,6 +44,7 @@
 <script src="js/plan.js"></script>
 <script src="js/progress.js"></script>
 <script src="js/scores.js"></script>
+<script src="js/sessions.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -60,7 +63,8 @@ const SECTION_INIT = {
   win: initWinSection,
   plan: initPlanSection,
   progress: initProgressSection,
-  scores: initScoresSection
+  scores: initScoresSection,
+  sessions: initSessionsSection
 };
 const initialized = {};
 

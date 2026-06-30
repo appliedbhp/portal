@@ -124,6 +124,27 @@ button.secondary:hover { background: #f5f6fa; }
 .comment-cell { white-space: pre-wrap; max-width: 320px; }
 .checkbox-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
 
+/* Session notes calendar */
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cal-header h3 { margin: 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.cal-dow { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; text-align: center; padding: 4px 0; }
+.cal-cell {
+  min-height: 64px; border: 1px solid var(--border); border-radius: 8px; padding: 6px;
+  background: #fbfcfe; cursor: default; font-size: 12px;
+}
+.cal-cell.empty { background: transparent; border-color: transparent; }
+.cal-cell.has-sessions { cursor: pointer; border-color: var(--primary); background: #eef2ff; }
+.cal-cell.has-sessions:hover { background: #e3e9ff; }
+.cal-cell.selected { box-shadow: 0 0 0 2px var(--primary) inset; }
+.cal-cell.today .cal-day-num { color: var(--primary-dark); font-weight: 800; }
+.cal-day-num { font-weight: 600; color: var(--text); }
+.cal-badge {
+  display: inline-block; margin-top: 4px; background: var(--primary); color: #fff;
+  border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700;
+}
+.note-text { white-space: pre-wrap; }
+
 /* Portal nav */
 .portal-header {
   display: flex; align-items: center; justify-content: space-between;
