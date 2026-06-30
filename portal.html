@@ -43,7 +43,7 @@
 
     <div class="sidebar-group">
       <div class="sidebar-group-title">Insights</div>
-      <button class="sidebar-link" data-section="recommendation" onclick="showSection('recommendation')"><i class="bi bi-stars"></i> Package Rec</button>
+      <button class="sidebar-link" data-section="recommendation" onclick="showSection('recommendation')" id="recNavBtn"><i class="bi bi-stars"></i> Package Rec</button>
       <button class="sidebar-link" data-section="appointments" onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i> Appointments</button>
     </div>
   </aside>
@@ -81,6 +81,7 @@ if (isProvider() && !getClientId()) {
 }
 document.getElementById("whoami").textContent = `${getClientId()} — ${getAssessorName()} (${getRole()})`;
 if (isProvider()) document.getElementById("switchClientBtn").style.display = "inline-block";
+if (getRole() !== "provider") document.getElementById("recNavBtn").style.display = "none";
 
 function switchClient() {
   setProviderClient("");
