@@ -216,6 +216,14 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .rec-tier-desc { font-size: 13px; margin-top: 6px; opacity: 0.75; }
 .rec-tier-tagline { font-size: 13px; margin-top: 8px; max-width: 420px; line-height: 1.5; }
 .rec-print-header { display: none; }
+
+/* Appointments */
+.appt-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.appt-card:last-child { border-bottom: none; }
+.appt-info { display: flex; flex-direction: column; gap: 4px; }
+.appt-name { font-weight: 600; font-size: 15px; }
+.appt-meta { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.appt-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .rec-tier-meta { text-align: right; }
 .conf-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
 .conf-high { background: #d1fae5; color: #065f46; }

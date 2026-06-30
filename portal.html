@@ -44,6 +44,7 @@
     <div class="sidebar-group">
       <div class="sidebar-group-title">Insights</div>
       <button class="sidebar-link" data-section="recommendation" onclick="showSection('recommendation')"><i class="bi bi-stars"></i> Package Rec</button>
+      <button class="sidebar-link" data-section="appointments" onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i> Appointments</button>
     </div>
   </aside>
 
@@ -57,6 +58,7 @@
       <div id="section-scores" class="section"></div>
       <div id="section-sessions" class="section"></div>
       <div id="section-recommendation" class="section"></div>
+      <div id="section-appointments" class="section"></div>
     </div>
   </div>
 </div>
@@ -71,6 +73,7 @@
 <script src="js/scores.js"></script>
 <script src="js/sessions.js"></script>
 <script src="js/recommendation.js"></script>
+<script src="js/appointments.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -96,7 +99,8 @@ const SECTION_INIT = {
   progress: initProgressSection,
   scores: initScoresSection,
   sessions: initSessionsSection,
-  recommendation: initRecommendationSection
+  recommendation: initRecommendationSection,
+  appointments: initAppointmentsSection
 };
 const initialized = {};
 
