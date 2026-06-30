@@ -8,6 +8,7 @@ let sessGoals = [];
 let sessView = "list"; // "list" | "calendar"
 let sessCalDate = new Date(); // current month being viewed in calendar mode
 let sessSelectedDay = null; // "YYYY-MM-DD" of the day expanded in calendar mode
+let sessProgByDay = {}; // "YYYY-MM-DD" -> [{stepNum, title, programName}]
 
 const GOALS_BLOCK_HEADING = "Goals Addressed This Session:";
 
@@ -117,12 +118,30 @@ function sessSwitchView(view) {
 
 async function loadSessions() {
   try {
-    const { sessions } = await apiCall("getSessions", {});
+    const [{ sessions }, progData] = await Promise.all([
+      apiCall("getSessions", {}),
+      apiCall("getMyProgram", {}).catch(() => ({ assignment: null, steps: [] }))
+    ]);
     sessSessions = sessions;
+    sessProgByDay = buildSessProgByDay(progData);
     sessRenderView();
   } catch (e) {
     document.getElementById("sess-viewBody").innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Error: ${escapeHtml(e.message)}</span></div>`;
   }
+}
+
+function buildSessProgByDay(progData) {
+  const byDay = {};
+  if (!progData.assignment || !progData.steps) return byDay;
+  const programName = progData.assignment.programName || "Program";
+  progData.steps.forEach(step => {
+    if (step.status === "completed" && step.completedAt) {
+      const key = step.completedAt.slice(0, 10);
+      if (!byDay[key]) byDay[key] = [];
+      byDay[key].push({ stepNum: step.stepNum, title: step.title, programName });
+    }
+  });
+  return byDay;
 }
 
 async function loadNoteTemplates() {
@@ -267,13 +286,23 @@ function sessRenderCalendar() {
   for (let d = 1; d <= daysInMonth; d++) {
     const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const count = (byDay[key] || []).length;
+    const progItems = sessProgByDay[key] || [];
     const classes = ["cal-cell"];
     if (count > 0) classes.push("has-sessions");
+    if (progItems.length > 0) classes.push("has-prog");
     if (key === todayKey) classes.push("today");
     if (key === sessSelectedDay) classes.push("selected");
-    cells += `<div class="${classes.join(" ")}" ${count > 0 ? `onclick="sessSelectDay('${key}')"` : ""}>
+    const progBadges = progItems.map(p =>
+      `<span class="cal-badge prog-badge" title="${escapeHtml(p.programName + " · " + p.title)}">
+        <i class="bi bi-play-circle-fill"></i>
+      </span>`
+    ).join("");
+    cells += `<div class="${classes.join(" ")}" ${count > 0 || progItems.length > 0 ? `onclick="sessSelectDay('${key}')"` : ""}>
       <div class="cal-day-num">${d}</div>
-      ${count > 0 ? `<span class="cal-badge">${count}</span>` : ""}
+      <div class="cal-badges">
+        ${count > 0 ? `<span class="cal-badge sess-badge">${count}</span>` : ""}
+        ${progBadges}
+      </div>
     </div>`;
   }
 

@@ -156,15 +156,19 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
   background: #fbfcfe; cursor: default; font-size: 12px;
 }
 .cal-cell.empty { background: transparent; border-color: transparent; }
-.cal-cell.has-sessions { cursor: pointer; border-color: var(--primary); background: #eef2ff; }
+.cal-cell.has-sessions, .cal-cell.has-prog { cursor: pointer; }
+.cal-cell.has-sessions { border-color: var(--primary); background: #eef2ff; }
 .cal-cell.has-sessions:hover { background: #e3e9ff; }
 .cal-cell.selected { box-shadow: 0 0 0 2px var(--primary) inset; }
 .cal-cell.today .cal-day-num { color: var(--primary-dark); font-weight: 800; }
 .cal-day-num { font-weight: 600; color: var(--text); }
-.cal-badge {
-  display: inline-block; margin-top: 4px; background: var(--gradient); color: #fff;
-  border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700;
-}
+/* session calendar badges — original style kept as .sess-badge */
+.cal-badges { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 4px; }
+.cal-badge { display: inline-block; background: var(--gradient); color: #fff; border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+.cal-badge.sess-badge { background: var(--gradient); color: #fff; padding: 1px 7px; border-radius: 10px; }
+.cal-badge.prog-badge { background: #f3e8ff; color: #7e22ce; padding: 0; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: help; position: relative; }
+.cal-badge.prog-badge .bi { margin-right: 0; font-size: 11px; }
+.cal-badge.prog-badge[title]:hover::after { content: attr(title); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; font-size: 11px; font-weight: 500; white-space: nowrap; padding: 4px 8px; border-radius: 6px; pointer-events: none; z-index: 10; max-width: 220px; white-space: normal; text-align: center; }
 .note-text { white-space: pre-wrap; }
 
 /* Portal nav */
