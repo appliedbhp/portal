@@ -112,9 +112,6 @@ function showSection(name) {
   if (!initialized[name]) {
     initialized[name] = true;
     SECTION_INIT[name](document.getElementById("section-" + name));
-  } else if (name === "home") {
-    // Home's numbers can go stale while you work in other sections — refresh on every visit.
-    initHomeSection(document.getElementById("section-home"));
   }
 }
 

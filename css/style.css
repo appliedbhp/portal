@@ -37,8 +37,9 @@ body {
   box-shadow: 0 2px 10px rgba(20, 25, 40, 0.04);
   margin-bottom: 24px;
 }
-h1 { font-family: "Lora", Georgia, serif; font-size: 25px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 24px; color: var(--primary-dark); }
-h2 { font-size: 18px; font-weight: 700; margin: 0 0 14px; }
+h1 { font-family: "Lora", Georgia, serif; font-size: 25px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 24px; color: var(--primary-dark); padding-top: 4px; }
+h2 { font-size: 18px; font-weight: 700; margin: 0 0 14px; padding-top: 2px; }
+.bi { margin-right: 6px; }
 h3 { font-size: 15px; font-weight: 700; color: var(--text); margin: 0 0 10px; }
 .row { margin-bottom: 16px; }
 label { display: block; font-weight: 600; font-size: 13px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.03em; }
