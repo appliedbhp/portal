@@ -208,6 +208,26 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .home-tile .home-tile-sub { font-size: 12px; color: var(--muted); }
 .home-tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 14px; }
 
+/* Package Recommendation section */
+.rec-tier-card { margin-bottom: 24px; }
+.rec-tier-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+.rec-tier-eyebrow { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+.rec-tier-name { font-family: "Lora", Georgia, serif; font-size: 38px; font-weight: 700; line-height: 1; }
+.rec-tier-desc { font-size: 13px; margin-top: 6px; opacity: 0.75; }
+.rec-tier-meta { text-align: right; }
+.conf-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.conf-high { background: #d1fae5; color: #065f46; }
+.conf-mod-high { background: #d1fae5; color: #065f46; }
+.conf-mod { background: #fef3c7; color: #92400e; }
+.conf-low { background: #fee2e2; color: #991b1b; }
+.rec-data-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; justify-content: flex-end; }
+.rec-data-chip { font-size: 11.5px; display: inline-flex; align-items: center; gap: 4px; }
+.rec-data-chip.used { color: #059669; }
+.rec-data-chip.missing { color: var(--muted); }
+.rec-triggers { margin: 0; padding-left: 18px; }
+.rec-triggers li { font-size: 13px; margin-bottom: 5px; line-height: 1.5; }
+.rec-narrative { font-size: 14px; line-height: 1.75; color: var(--text); white-space: pre-wrap; margin: 0; }
+
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; }
