@@ -1,0 +1,173 @@
+<style>
+@media print {
+  button, .no-print { display: none !important; }
+}
+.bfa-intro { font-size:14px; color:var(--muted); margin-bottom:20px; line-height:1.6; }
+.bfa-section-head { font-size:16px; font-weight:700; color:var(--primary); border-bottom:2px solid var(--primary); padding-bottom:6px; margin:28px 0 16px; }
+.bfa-col-heads { display:grid; grid-template-columns:190px 1fr 100px; gap:10px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:0 12px; margin-bottom:6px; }
+.bfa-beh-row { display:grid; grid-template-columns:190px 1fr 100px; gap:10px; align-items:start; background:var(--surface); border-radius:8px; padding:10px 12px; margin-bottom:8px; transition:opacity .2s; }
+.bfa-beh-row.inactive { opacity:.35; }
+.bfa-beh-check { display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; padding-top:4px; }
+.bfa-beh-check input[type=checkbox] { width:16px; height:16px; cursor:pointer; accent-color:var(--primary); }
+.bfa-beh-ex textarea { width:100%; font-size:13px; padding:6px 8px; border:1.5px solid var(--border); border-radius:6px; resize:vertical; min-height:38px; box-sizing:border-box; }
+.bfa-beh-pri select { width:100%; font-size:13px; padding:6px 8px; border:1.5px solid var(--border); border-radius:6px; }
+.bfa-fn-head { font-size:14px; font-weight:700; margin:16px 0 10px; padding:6px 12px; border-radius:6px; }
+.bfa-fn-head.att { background:#ede9fe; color:#5b21b6; }
+.bfa-fn-head.esc { background:#fef3c7; color:#92400e; }
+.bfa-fn-head.tan { background:#d1fae5; color:#065f46; }
+.bfa-fn-head.aut { background:#fce7f3; color:#9d174d; }
+.bfa-item { margin-bottom:12px; padding:12px; background:var(--surface); border-radius:8px; }
+.bfa-item-q { font-size:14px; line-height:1.5; margin-bottom:10px; }
+.bfa-likert { display:flex; gap:6px; flex-wrap:wrap; }
+.bfa-likert label { display:inline-flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+.bfa-likert input[type=radio] { display:none; }
+.bfa-likert .bfa-btn { padding:5px 10px; border:1.5px solid var(--border); border-radius:6px; font-size:12px; text-align:center; background:white; transition:all .15s; min-width:72px; }
+.bfa-likert input[type=radio]:checked + .bfa-btn { background:var(--primary); color:white; border-color:var(--primary); }
+.bfa-likert label:hover .bfa-btn { border-color:var(--primary); }
+.bfa-p2-behavior { border:2px solid var(--border); border-radius:10px; padding:16px; margin-bottom:20px; }
+.bfa-p2-behavior-head { font-size:15px; font-weight:700; margin:0 0 4px; }
+.bfa-results { margin-top:24px; padding:16px; border:2px solid var(--border); border-radius:10px; display:none; }
+</style>
+
+<p class="bfa-intro">
+  <strong>Part 1:</strong> Check each behavior that applies and describe what it looks like.
+  <strong>Part 2</strong> will appear for each behavior you check — please answer all 20 questions
+  thinking about that specific behavior. When finished, click <em>Calculate Scores</em> to see results,
+  then submit to save.
+</p>
+
+<!-- ── PART 1 ──────────────────────────────────────────────────────── -->
+<div class="bfa-section-head">Part 1 — Behaviors of Concern</div>
+<p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+  Check each behavior that applies. Describe what it looks like and rate how much it concerns you
+  (1 = some concern · 2 = significant concern · 3 = urgent / unsafe).
+</p>
+
+<div class="bfa-col-heads"><span>Behavior</span><span>Describe / Examples</span><span>Priority</span></div>
+
+<div class="bfa-beh-row inactive" id="brow_aggression">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="aggression" data-label="Aggression" id="cb_aggression" name="beh_aggression" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_aggression">Aggression</label>
+  </div>
+  <div><textarea name="beh_aggression_ex" placeholder="e.g. hits siblings, kicks, bites when redirected"></textarea></div>
+  <div><select name="beh_aggression_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_sib">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="sib" data-label="Self-injurious behavior" id="cb_sib" name="beh_sib" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_sib">Self-injurious behavior</label>
+  </div>
+  <div><textarea name="beh_sib_ex" placeholder="e.g. head banging, hand biting, skin picking"></textarea></div>
+  <div><select name="beh_sib_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_property">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="property" data-label="Property destruction" id="cb_property" name="beh_property" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_property">Property destruction</label>
+  </div>
+  <div><textarea name="beh_property_ex" placeholder="e.g. throws objects, breaks belongings, damages walls"></textarea></div>
+  <div><select name="beh_property_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_elopement">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="elopement" data-label="Elopement / running away" id="cb_elopement" name="beh_elopement" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_elopement">Elopement / running away</label>
+  </div>
+  <div><textarea name="beh_elopement_ex" placeholder="e.g. bolts in parking lots, runs from classroom"></textarea></div>
+  <div><select name="beh_elopement_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_school">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="school" data-label="School refusal" id="cb_school" name="beh_school" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_school">School refusal</label>
+  </div>
+  <div><textarea name="beh_school_ex" placeholder="e.g. refuses to get ready, cries at drop-off, somatic complaints"></textarea></div>
+  <div><select name="beh_school_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_dysreg">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="dysreg" data-label="Emotional dysregulation / tantrums" id="cb_dysreg" name="beh_dysreg" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_dysreg">Emotional dysregulation / tantrums</label>
+  </div>
+  <div><textarea name="beh_dysreg_ex" placeholder="e.g. prolonged crying, screaming, floor drops, difficulty calming"></textarea></div>
+  <div><select name="beh_dysreg_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_verbal">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="verbal" data-label="Verbal aggression / threats" id="cb_verbal" name="beh_verbal" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_verbal">Verbal aggression / threats</label>
+  </div>
+  <div><textarea name="beh_verbal_ex" placeholder="e.g. yelling, name-calling, threatening statements"></textarea></div>
+  <div><select name="beh_verbal_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_noncomp">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="noncomp" data-label="Noncompliance" id="cb_noncomp" name="beh_noncomp" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_noncomp">Noncompliance</label>
+  </div>
+  <div><textarea name="beh_noncomp_ex" placeholder="e.g. refuses most directions, ignores requests, says no to everything"></textarea></div>
+  <div><select name="beh_noncomp_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_stim">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="stim" data-label="Stereotypy / repetitive behavior" id="cb_stim" name="beh_stim" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_stim">Stereotypy / repetitive behavior</label>
+  </div>
+  <div><textarea name="beh_stim_ex" placeholder="e.g. hand flapping, rocking, spinning objects, vocal stimming"></textarea></div>
+  <div><select name="beh_stim_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_pica">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="pica" data-label="Pica" id="cb_pica" name="beh_pica" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_pica">Pica</label>
+  </div>
+  <div><textarea name="beh_pica_ex" placeholder="e.g. eats dirt, paper, clothing, non-food objects"></textarea></div>
+  <div><select name="beh_pica_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<div class="bfa-beh-row inactive" id="brow_other">
+  <div class="bfa-beh-check">
+    <input type="checkbox" class="bfa-cb" data-key="other" data-label="Other" id="cb_other" name="beh_other" value="yes"
+      onchange="bfaToggle(this)">
+    <label for="cb_other">Other</label>
+  </div>
+  <div><textarea name="beh_other_ex" placeholder="Describe the behavior and give examples"></textarea></div>
+  <div><select name="beh_other_pri"><option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option></select></div>
+</div>
+
+<!-- ── PART 2 container — sections generated dynamically per behavior ── -->
+<div id="bfa-p2-container"></div>
+
+<!-- ── SCORING ─────────────────────────────────────────────────────── -->
+<div style="margin-top:24px;" class="no-print">
+  <button type="button" onclick="bfaCalculate()">Calculate Scores</button>
+</div>
+<div class="bfa-results" id="bfa-results"></div>
+<div style="margin-top:16px;" class="no-print">
+  <button type="button" class="secondary" onclick="window.print()">
+    <i class="bi bi-printer-fill"></i> Print / Save as PDF
+  </button>
+</div>
+
+<!-- Populated by bfaCalculate() before submission — functions defined in bfa.js -->
+<input type="hidden" name="bfa_scores_json" id="bfa-scores-hidden">

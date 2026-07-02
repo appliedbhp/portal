@@ -1,13 +1,19 @@
-// Progress section — reads/writes data_prog, linked to tbl_plan goals by OBJ_TEXT.
+// Progress section — reads/writes data_prog. Chart and table show one goal
+// at a time so Y-axis scale is always meaningful.
+
+let progGoals      = [];
+let progAllEntries = [];
+let progSelected   = ""; // objText of the currently viewed goal
 
 function initProgressSection(root) {
   root.innerHTML = `
     <div class="card">
       <h1><i class="bi bi-graph-up"></i>Progress</h1>
+      <div id="prog-goal-picker" style="margin-bottom:20px;"></div>
       <div id="prog-chartSection"></div>
       <table class="summary-table">
-        <thead><tr><th>Date</th><th>Objective</th><th>Measure</th><th>Score</th></tr></thead>
-        <tbody id="prog-body"><tr><td colspan="4">Loading...</td></tr></tbody>
+        <thead><tr><th>Date</th><th>Measure</th><th>Score</th></tr></thead>
+        <tbody id="prog-body"><tr><td colspan="3">Loading…</td></tr></tbody>
       </table>
     </div>
 
@@ -15,14 +21,16 @@ function initProgressSection(root) {
       <h2><i class="bi bi-plus-circle-fill"></i>Add a Progress Entry</h2>
       <div class="row">
         <label>Objective</label>
-        <select id="prog-objText" style="max-width:520px;" onchange="progSyncMeasure()"><option value="">Loading goals...</option></select>
+        <select id="prog-objText" style="max-width:520px;" onchange="progSyncMeasure()">
+          <option value="">Loading goals…</option>
+        </select>
       </div>
       <div class="row"><label>Date</label><input id="prog-date" type="date"></div>
       <div class="row">
         <label>Measure</label>
         <input id="prog-measure" type="text" readonly style="background:#f0f1f5;">
       </div>
-      <div class="field-hint"><i class="bi bi-info-circle-fill"></i> Measure is defined on the goal itself (Goals &amp; Plan) — pick an objective above to fill it in.</div>
+      <div class="field-hint"><i class="bi bi-info-circle-fill"></i> Measure is defined on the goal — pick an objective above to fill it in.</div>
       <div class="row"><label>Score</label><input id="prog-score" type="text" placeholder="e.g. 80"></div>
       <button onclick="addProgress()"><i class="bi bi-save-fill"></i> Save Entry</button>
       <div id="prog-status"></div>
@@ -32,8 +40,6 @@ function initProgressSection(root) {
   loadProgressObjectiveOptions();
 }
 
-let progGoals = [];
-
 async function loadProgressObjectiveOptions() {
   const select = document.getElementById("prog-objText");
   try {
@@ -41,15 +47,14 @@ async function loadProgressObjectiveOptions() {
     progGoals = goals;
     select.innerHTML = goals.length
       ? goals.map(g => `<option value="${escapeHtml(g.objText)}">${escapeHtml(g.objective)}</option>`).join("")
-      : `<option value="">No goals on file — add one in Goals & Plan first</option>`;
+      : `<option value="">No goals on file — add one in Goals &amp; Plan first</option>`;
     progSyncMeasure();
+    renderGoalPicker();
   } catch (e) {
     select.innerHTML = `<option value="">Error loading goals</option>`;
   }
 }
 
-// Measure is defined per-goal (tbl_plan.MEASURE), not typed per progress
-// entry — keeps every entry against the same objective consistent.
 function progSyncMeasure() {
   const objText = document.getElementById("prog-objText").value;
   const goal = progGoals.find(g => g.objText === objText);
@@ -59,79 +64,131 @@ function progSyncMeasure() {
 async function loadProgress() {
   try {
     const { progress } = await apiCall("getProgress", {});
-    document.getElementById("prog-body").innerHTML = progress.length
-      ? progress.map(p => `<tr><td>${escapeHtml(p.date)}</td><td>${escapeHtml(p.objText)}</td><td>${escapeHtml(p.measure)}</td><td>${escapeHtml(p.score)}</td></tr>`).join("")
-      : `<tr><td colspan="4">No progress entries on file yet.</td></tr>`;
-    renderProgressChart(progress);
+    progAllEntries = progress;
+    // Auto-select first goal that has data, or first goal overall
+    if (!progSelected) {
+      const withData = progGoals.find(g => progress.some(p => p.objText === g.objText));
+      progSelected = (withData || progGoals[0] || {}).objText || "";
+    }
+    renderGoalView();
   } catch (e) {
-    document.getElementById("prog-body").innerHTML = `<tr><td colspan="4">Error: ${escapeHtml(e.message)}</td></tr>`;
+    document.getElementById("prog-body").innerHTML =
+      `<tr><td colspan="3">Error: ${escapeHtml(e.message)}</td></tr>`;
   }
 }
 
-// One line per objective (matched by OBJ_TEXT), score over time. Non-numeric
-// scores are skipped — the Score field is free text, so not every entry
-// is guaranteed to be a plottable number.
-function renderProgressChart(progress) {
+function renderGoalPicker() {
+  const el = document.getElementById("prog-goal-picker");
+  if (!el || progGoals.length === 0) return;
+
+  const buttons = progGoals.map(g => {
+    const active = g.objText === progSelected;
+    const hasData = progAllEntries.some(p => p.objText === g.objText);
+    return `<button
+      class="${active ? "" : "secondary"}"
+      onclick="progSelectGoal(${JSON.stringify(escapeHtml(g.objText))})"
+      style="font-size:12px;padding:6px 12px;${!hasData ? "opacity:0.55;" : ""}">
+      ${escapeHtml(g.objective || g.objText)}
+    </button>`;
+  }).join("");
+
+  el.innerHTML = `<div class="btn-row" style="flex-wrap:wrap;gap:6px;">${buttons}</div>`;
+}
+
+function progSelectGoal(objText) {
+  progSelected = objText;
+  renderGoalPicker();
+  renderGoalView();
+}
+
+function renderGoalView() {
+  renderGoalPicker();
+
+  const goal    = progGoals.find(g => g.objText === progSelected);
+  const measure = goal ? (goal.measure || "Score") : "Score";
+  const entries = progAllEntries.filter(p => p.objText === progSelected);
+
+  // Table
+  document.getElementById("prog-body").innerHTML = entries.length
+    ? entries.map(p =>
+        `<tr><td>${escapeHtml(p.date)}</td><td>${escapeHtml(p.measure)}</td><td>${escapeHtml(p.score)}</td></tr>`
+      ).join("")
+    : `<tr><td colspan="3" style="color:var(--muted);">No entries for this goal yet.</td></tr>`;
+
+  // Chart
   const section = document.getElementById("prog-chartSection");
-  const numeric = progress.filter(p => p.date && p.score !== "" && !isNaN(Number(p.score)));
+  const numeric = entries.filter(p => p.date && p.score !== "" && !isNaN(Number(p.score)));
+
   if (numeric.length === 0) {
-    section.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>No numeric progress entries to chart yet.</span></div>';
+    section.innerHTML = entries.length
+      ? `<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>Scores for this goal are non-numeric — no chart to display.</span></div>`
+      : `<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>No entries yet for this goal.</span></div>`;
     return;
   }
 
-  const byObjective = {};
-  const order = [];
-  numeric.forEach(p => {
-    const key = p.objText || "Unlabeled";
-    if (!byObjective[key]) { byObjective[key] = []; order.push(key); }
-    byObjective[key].push({ date: p.date, score: Number(p.score) });
-  });
-  order.forEach(key => byObjective[key].sort((a, b) => a.date.localeCompare(b.date)));
-
-  const allDates = [...new Set(numeric.map(p => p.date))].sort();
+  numeric.sort((a, b) => a.date.localeCompare(b.date));
+  const labels = numeric.map(p => p.date);
+  const scores = numeric.map(p => Number(p.score));
+  const color  = colorForDomain(progSelected);
 
   section.innerHTML = `<div class="chart-wrap wide"><canvas id="prog-chart"></canvas></div>`;
   destroyChart("prog-chart");
-  const datasets = order.map(key => {
-    const color = colorForDomain(key);
-    const byDate = {};
-    byObjective[key].forEach(p => { byDate[p.date] = p.score; });
-    return {
-      label: key.length > 40 ? key.slice(0, 38) + "…" : key,
-      data: allDates.map(d => (d in byDate ? byDate[d] : null)),
-      borderColor: color, backgroundColor: hexToRgba(color, 0.12),
-      pointBackgroundColor: color, pointBorderColor: "#fff", pointBorderWidth: 2,
-      pointRadius: 5, pointHoverRadius: 7, borderWidth: 3, spanGaps: true, tension: 0.3, fill: false
-    };
-  });
-  chartInstances["prog-chart"] = new Chart(document.getElementById("prog-chart").getContext("2d"), {
-    type: "line",
-    data: { labels: allDates, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-      scales: { y: { title: { display: true, text: "Score" } }, x: { grid: { display: false } } },
-      plugins: { legend: { position: "bottom" }, tooltip: { callbacks: { title: items => items[0]?.label || "" } } }
+
+  chartInstances["prog-chart"] = new Chart(
+    document.getElementById("prog-chart").getContext("2d"), {
+      type: "line",
+      data: {
+        labels,
+        datasets: [{
+          label: measure,
+          data: scores,
+          borderColor: color,
+          backgroundColor: hexToRgba(color, 0.12),
+          pointBackgroundColor: color,
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          borderWidth: 3,
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        scales: {
+          y: { title: { display: true, text: measure } },
+          x: { grid: { display: false } }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { title: items => items[0]?.label || "" } }
+        }
+      }
     }
-  });
+  );
 }
 
 async function addProgress() {
   const objText = document.getElementById("prog-objText").value;
-  const date = document.getElementById("prog-date").value;
+  const date    = document.getElementById("prog-date").value;
   const measure = document.getElementById("prog-measure").value.trim();
-  const score = document.getElementById("prog-score").value.trim();
+  const score   = document.getElementById("prog-score").value.trim();
 
   if (!objText || !measure || !score) {
     setStatus("prog-status", "Please select an objective and fill in Measure and Score.", "error");
     return;
   }
-  setStatus("prog-status", "Saving...", "loading");
+  setStatus("prog-status", "Saving…", "loading");
   try {
     await apiCall("addProgress", { objText, date, measure, score });
-    setStatus("prog-status", "Entry saved.", "success");
-    document.getElementById("prog-measure").value = "";
+    setStatus("prog-status", "Entry saved.", "");
     document.getElementById("prog-score").value = "";
-    loadProgress();
+    // Switch view to the goal just updated
+    progSelected = objText;
+    await loadProgress();
   } catch (e) {
     setStatus("prog-status", "Error: " + e.message, "error");
   }

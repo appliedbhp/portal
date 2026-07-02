@@ -31,6 +31,7 @@
       <div class="sidebar-group-title">Assessments</div>
       <button class="sidebar-link" data-section="roadmap" onclick="showSection('roadmap')"><i class="bi bi-signpost-split-fill"></i> Roadmap</button>
       <button class="sidebar-link" data-section="win" onclick="showSection('win')"><i class="bi bi-heart-pulse-fill"></i> What I Need</button>
+      <button class="sidebar-link" data-section="bfa" onclick="showSection('bfa')"><i class="bi bi-clipboard2-check-fill"></i> Behavior Assessment</button>
     </div>
 
     <div class="sidebar-group">
@@ -67,6 +68,7 @@
       <div id="section-appointments" class="section"></div>
       <div id="section-programs" class="section"></div>
       <div id="section-program-admin" class="section"></div>
+      <div id="section-bfa" class="section"></div>
     </div>
   </div>
 </div>
@@ -84,6 +86,7 @@
 <script src="js/appointments.js"></script>
 <script src="js/programs.js"></script>
 <script src="js/program-admin.js"></script>
+<script src="js/bfa.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -115,7 +118,8 @@ const SECTION_INIT = {
   recommendation: initRecommendationSection,
   appointments: initAppointmentsSection,
   programs: initProgramsSection,
-  "program-admin": initProgramAdminSection
+  "program-admin": initProgramAdminSection,
+  bfa: initBfaSection
 };
 const initialized = {};
 

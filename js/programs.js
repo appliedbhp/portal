@@ -97,6 +97,21 @@ function showStep(stepNum) {
     try { previousResponse = JSON.parse(step.response).reflection || ""; } catch (_) {}
   }
 
+  let completedExtra = "";
+  if (isCompleted && step.response) {
+    try {
+      const saved = JSON.parse(step.response);
+      if (saved.bfa_scores_json) {
+        completedExtra = `<div style="margin-top:20px;">${renderBfaScores(saved.bfa_scores_json)}</div>`;
+      } else if (saved.reflection) {
+        completedExtra = `<div class="activity-previous-response">
+          <div class="activity-response-label">Your reflection</div>
+          <p>${escapeHtml(saved.reflection)}</p>
+        </div>`;
+      }
+    } catch (_) {}
+  }
+
   panel.innerHTML = `
     <div class="card activity-card">
       <h2 style="padding-top:0;">
@@ -104,23 +119,26 @@ function showStep(stepNum) {
       </h2>
       ${isCompleted ? `<div class="field-hint" style="margin-bottom:16px;">
         <i class="bi bi-check-lg"></i> Completed${step.completedAt ? " · " + new Date(step.completedAt).toLocaleDateString() : ""}
-      </div>` : ""}
+      </div>
+      ${completedExtra}` : `
       <div class="activity-body">${step.content || ""}</div>
-      ${!isCompleted ? `
-        <div class="activity-submit">
-          <button onclick="submitActivity(${stepNum})" id="submit-activity-btn">
-            <i class="bi bi-check-lg"></i> Mark Complete
-          </button>
-          <div id="activity-submit-status"></div>
-        </div>
-      ` : previousResponse ? `
-        <div class="activity-previous-response">
-          <div class="activity-response-label">Your reflection</div>
-          <p>${escapeHtml(previousResponse)}</p>
-        </div>
-      ` : ""}
+      <div class="activity-submit">
+        <button onclick="submitActivity(${stepNum})" id="submit-activity-btn">
+          <i class="bi bi-check-lg"></i> Mark Complete
+        </button>
+        <div id="activity-submit-status"></div>
+      </div>`}
     </div>
   `;
+
+  // Re-execute any <script> tags injected via innerHTML (they don't run automatically)
+  if (!isCompleted) {
+    panel.querySelectorAll(".activity-body script").forEach(old => {
+      const s = document.createElement("script");
+      s.textContent = old.textContent;
+      old.parentNode.replaceChild(s, old);
+    });
+  }
 }
 
 async function submitActivity(stepNum) {
@@ -130,7 +148,11 @@ async function submitActivity(stepNum) {
 
   const responseData = {};
   document.querySelectorAll(".activity-body [name]").forEach(el => {
-    responseData[el.name] = el.value;
+    if (el.type === "radio" || el.type === "checkbox") {
+      if (el.checked) responseData[el.name] = el.value;
+    } else {
+      responseData[el.name] = el.value;
+    }
   });
 
   try {

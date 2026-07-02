@@ -38,15 +38,21 @@ function renderProgramAdmin(libData, progressData) {
       const icon = iconMap[step.status] || "circle";
       let responseHtml = "";
       if (step.status === "completed" && step.response) {
-        let reflection = "";
-        try { reflection = JSON.parse(step.response).reflection || ""; } catch (_) {}
-        if (reflection) {
-          responseHtml = `
-            <div class="step-review-body" style="display:none;">
-              <div class="activity-response-label">Client reflection</div>
-              <p style="font-size:14px;margin:0;">${escapeHtml(reflection)}</p>
-            </div>`;
-        }
+        try {
+          const saved = JSON.parse(step.response);
+          if (saved.bfa_scores_json) {
+            responseHtml = `
+              <div class="step-review-body" style="display:none;">
+                ${renderBfaScores(saved.bfa_scores_json)}
+              </div>`;
+          } else if (saved.reflection) {
+            responseHtml = `
+              <div class="step-review-body" style="display:none;">
+                <div class="activity-response-label">Client reflection</div>
+                <p style="font-size:14px;margin:0;">${escapeHtml(saved.reflection)}</p>
+              </div>`;
+          }
+        } catch (_) {}
       }
       return `
         <div class="step-review-item ${step.status}">

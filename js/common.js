@@ -112,3 +112,51 @@ function updateCarouselCharts(prefix) {
     }
   });
 })();
+
+// Renders saved BFA scores (bfa_scores_json) into HTML — used by both
+// programs.js (parent completed view) and program-admin.js (provider review).
+function renderBfaScores(scoresJson) {
+  const FN_COLORS = { att: "#6366f1", esc: "#d97706", tan: "#059669", aut: "#db2777" };
+  const FN_ORDER  = ["att", "esc", "tan", "aut"];
+  const FN_LABELS = { att: "Attention", esc: "Escape", tan: "Tangible", aut: "Automatic / Sensory" };
+
+  let data;
+  try { data = typeof scoresJson === "string" ? JSON.parse(scoresJson) : scoresJson; }
+  catch (_) { return `<p style="color:var(--muted);font-size:13px;">Score data unavailable.</p>`; }
+
+  let html = `<div style="font-weight:700;font-size:14px;margin-bottom:14px;"><i class="bi bi-bar-chart-fill"></i> Function Score Summary</div>`;
+
+  Object.values(data).forEach(entry => {
+    const label  = entry.label || "Behavior";
+    const scores = entry.scores || {};
+    const sorted = FN_ORDER.map(fn => ({ fn, label: FN_LABELS[fn], score: scores[fn] || 0 }))
+                            .sort((a, b) => b.score - a.score);
+    const top = sorted[0];
+
+    html += `<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">`;
+    html += `<div style="font-weight:700;font-size:14px;margin-bottom:10px;">${escapeHtml(label)}</div>`;
+
+    sorted.forEach(item => {
+      const pct    = Math.round((item.score / 20) * 100);
+      const isTop  = item.fn === top.fn && item.score >= 8;
+      const isSig  = item.score >= 8 && item.fn !== top.fn;
+      const badge  = isTop ? ` <span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:700;">Primary</span>`
+                   : isSig ? ` <span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-weight:700;">Significant</span>` : "";
+      html += `<div style="margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:600;display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span>${escapeHtml(item.label)}${badge}</span><span>${item.score}/20</span>
+        </div>
+        <div style="background:#f0f1f5;border-radius:4px;height:20px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${FN_COLORS[item.fn]};border-radius:4px;min-width:${pct > 0 ? "22px" : "0"};display:flex;align-items:center;padding-left:6px;color:white;font-size:12px;font-weight:700;">${pct > 15 ? item.score : ""}</div>
+        </div>
+      </div>`;
+    });
+
+    if (top.score < 8) {
+      html += `<p style="font-size:12px;color:var(--muted);margin:4px 0 0;">No subscale reached the significant threshold (≥8).</p>`;
+    }
+    html += `</div>`;
+  });
+
+  return html;
+}
