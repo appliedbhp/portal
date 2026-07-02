@@ -27,6 +27,13 @@
 .bfa-p2-behavior { border:2px solid var(--border); border-radius:10px; padding:16px; margin-bottom:20px; }
 .bfa-p2-behavior-head { font-size:15px; font-weight:700; margin:0 0 4px; }
 .bfa-results { margin-top:24px; padding:16px; border:2px solid var(--border); border-radius:10px; display:none; }
+.bfa-ant-section { margin-bottom:20px; }
+.bfa-ant-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:6px; }
+.bfa-ant-item { display:flex; align-items:flex-start; gap:8px; font-size:13px; cursor:pointer; padding:6px 8px; border-radius:6px; border:1.5px solid var(--border); background:#fff; transition:border-color .15s, background .15s; }
+.bfa-ant-item:hover { border-color:var(--primary); }
+.bfa-ant-item input[type=checkbox] { width:15px; height:15px; margin-top:1px; flex-shrink:0; accent-color:var(--primary); cursor:pointer; }
+.bfa-ant-item input[type=checkbox]:checked ~ span { font-weight:600; color:var(--primary-dark); }
+.bfa-ant-item:has(input:checked) { border-color:var(--primary); background:#ede9fe22; }
 </style>
 
 <p class="bfa-intro">

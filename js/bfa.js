@@ -39,6 +39,36 @@ const BFA_QUESTIONS = [
 
 const BFA_SCALE = [["0","Never"],["1","Monthly"],["2","Weekly"],["3","Daily"],["4","Frequently"]];
 
+const BFA_ANTECEDENTS = [
+  { cat: "Time & Setting", cls: "ant-setting", icon: "bi-clock-fill", items: [
+    { code: "morning",    label: "Morning routine / getting ready" },
+    { code: "transition", label: "Transitions between activities" },
+    { code: "unstructured", label: "Unstructured / free time" },
+    { code: "community",  label: "Community settings (stores, restaurants)" },
+    { code: "school",     label: "School / homework time" },
+    { code: "bedtime",    label: "Bedtime / nighttime routine" }
+  ]},
+  { cat: "Physiological", cls: "ant-physio", icon: "bi-heart-pulse-fill", items: [
+    { code: "hunger",     label: "Hunger or thirst" },
+    { code: "fatigue",    label: "Fatigue / not enough sleep" },
+    { code: "illness",    label: "Illness or physical discomfort" },
+    { code: "sensory_ov", label: "Sensory overload (noise, lights, crowds)" }
+  ]},
+  { cat: "Social / Interpersonal", cls: "ant-social", icon: "bi-people-fill", items: [
+    { code: "demand",     label: "Demand or instruction given" },
+    { code: "denied",     label: "Preferred item / activity denied or ended" },
+    { code: "att_shift",  label: "Adult attention shifts away" },
+    { code: "peer",       label: "Peer or sibling conflict" },
+    { code: "routine_chg",label: "Change in expected routine or schedule" }
+  ]},
+  { cat: "Task / Activity", cls: "ant-task", icon: "bi-list-task", items: [
+    { code: "nonpref",    label: "Non-preferred task presented" },
+    { code: "waiting",    label: "Asked to wait" },
+    { code: "unavail",    label: "Preferred item visible but unavailable" },
+    { code: "long_task",  label: "Long or repetitive task" }
+  ]}
+];
+
 // Delegated click handler for BFA pill buttons
 document.addEventListener("click", (e) => {
   const pill = e.target.closest(".bfa-p2-behavior .pill");
@@ -49,10 +79,45 @@ document.addEventListener("click", (e) => {
   group.querySelectorAll(".pill").forEach(p => p.classList.toggle("active", p === pill));
 });
 
+function bfaBuildAntecedents(key) {
+  let html = `<div class="bfa-ant-section">
+    <div class="bfa-fn-head" style="background:#f0f4ff;color:#1e3a8a;margin-bottom:12px;">
+      <i class="bi bi-arrow-right-circle-fill"></i> Antecedent Analysis — What happens <em>before</em> this behavior?
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin:0 0 14px;">Check all that commonly occur just before or around the time this behavior happens.</p>`;
+
+  BFA_ANTECEDENTS.forEach(cat => {
+    html += `<div style="margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:var(--primary-dark);margin-bottom:8px;">
+        <i class="bi ${cat.icon}"></i> ${cat.cat}
+      </div>
+      <div class="bfa-ant-grid">`;
+    cat.items.forEach(item => {
+      const name = `ant_${key}_${item.code}`;
+      html += `<label class="bfa-ant-item">
+        <input type="checkbox" name="${name}" value="yes">
+        <span>${escapeHtml(item.label)}</span>
+      </label>`;
+    });
+    html += `</div></div>`;
+  });
+
+  html += `<div style="margin-top:8px;">
+    <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Other antecedents / notes</label>
+    <textarea name="ant_${key}_notes" placeholder="Describe any other patterns or triggers you notice…"
+      style="width:100%;font-size:13px;padding:8px;border:1.5px solid var(--border);border-radius:6px;resize:vertical;min-height:56px;box-sizing:border-box;"></textarea>
+  </div></div>`;
+  return html;
+}
+
 function bfaBuildPart2(key, label) {
   let qNum = 0;
   let html = `<div class="bfa-p2-behavior" id="bfa-p2-${key}">`;
-  html += `<div class="bfa-p2-behavior-head"><i class="bi bi-question-circle-fill"></i> ${escapeHtml(label)} — Function Assessment</div>`;
+  html += `<div class="bfa-p2-behavior-head"><i class="bi bi-question-circle-fill"></i> ${escapeHtml(label)}</div>`;
+  html += bfaBuildAntecedents(key);
+  html += `<div class="bfa-fn-head" style="background:#f9fafb;color:var(--text);border-left:3px solid var(--primary);border-radius:0 6px 6px 0;padding-left:14px;margin-top:20px;">
+    <i class="bi bi-bar-chart-fill" style="color:var(--primary);"></i> Function Assessment — What <em>maintains</em> this behavior?
+  </div>`;
   html += `<p style="font-size:13px;color:var(--muted);margin:4px 0 10px;">Answer thinking about <strong>${escapeHtml(label)}</strong> specifically.</p>`;
   html += `<div class="scale-legend no-print" style="margin-bottom:16px;">
     <strong><i class="bi bi-info-circle-fill"></i> Rating Scale</strong>
@@ -126,7 +191,18 @@ function bfaCalculate() {
       }
       fnScores[group.fn] = sum;
     });
-    scores[key] = { _label: label, scores: fnScores };
+
+    // Collect antecedents
+    const antecedents = [];
+    BFA_ANTECEDENTS.forEach(cat => {
+      cat.items.forEach(item => {
+        const cb = section.querySelector(`input[name="ant_${key}_${item.code}"]`);
+        if (cb && cb.checked) antecedents.push({ cat: cat.cat, label: item.label });
+      });
+    });
+    const antNotes = (section.querySelector(`textarea[name="ant_${key}_notes"]`) || {}).value || "";
+
+    scores[key] = { _label: label, scores: fnScores, antecedents, antNotes };
   });
 
   if (missing > 0) {
@@ -143,8 +219,28 @@ function bfaCalculate() {
       .sort((a, b) => b.score - a.score);
     const topFn = sorted[0];
 
+    const antecedents = entry.antecedents || [];
+    const antNotes    = entry.antNotes || "";
+
     html += `<div style="margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border);">`;
     html += `<div style="font-weight:700;font-size:15px;margin-bottom:12px;">${escapeHtml(label)}</div>`;
+
+    if (antecedents.length || antNotes) {
+      html += `<div style="margin-bottom:14px;padding:10px 12px;background:#f0f4ff;border-radius:8px;border-left:3px solid #6366f1;">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#3730a3;margin-bottom:6px;">
+          <i class="bi bi-arrow-right-circle-fill"></i> Identified Antecedents
+        </div>`;
+      if (antecedents.length) {
+        const byCat = {};
+        antecedents.forEach(a => { (byCat[a.cat] = byCat[a.cat] || []).push(a.label); });
+        Object.entries(byCat).forEach(([cat, items]) => {
+          html += `<div style="font-size:12px;font-weight:600;color:#1e3a8a;margin:6px 0 3px;">${escapeHtml(cat)}</div>`;
+          html += `<ul style="margin:0 0 4px;padding-left:18px;">${items.map(i => `<li style="font-size:13px;margin-bottom:2px;">${escapeHtml(i)}</li>`).join("")}</ul>`;
+        });
+      }
+      if (antNotes) html += `<p style="font-size:13px;margin:6px 0 0;font-style:italic;">${escapeHtml(antNotes)}</p>`;
+      html += `</div>`;
+    }
     sorted.forEach(item => {
       const pct   = Math.round((item.score / 20) * 100);
       const isTop = item.fn === topFn.fn && item.score >= 8;
@@ -174,7 +270,9 @@ function bfaCalculate() {
   resultsEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
   const toSave = {};
-  Object.entries(scores).forEach(([k, v]) => { toSave[k] = { label: v._label, scores: v.scores }; });
+  Object.entries(scores).forEach(([k, v]) => {
+    toSave[k] = { label: v._label, scores: v.scores, antecedents: v.antecedents || [], antNotes: v.antNotes || "" };
+  });
   const hidden = document.getElementById("bfa-scores-hidden");
   if (hidden) hidden.value = JSON.stringify(toSave);
 }

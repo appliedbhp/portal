@@ -133,8 +133,28 @@ function renderBfaScores(scoresJson) {
                             .sort((a, b) => b.score - a.score);
     const top = sorted[0];
 
+    const antecedents = entry.antecedents || [];
+    const antNotes    = entry.antNotes || "";
+
     html += `<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">`;
     html += `<div style="font-weight:700;font-size:14px;margin-bottom:10px;">${escapeHtml(label)}</div>`;
+
+    if (antecedents.length || antNotes) {
+      html += `<div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:8px;border-left:3px solid #6366f1;">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#3730a3;margin-bottom:6px;">
+          <i class="bi bi-arrow-right-circle-fill"></i> Identified Antecedents
+        </div>`;
+      if (antecedents.length) {
+        const byCat = {};
+        antecedents.forEach(a => { (byCat[a.cat] = byCat[a.cat] || []).push(a.label); });
+        Object.entries(byCat).forEach(([cat, items]) => {
+          html += `<div style="font-size:12px;font-weight:600;color:#1e3a8a;margin:6px 0 3px;">${escapeHtml(cat)}</div>`;
+          html += `<ul style="margin:0 0 4px;padding-left:18px;">${items.map(i => `<li style="font-size:13px;margin-bottom:2px;">${escapeHtml(i)}</li>`).join("")}</ul>`;
+        });
+      }
+      if (antNotes) html += `<p style="font-size:13px;margin:6px 0 0;font-style:italic;">${escapeHtml(antNotes)}</p>`;
+      html += `</div>`;
+    }
 
     sorted.forEach(item => {
       const pct    = Math.round((item.score / 20) * 100);
