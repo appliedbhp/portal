@@ -230,32 +230,71 @@ function renderBfaHistory() {
   }).join("");
 }
 
+function bfaBuildPart1() {
+  const behaviors = [
+    { key: "aggression", label: "Aggression",                      ex: "e.g. hits siblings, kicks, bites when redirected" },
+    { key: "sib",        label: "Self-injurious behavior",         ex: "e.g. head banging, hand biting, skin picking" },
+    { key: "property",   label: "Property destruction",            ex: "e.g. throws objects, breaks belongings" },
+    { key: "elopement",  label: "Elopement / running away",        ex: "e.g. bolts in parking lots, runs from classroom" },
+    { key: "school",     label: "School refusal",                  ex: "e.g. refuses to get ready, cries at drop-off" },
+    { key: "dysreg",     label: "Emotional dysregulation",         ex: "e.g. prolonged crying, screaming, floor drops" },
+    { key: "verbal",     label: "Verbal aggression / threats",     ex: "e.g. yelling, name-calling, threatening statements" },
+    { key: "noncomp",    label: "Noncompliance",                   ex: "e.g. refuses most directions, ignores requests" },
+    { key: "stim",       label: "Stereotypy / repetitive behavior",ex: "e.g. hand flapping, rocking, vocal stimming" },
+    { key: "pica",       label: "Pica",                            ex: "e.g. eats dirt, paper, clothing, non-food objects" },
+    { key: "other",      label: "Other",                           ex: "Describe the behavior and give examples" }
+  ];
+  const priOpts = `<option value="">—</option><option value="1">1 – Some</option><option value="2">2 – Significant</option><option value="3">3 – Urgent</option>`;
+  const rows = behaviors.map(b => `
+    <div class="bfa-beh-row inactive" id="brow_${b.key}">
+      <div class="bfa-beh-check">
+        <input type="checkbox" class="bfa-cb" data-key="${b.key}" data-label="${escapeAttr(b.label)}"
+          id="cb_${b.key}" name="beh_${b.key}" value="yes" onchange="bfaToggle(this)">
+        <label for="cb_${b.key}">${escapeHtml(b.label)}</label>
+      </div>
+      <div><textarea name="beh_${b.key}_ex" placeholder="${escapeAttr(b.ex)}"></textarea></div>
+      <div><select name="beh_${b.key}_pri">${priOpts}</select></div>
+    </div>`).join("");
+
+  return `
+    <p class="bfa-intro">
+      <strong>Part 1:</strong> Check each behavior that applies.
+      <strong>Part 2</strong> questions will appear below each one you check.
+      Click <em>Calculate Scores</em> when done, then save.
+    </p>
+    <div class="bfa-section-head">Part 1 — Behaviors of Concern</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">
+      Rate priority: 1 = some concern · 2 = significant · 3 = urgent / unsafe
+    </p>
+    <div class="bfa-col-heads"><span>Behavior</span><span>Describe / Examples</span><span>Priority</span></div>
+    ${rows}
+    <div class="bfa-section-head" style="margin-top:28px;">Part 2 — Function Assessment</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Check behaviors above to generate questions here.</p>
+    <div id="bfa-p2-container"></div>
+    <div style="margin-top:24px;">
+      <button type="button" onclick="bfaCalculate()">Calculate Scores</button>
+    </div>
+    <div class="bfa-results" id="bfa-results"></div>
+    <input type="hidden" name="bfa_scores_json" id="bfa-scores-hidden">`;
+}
+
 function bfaOpenForm() {
   if (bfaFormOpen) return;
   bfaFormOpen = true;
 
-  // Load the BFA HTML from the assets file and inject it
-  fetch("assets/activities/behavioral-function-assessment.html")
-    .then(r => r.text())
-    .then(html => {
-      const area = document.getElementById("bfa-form-area");
-      area.innerHTML = `
-        <div class="card" id="bfa-form-card">
-          <h2><i class="bi bi-pencil-fill"></i>New Assessment</h2>
-          <div class="activity-body">${html}</div>
-          <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;">
-            <button onclick="bfaSubmit()"><i class="bi bi-save-fill"></i> Save Assessment</button>
-            <button class="secondary" onclick="bfaCloseForm()"><i class="bi bi-x-lg"></i> Cancel</button>
-          </div>
-          <div id="bfa-submit-status" style="margin-top:10px;"></div>
-        </div>
-      `;
-      area.scrollIntoView({ behavior: "smooth", block: "start" });
-    })
-    .catch(e => {
-      setStatus("bfa-status", "Could not load assessment form: " + e.message, "error");
-      bfaFormOpen = false;
-    });
+  const area = document.getElementById("bfa-form-area");
+  area.innerHTML = `
+    <div class="card" id="bfa-form-card">
+      <h2><i class="bi bi-pencil-fill"></i>New Assessment</h2>
+      <div class="activity-body">${bfaBuildPart1()}</div>
+      <div style="margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button onclick="bfaSubmit()"><i class="bi bi-save-fill"></i> Save Assessment</button>
+        <button class="secondary" onclick="bfaCloseForm()"><i class="bi bi-x-lg"></i> Cancel</button>
+      </div>
+      <div id="bfa-submit-status" style="margin-top:10px;"></div>
+    </div>
+  `;
+  area.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 async function bfaSubmit() {
