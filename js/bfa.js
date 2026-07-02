@@ -39,21 +39,37 @@ const BFA_QUESTIONS = [
 
 const BFA_SCALE = [["0","Never"],["1","Monthly"],["2","Weekly"],["3","Daily"],["4","Frequently"]];
 
+// Delegated click handler for BFA pill buttons
+document.addEventListener("click", (e) => {
+  const pill = e.target.closest(".bfa-p2-behavior .pill");
+  if (!pill) return;
+  const group = pill.closest(".pills");
+  if (!group) return;
+  group.dataset.value = pill.dataset.val;
+  group.querySelectorAll(".pill").forEach(p => p.classList.toggle("active", p === pill));
+});
+
 function bfaBuildPart2(key, label) {
   let qNum = 0;
   let html = `<div class="bfa-p2-behavior" id="bfa-p2-${key}">`;
   html += `<div class="bfa-p2-behavior-head"><i class="bi bi-question-circle-fill"></i> ${escapeHtml(label)} — Function Assessment</div>`;
-  html += `<p style="font-size:13px;color:var(--muted);margin:4px 0 16px;">Answer thinking about <strong>${escapeHtml(label)}</strong> specifically. &nbsp; 0 = Never · 1 = Monthly · 2 = Weekly · 3 = Daily · 4 = Frequently</p>`;
+  html += `<p style="font-size:13px;color:var(--muted);margin:4px 0 10px;">Answer thinking about <strong>${escapeHtml(label)}</strong> specifically.</p>`;
+  html += `<div class="scale-legend no-print" style="margin-bottom:16px;">
+    <strong><i class="bi bi-info-circle-fill"></i> Rating Scale</strong>
+    <div class="scale-legend-row">
+      ${BFA_SCALE.map(([v, l]) => `<span class="scale-chip"><b>${v}</b> ${l}</span>`).join("")}
+    </div>
+  </div>`;
   BFA_QUESTIONS.forEach(group => {
     html += `<div class="bfa-fn-head ${group.cls}">${group.label}</div>`;
     group.items.forEach((q, i) => {
       qNum++;
-      const name = `${key}_${group.fn}_${i + 1}`;
-      html += `<div class="bfa-item"><div class="bfa-item-q">${qNum}. ${escapeHtml(q)}</div><div class="bfa-likert">`;
-      BFA_SCALE.forEach(([val, lbl]) => {
-        html += `<label><input type="radio" name="${name}" value="${val}"><span class="bfa-btn">${val}<br>${lbl}</span></label>`;
-      });
-      html += `</div></div>`;
+      html += `<div class="bfa-item">
+        <div class="bfa-item-q">${qNum}. ${escapeHtml(q)}</div>
+        <div class="pills" data-bfa-key="${key}" data-bfa-fn="${group.fn}" data-bfa-item="${i + 1}" data-value="">
+          ${BFA_SCALE.map(([val, lbl]) => `<button type="button" class="pill" data-val="${val}" title="${lbl}">${val}</button>`).join("")}
+        </div>
+      </div>`;
     });
   });
   html += `</div>`;
@@ -103,9 +119,10 @@ function bfaCalculate() {
     BFA_QUESTIONS.forEach(group => {
       let sum = 0;
       for (let i = 1; i <= 5; i++) {
-        const el = section.querySelector(`input[name="${key}_${group.fn}_${i}"]:checked`);
-        if (!el) { missing++; return; }
-        sum += parseInt(el.value);
+        const pillGroup = section.querySelector(`.pills[data-bfa-fn="${group.fn}"][data-bfa-item="${i}"]`);
+        const val = pillGroup ? pillGroup.dataset.value : "";
+        if (val === "") { missing++; return; }
+        sum += parseInt(val);
       }
       fnScores[group.fn] = sum;
     });
@@ -300,9 +317,9 @@ function bfaOpenForm() {
 async function bfaSubmit() {
   const responseData = {};
   document.querySelectorAll("#bfa-form-card .activity-body [name]").forEach(el => {
-    if (el.type === "radio" || el.type === "checkbox") {
+    if (el.type === "checkbox") {
       if (el.checked) responseData[el.name] = el.value;
-    } else {
+    } else if (el.type !== "radio") {
       responseData[el.name] = el.value;
     }
   });
