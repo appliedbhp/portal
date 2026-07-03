@@ -3,7 +3,20 @@
 
 let progGoals      = [];
 let progAllEntries = [];
-let progSelected   = ""; // objText of the currently viewed goal
+let progSelected   = ""; // goalKey of the currently viewed goal
+
+// Build the canonical display/key string from goal parts.
+// Format: "GOAL_NUM.OBJ_NUM GOAL_DOMAIN | OBJECTIVE"
+// Falls back gracefully if any part is missing.
+function progGoalKey(g) {
+  const num    = (g.goalNum != null && g.goalNum !== "") ? String(g.goalNum) : "";
+  const obj    = (g.objNum  != null && g.objNum  !== "") ? String(g.objNum)  : "";
+  const domain = (g.goalDomain || "").trim();
+  const text   = (g.objective  || "").trim();
+  const prefix = (num && obj) ? num + "." + obj + " " : "";
+  const domPart = domain ? domain + " | " : "";
+  return (prefix + domPart + text).trim();
+}
 
 const PROG_NUM_COLS = 5;
 
@@ -67,9 +80,10 @@ async function loadProgressObjectiveOptions() {
   const select = document.getElementById("prog-objText");
   try {
     const { goals } = await apiCall("getPlan", {});
-    progGoals = goals;
-    select.innerHTML = goals.length
-      ? goals.map(g => `<option value="${escapeHtml(g.objText)}">${escapeHtml(g.objective)}</option>`).join("")
+    // Attach computed key to each goal so all comparisons use the same string
+    progGoals = goals.map(g => Object.assign({}, g, { _key: progGoalKey(g) }));
+    select.innerHTML = progGoals.length
+      ? progGoals.map(g => `<option value="${escapeHtml(g._key)}">${escapeHtml(g._key)}</option>`).join("")
       : `<option value="">No goals on file — add one in Goals &amp; Plan first</option>`;
     progSyncMeasure();
     progRenderDateCols();
@@ -80,8 +94,8 @@ async function loadProgressObjectiveOptions() {
 }
 
 function progSyncMeasure() {
-  const objText = document.getElementById("prog-objText").value;
-  const goal = progGoals.find(g => g.objText === objText);
+  const key  = document.getElementById("prog-objText").value;
+  const goal = progGoals.find(g => g._key === key);
   const measure = goal ? (goal.measure || "") : "";
   const lbl = document.getElementById("prog-measure-label");
   if (lbl) lbl.textContent = measure || "(none)";
@@ -118,8 +132,8 @@ async function loadProgress() {
     progAllEntries = progress;
     // Auto-select first goal that has data, or first goal overall
     if (!progSelected) {
-      const withData = progGoals.find(g => progress.some(p => p.objText === g.objText));
-      progSelected = (withData || progGoals[0] || {}).objText || "";
+      const withData = progGoals.find(g => progress.some(p => p.objText === g._key));
+      progSelected = (withData || progGoals[0] || {})._key || "";
     }
     renderGoalView();
   } catch (e) {
@@ -132,22 +146,25 @@ function renderGoalPicker() {
   const el = document.getElementById("prog-goal-picker");
   if (!el || progGoals.length === 0) return;
 
-  const buttons = progGoals.map(g => {
-    const active = g.objText === progSelected;
-    const hasData = progAllEntries.some(p => p.objText === g.objText);
+  const buttons = progGoals.map((g, idx) => {
+    const active   = g._key === progSelected;
+    const hasData  = progAllEntries.some(p => p.objText === g._key);
     return `<button
       class="${active ? "" : "secondary"}"
-      onclick="progSelectGoal(${JSON.stringify(escapeHtml(g.objText))})"
+      data-goal-idx="${idx}"
+      onclick="progSelectGoal(this.dataset.goalIdx)"
       style="font-size:12px;padding:6px 12px;${!hasData ? "opacity:0.55;" : ""}">
-      ${escapeHtml(g.objective || g.objText)}
+      ${escapeHtml(g._key)}
     </button>`;
   }).join("");
 
   el.innerHTML = `<div class="btn-row" style="flex-wrap:wrap;gap:6px;">${buttons}</div>`;
 }
 
-function progSelectGoal(objText) {
-  progSelected = objText;
+function progSelectGoal(idxStr) {
+  const g = progGoals[parseInt(idxStr)];
+  if (!g) return;
+  progSelected = g._key;
   renderGoalPicker();
   renderGoalView();
 }
@@ -155,7 +172,7 @@ function progSelectGoal(objText) {
 function renderGoalView() {
   renderGoalPicker();
 
-  const goal    = progGoals.find(g => g.objText === progSelected);
+  const goal    = progGoals.find(g => g._key === progSelected);
   const measure = goal ? (goal.measure || "Score") : "Score";
   const entries = progAllEntries.filter(p => p.objText === progSelected);
 
@@ -223,13 +240,14 @@ function renderGoalView() {
 }
 
 async function addProgressBatch() {
-  const objText = document.getElementById("prog-objText").value;
-  if (!objText) {
+  const key  = document.getElementById("prog-objText").value;
+  if (!key) {
     setStatus("prog-status", "Please select an objective.", "error");
     return;
   }
-  const goal    = progGoals.find(g => g.objText === objText);
+  const goal    = progGoals.find(g => g._key === key);
   const measure = goal ? (goal.measure || "") : "";
+  const objText = key; // store the formatted key as OBJ_TEXT in data_prog
 
   const entries = [];
   for (let i = 0; i < PROG_NUM_COLS; i++) {
@@ -254,7 +272,7 @@ async function addProgressBatch() {
       const inp = document.getElementById("prog-score-" + i);
       if (inp) inp.value = "";
     }
-    progSelected = objText;
+    progSelected = key;
     await loadProgress();
   } catch (e) {
     setStatus("prog-status", "Error: " + e.message, "error");
