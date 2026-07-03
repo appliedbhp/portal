@@ -2,6 +2,92 @@
 // Tracks the activated session plan: shows each session, allows logging notes
 // using generic templates per session type.
 
+// ── US Federal Holiday projection ──────────────────────────────────────────
+
+function _cpNthWeekday(year, month, weekday, n) {
+  let d = new Date(year, month, 1), count = 0;
+  while (d.getMonth() === month) {
+    if (d.getDay() === weekday && ++count === n) return new Date(d);
+    d.setDate(d.getDate() + 1);
+  }
+  return null;
+}
+function _cpLastWeekday(year, month, weekday) {
+  let d = new Date(year, month + 1, 0);
+  while (d.getDay() !== weekday) d.setDate(d.getDate() - 1);
+  return new Date(d);
+}
+function _cpObserved(d) {
+  const day = d.getDay();
+  if (day === 6) return new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
+  if (day === 0) return new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1);
+  return new Date(d);
+}
+function cpFederalHolidays(year) {
+  return [
+    { date: _cpObserved(new Date(year, 0,  1)),  name: "New Year's Day" },
+    { date: _cpNthWeekday(year, 0, 1, 3),        name: "MLK Jr. Day" },
+    { date: _cpNthWeekday(year, 1, 1, 3),        name: "Presidents' Day" },
+    { date: _cpLastWeekday(year, 4, 1),           name: "Memorial Day" },
+    { date: _cpObserved(new Date(year, 5, 19)),  name: "Juneteenth" },
+    { date: _cpObserved(new Date(year, 6,  4)),  name: "Independence Day" },
+    { date: _cpNthWeekday(year, 8, 1, 1),        name: "Labor Day" },
+    { date: _cpNthWeekday(year, 9, 1, 2),        name: "Columbus Day" },
+    { date: _cpObserved(new Date(year, 10, 11)), name: "Veterans Day" },
+    { date: _cpNthWeekday(year, 10, 4, 4),       name: "Thanksgiving Day" },
+    { date: _cpObserved(new Date(year, 11, 25)), name: "Christmas Day" },
+  ].filter(h => h.date !== null);
+}
+
+// Returns [{weekStart, weekEnd, holidays[], projectedLabel, status}] per week.
+// status: "completed" | "current" | "upcoming" | "overdue" | "holiday-delay"
+function cpProjectWeeks(startDateStr, numWeeks, noteMap) {
+  if (!startDateStr) return Array.from({ length: numWeeks }, () => ({ projectedLabel: "—", holidays: [], status: "upcoming" }));
+  const start = new Date(startDateStr + "T00:00:00");
+  if (isNaN(start)) return Array.from({ length: numWeeks }, () => ({ projectedLabel: "—", holidays: [], status: "upcoming" }));
+
+  const endYear = new Date(start.getTime() + numWeeks * 7 * 86400000).getFullYear();
+  const allHolidays = [];
+  for (let y = start.getFullYear(); y <= endYear; y++) allHolidays.push(...cpFederalHolidays(y));
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const fmt = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+
+  // Accumulate offset days from holidays in prior weeks
+  let extraDays = 0;
+  return Array.from({ length: numWeeks }, (_, i) => {
+    const ws = new Date(start.getTime() + (i * 7 + extraDays) * 86400000);
+    const we = new Date(ws.getTime() + 6 * 86400000);
+    const weekHols = allHolidays.filter(h => h.date >= ws && h.date <= we);
+    if (weekHols.length) extraDays += 7; // push subsequent weeks by a week per holiday week
+
+    const projectedLabel = fmt(ws) + " – " + fmt(we);
+
+    // Determine status
+    const sessNumsThisWeek = Object.keys(noteMap)
+      .filter(sn => noteMap[sn])
+      .map(Number);
+    // We check if any session assigned to this week index is logged
+    const weekIndex = i + 1;
+    const noteLogged = noteMap[weekIndex] !== undefined;
+
+    let status;
+    if (noteLogged) {
+      status = "completed";
+    } else if (weekHols.length) {
+      status = "holiday-delay";
+    } else if (today > we) {
+      status = "overdue";
+    } else if (today >= ws && today <= we) {
+      status = "current";
+    } else {
+      status = "upcoming";
+    }
+
+    return { weekStart: ws, weekEnd: we, holidays: weekHols, projectedLabel, status };
+  });
+}
+
 const NOTE_TEMPLATES = {
   "parent-only": [
     { key: "check_in",     label: "Parent Check-In",          placeholder: "How has the week gone? What's working, what isn't?" },
@@ -92,17 +178,43 @@ function renderClientProgram(root, program, notes, goals) {
     <div id="note-modal-area"></div>`;
 
   const weeksEl = root.querySelector("#program-weeks");
-  (sp.weeks || []).forEach(wk => {
+  const projections = cpProjectWeeks(program.startDate, (sp.weeks || []).length, noteMap);
+  const STATUS_STYLE = {
+    completed:     "background:#d1fae5;color:#065f46;",
+    current:       "background:#dbeafe;color:#1e40af;",
+    overdue:       "background:#fee2e2;color:#991b1b;",
+    "holiday-delay": "background:#fef3c7;color:#92400e;",
+    upcoming:      "background:#f3f4f6;color:#374151;"
+  };
+  const STATUS_LABEL = {
+    completed: "Complete", current: "In Progress", overdue: "Overdue",
+    "holiday-delay": "Holiday Week", upcoming: "Upcoming"
+  };
+
+  (sp.weeks || []).forEach((wk, wi) => {
+    const proj = projections[wi] || {};
     const wkCard = document.createElement("div");
     wkCard.className = "card";
     wkCard.style.marginBottom = "12px";
 
     const allDone = (wk.sessions || []).every(s => noteMap[s.session_num]);
+    const statusStyle = STATUS_STYLE[proj.status] || STATUS_STYLE.upcoming;
+    const statusLabel = STATUS_LABEL[proj.status] || "";
+    const holHtml = (proj.holidays || []).map(h =>
+      `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:8px;margin-left:6px;">
+        <i class="bi bi-calendar-x-fill"></i> ${escapeHtml(h.name)}
+      </span>`
+    ).join("");
+
     wkCard.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:6px;">
         <div>
           <span style="font-weight:700;font-size:15px;">Week ${wk.week} — ${escapeHtml(wk.phase || "")}</span>
-          ${allDone ? `<span style="margin-left:8px;font-size:11px;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:10px;font-weight:700;">Complete</span>` : ""}
+          <span style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;${statusStyle}">${statusLabel}</span>
+          ${holHtml}
+        </div>
+        <div style="font-size:12px;color:var(--muted);text-align:right;">
+          <i class="bi bi-calendar3"></i> ${escapeHtml(proj.projectedLabel || "—")}
         </div>
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;">
