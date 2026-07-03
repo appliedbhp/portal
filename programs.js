@@ -100,7 +100,15 @@ function renderClientProgramPanel(program, notes, goals) {
         </div>`).join("")}
     </div>` : "";
 
-  const weeksHtml = (sp.weeks || []).map(wk => {
+  const projections = cpProjectWeeks(program.startDate, (sp.weeks || []).length, noteMap);
+  const PSTYLE = { completed:"background:#d1fae5;color:#065f46;", current:"background:#dbeafe;color:#1e40af;", overdue:"background:#fee2e2;color:#991b1b;", "holiday-delay":"background:#fef3c7;color:#92400e;", upcoming:"background:#f3f4f6;color:#374151;" };
+  const PLABEL = { completed:"Complete", current:"In Progress", overdue:"Overdue", "holiday-delay":"Holiday Week", upcoming:"Upcoming" };
+
+  const weeksHtml = (sp.weeks || []).map((wk, wi) => {
+    const proj = projections[wi] || {};
+    const holHtml = (proj.holidays || []).map(h =>
+      `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:8px;margin-left:6px;"><i class="bi bi-calendar-x-fill"></i> ${escapeHtml(h.name)}</span>`
+    ).join("");
     const sessHtml = (wk.sessions || []).map(sess => {
       const done  = !!noteMap[sess.session_num];
       const color = TYPE_COLOR[sess.type] || "#6b7280";
@@ -126,7 +134,14 @@ function renderClientProgramPanel(program, notes, goals) {
 
     return `
       <div class="card" style="margin-bottom:12px;">
-        <div style="font-weight:700;font-size:15px;margin-bottom:12px;">Week ${wk.week} — ${escapeHtml(wk.phase || "")}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+          <div>
+            <span style="font-weight:700;font-size:15px;">Week ${wk.week} — ${escapeHtml(wk.phase || "")}</span>
+            <span style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;${PSTYLE[proj.status]||PSTYLE.upcoming}">${PLABEL[proj.status]||""}</span>
+            ${holHtml}
+          </div>
+          <div style="font-size:12px;color:var(--muted);"><i class="bi bi-calendar3"></i> ${escapeHtml(proj.projectedLabel || "—")}</div>
+        </div>
         ${sessHtml}
       </div>`;
   }).join("");
