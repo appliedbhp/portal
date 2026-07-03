@@ -29,9 +29,9 @@
 
     <div class="sidebar-group">
       <div class="sidebar-group-title">Assessments</div>
-      <button class="sidebar-link" data-section="roadmap" onclick="showSection('roadmap')"><i class="bi bi-signpost-split-fill"></i> Roadmap</button>
-      <button class="sidebar-link" data-section="win" onclick="showSection('win')"><i class="bi bi-heart-pulse-fill"></i> What I Need</button>
-      <button class="sidebar-link" data-section="bfa" onclick="showSection('bfa')"><i class="bi bi-clipboard2-check-fill"></i> Behavior Assessment</button>
+      <button class="sidebar-link" data-section="roadmap" onclick="showSection('roadmap')" id="roadmapNavBtn"><i class="bi bi-signpost-split-fill"></i> Roadmap</button>
+      <button class="sidebar-link" data-section="win" onclick="showSection('win')" id="winNavBtn"><i class="bi bi-heart-pulse-fill"></i> What I Need</button>
+      <button class="sidebar-link" data-section="bfa" onclick="showSection('bfa')" id="bfaNavBtn"><i class="bi bi-clipboard2-check-fill"></i> Behavior Assessment</button>
     </div>
 
     <div class="sidebar-group">
@@ -46,6 +46,8 @@
       <div class="sidebar-group-title">Insights</div>
       <button class="sidebar-link" data-section="recommendation" onclick="showSection('recommendation')" id="recNavBtn"><i class="bi bi-stars"></i> Package Rec</button>
       <button class="sidebar-link" data-section="reports" onclick="showSection('reports')" id="reportsNavBtn"><i class="bi bi-file-earmark-medical-fill"></i> Assessment Report</button>
+      <button class="sidebar-link" data-section="progress-report" onclick="showSection('progress-report')" id="progressReportNavBtn"><i class="bi bi-graph-up-arrow"></i> Progress Report</button>
+      <button class="sidebar-link" data-section="client-program" onclick="showSection('client-program')" id="clientProgramNavBtn"><i class="bi bi-calendar2-week-fill"></i> Client Program</button>
       <button class="sidebar-link" data-section="program-admin" onclick="showSection('program-admin')" id="programAdminNavBtn"><i class="bi bi-collection-play-fill"></i> Programs</button>
       <button class="sidebar-link" data-section="appointments" onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i> Appointments</button>
     </div>
@@ -71,6 +73,8 @@
       <div id="section-program-admin" class="section"></div>
       <div id="section-bfa" class="section"></div>
       <div id="section-reports" class="section"></div>
+      <div id="section-progress-report" class="section"></div>
+      <div id="section-client-program" class="section"></div>
     </div>
   </div>
 </div>
@@ -90,6 +94,8 @@
 <script src="js/program-admin.js"></script>
 <script src="js/bfa.js"></script>
 <script src="js/reports.js"></script>
+<script src="js/progress-report.js"></script>
+<script src="js/client-program.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -97,10 +103,18 @@ if (isProvider() && !getClientId()) {
 }
 document.getElementById("whoami").textContent = `${getClientId()} — ${getAssessorName()} (${getRole()})`;
 if (isProvider()) document.getElementById("switchClientBtn").style.display = "inline-block";
-if (getRole() !== "provider") document.getElementById("recNavBtn").style.display = "none";
-if (getRole() !== "provider") document.getElementById("reportsNavBtn").style.display = "none";
-if (getRole() !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
-if (getRole() === "provider") document.getElementById("programsNavBtn").style.display = "none";
+const _role = getRole();
+if (_role !== "provider") document.getElementById("recNavBtn").style.display = "none";
+if (_role !== "provider") document.getElementById("reportsNavBtn").style.display = "none";
+if (_role !== "provider") document.getElementById("progressReportNavBtn").style.display = "none";
+if (_role !== "provider") document.getElementById("clientProgramNavBtn").style.display = "none";
+if (_role !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
+if (_role === "provider") document.getElementById("programsNavBtn").style.display = "none";
+if (_role === "adult") {
+  document.getElementById("roadmapNavBtn").style.display = "none";
+  document.getElementById("winNavBtn").style.display = "none";
+  document.getElementById("bfaNavBtn").style.display = "none";
+}
 
 function switchClient() {
   setProviderClient("");
@@ -124,7 +138,9 @@ const SECTION_INIT = {
   programs: initProgramsSection,
   "program-admin": initProgramAdminSection,
   bfa: initBfaSection,
-  reports: initReportsSection
+  reports: initReportsSection,
+  "progress-report": initProgressReportSection,
+  "client-program": initClientProgramSection
 };
 const initialized = {};
 
@@ -139,6 +155,7 @@ function showSection(name) {
 }
 
 showSection("home");
+if (_role === "provider") checkProgressReportDue();
 </script>
 </body>
 </html>
