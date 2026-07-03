@@ -74,13 +74,18 @@ function renderClientProgram(root, program, notes) {
 
   root.innerHTML = `
     <div class="card">
-      <h1><i class="bi bi-calendar2-week-fill"></i>Client Program</h1>
-      <div class="stat-row" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <h1 style="margin:0;"><i class="bi bi-calendar2-week-fill"></i> Client Program</h1>
+        <button class="secondary no-print" onclick="printClientProgram()" style="flex-shrink:0;">
+          <i class="bi bi-printer-fill"></i> Print / Save PDF
+        </button>
+      </div>
+      <div class="stat-row" style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;">
         ${statCard("calendar-check-fill", "Model", escapeHtml(sp.model || "—"))}
         ${statCard("list-ol", "Sessions", completedCount + " / " + totalSessions + " logged")}
         ${statCard("calendar-event", "Started", escapeHtml(program.startDate || "Not set"))}
       </div>
-      ${sp.model_rationale ? `<p style="font-size:13px;color:var(--muted);margin:0 0 16px;font-style:italic;">${escapeHtml(sp.model_rationale)}</p>` : ""}
+      ${sp.model_rationale ? `<p style="font-size:13px;color:var(--muted);margin:0;font-style:italic;">${escapeHtml(sp.model_rationale)}</p>` : ""}
     </div>
     <div id="program-weeks"></div>
     <div id="note-modal-area"></div>`;
@@ -125,7 +130,8 @@ function renderClientProgram(root, program, notes) {
                       style="margin-left:8px;padding:2px 8px;font-size:11px;">View</button>
                   </div>` : ""}
               </div>
-              <button onclick="openNoteModal(${sess.session_num}, '${sess.type}', ${JSON.stringify(escapeHtml(sess.title || ""))})"
+              <button data-snum="${sess.session_num}" data-stype="${escapeHtml(sess.type)}" data-stitle="${escapeHtml(sess.title || "")}"
+                onclick="openNoteModal(+this.dataset.snum, this.dataset.stype, this.dataset.stitle)"
                 style="margin-left:12px;flex-shrink:0;padding:6px 12px;font-size:12px;
                        ${done ? "opacity:.7;" : ""}">
                 <i class="bi bi-${done ? "pencil" : "plus-lg"}"></i> ${done ? "Edit" : "Log Note"}
@@ -171,7 +177,8 @@ function openNoteModal(sessionNum, sessionType, sessionTitle) {
           <div id="note-save-status" style="margin-bottom:12px;"></div>
           <div style="display:flex;gap:10px;justify-content:flex-end;">
             <button class="secondary" onclick="closeNoteModal()">Cancel</button>
-            <button onclick="saveNoteModal(${sessionNum}, '${sessionType}', ${JSON.stringify(escapeHtml(sessionTitle))})">
+            <button data-snum="${sessionNum}" data-stype="${escapeHtml(String(sessionType))}" data-stitle="${escapeHtml(String(sessionTitle))}"
+              onclick="saveNoteModal(+this.dataset.snum, this.dataset.stype, this.dataset.stitle)">
               <i class="bi bi-check-lg"></i> Save Note
             </button>
           </div>
@@ -212,6 +219,9 @@ async function saveNoteModal(sessionNum, sessionType, sessionTitle) {
 function viewSessionNote(sessionNum) {
   const note = (window._programNotes || {})[sessionNum];
   if (!note) return;
-  const template = noteTemplateFor(note.sessionType);
   openNoteModal(sessionNum, note.sessionType, note.title);
+}
+
+function printClientProgram() {
+  window.print();
 }
