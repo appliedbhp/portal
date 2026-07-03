@@ -331,10 +331,22 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
   .no-print { display: none !important; }
   body { background: #fff; }
   .page { max-width: 100%; padding: 0; }
-  .card { box-shadow: none; border: none; padding: 0; }
+  .card { box-shadow: none; border: 1px solid #ddd; padding: 12px; margin-bottom: 10px; }
   .scale-legend { position: static; box-shadow: none; }
   .stat-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px; }
   .stat-card { background: #f7f8fc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 8px 10px; }
   .chart-wrap { height: 280px; }
   .chart-wrap.wide { height: 260px; }
+  /* Client program print layout */
+  .app-shell { display: block !important; }
+  .main-content { margin: 0 !important; padding: 0 !important; }
+  .section { display: block !important; }
+  .section:not(.active) { display: none !important; }
+  #program-weeks .card { break-inside: avoid; page-break-inside: avoid; }
+  #program-weeks [style*="border-radius:8px"] {
+    border: 1px solid #ddd !important;
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
