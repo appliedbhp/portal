@@ -313,15 +313,25 @@ function sessRenderCalendar() {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const todayKey = todayLocalKey_();
 
+  // Index client program notes by date
+  const clientNotesByDay = {};
+  sessProgramNotes.forEach(n => {
+    const key = (n.recordedAt || "").slice(0, 10);
+    if (!key) return;
+    if (!clientNotesByDay[key]) clientNotesByDay[key] = [];
+    clientNotesByDay[key].push(n);
+  });
+
   let cells = "";
   for (let i = 0; i < startWeekday; i++) cells += `<div class="cal-cell empty"></div>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
     const count = (byDay[key] || []).length;
     const progItems = sessProgByDay[key] || [];
+    const clientNotes = clientNotesByDay[key] || [];
     const classes = ["cal-cell"];
     if (count > 0) classes.push("has-sessions");
-    if (progItems.length > 0) classes.push("has-prog");
+    if (progItems.length > 0 || clientNotes.length > 0) classes.push("has-prog");
     if (key === todayKey) classes.push("today");
     if (key === sessSelectedDay) classes.push("selected");
     const progBadges = progItems.map(p =>
@@ -329,11 +339,17 @@ function sessRenderCalendar() {
         <i class="bi bi-play-circle-fill"></i>
       </span>`
     ).join("");
-    cells += `<div class="${classes.join(" ")}" ${count > 0 || progItems.length > 0 ? `onclick="sessSelectDay('${key}')"` : ""}>
+    const clientBadges = clientNotes.map(n =>
+      `<span class="cal-badge" style="background:#dbeafe;color:#1e40af;" data-tooltip="${escapeHtml("Session " + n.sessionNum + ": " + (n.title || ""))}">
+        <i class="bi bi-calendar2-week-fill"></i>
+      </span>`
+    ).join("");
+    cells += `<div class="${classes.join(" ")}" ${count > 0 || progItems.length > 0 || clientNotes.length > 0 ? `onclick="sessSelectDay('${key}')"` : ""}>
       <div class="cal-day-num">${d}</div>
       <div class="cal-badges">
         ${count > 0 ? `<span class="cal-badge sess-badge">${count}</span>` : ""}
         ${progBadges}
+        ${clientBadges}
       </div>
     </div>`;
   }
