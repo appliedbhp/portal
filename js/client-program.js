@@ -43,17 +43,18 @@ function initClientProgramSection(root) {
 
 async function loadClientProgram(root) {
   try {
-    const [{ program }, { notes }] = await Promise.all([
+    const [{ program }, { notes }, goalsRes] = await Promise.all([
       apiCall("getClientProgram", {}),
-      apiCall("getSessionNotes", {})
+      apiCall("getSessionNotes", {}),
+      apiCall("getPlan", {}).catch(() => ({ goals: [] }))
     ]);
-    renderClientProgram(root, program, notes || []);
+    renderClientProgram(root, program, notes || [], goalsRes.goals || []);
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Could not load program: ${escapeHtml(e.message)}</span></div></div>`;
   }
 }
 
-function renderClientProgram(root, program, notes) {
+function renderClientProgram(root, program, notes, goals) {
   if (!program || !program.sessionPlan) {
     root.innerHTML = `
       <div class="card">
@@ -116,19 +117,30 @@ function renderClientProgram(root, program, notes) {
                         border:1.5px solid ${done ? "#bbf7d0" : "var(--border)"};
                         background:${done ? "#f0fdf4" : "var(--surface)"};">
               <div style="flex:1;min-width:0;">
-                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
                   <span style="font-size:11px;font-weight:700;background:${color}22;color:${color};
                                padding:2px 8px;border-radius:10px;">${escapeHtml(TYPE_MAP[sess.type] || sess.type)}</span>
                   <span style="font-size:13px;font-weight:600;">Session ${sess.session_num}: ${escapeHtml(sess.title || "")}</span>
                   ${done ? `<i class="bi bi-check-circle-fill" style="color:#059669;font-size:14px;"></i>` : ""}
                 </div>
-                ${sess.focus ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHtml(sess.focus)}</div>` : ""}
-                ${done && noteMap[sess.session_num] ? `
-                  <div style="font-size:11px;color:var(--muted);margin-top:4px;">
-                    <i class="bi bi-pencil-fill"></i> Note logged ${escapeHtml(noteMap[sess.session_num].recordedAt.slice(0,10))}
-                    <button class="secondary" onclick="viewSessionNote(${sess.session_num})"
-                      style="margin-left:8px;padding:2px 8px;font-size:11px;">View</button>
-                  </div>` : ""}
+                ${sess.description ? `<div style="font-size:12px;color:var(--text);margin:4px 0 2px;line-height:1.5;">${escapeHtml(sess.description)}</div>` : ""}
+                ${sess.focus ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;font-style:italic;">${escapeHtml(sess.focus)}</div>` : ""}
+                ${done && noteMap[sess.session_num] ? (() => {
+                  const n = noteMap[sess.session_num];
+                  const goalList = (n.fields && n.fields._goals_addressed) || [];
+                  return `<div style="margin-top:8px;">
+                    ${goalList.length ? `<div style="font-size:11px;margin-bottom:4px;">
+                      ${goalList.map(g => `<span style="display:inline-block;background:#dbeafe;color:#1e40af;
+                        font-size:11px;font-weight:600;padding:1px 7px;border-radius:8px;margin:2px 3px 2px 0;">
+                        <i class="bi bi-check2"></i> ${escapeHtml(g)}</span>`).join("")}
+                    </div>` : ""}
+                    <div style="font-size:11px;color:var(--muted);">
+                      <i class="bi bi-pencil-fill"></i> Note logged ${escapeHtml(n.recordedAt.slice(0,10))}
+                      <button class="secondary" onclick="viewSessionNote(${sess.session_num})"
+                        style="margin-left:8px;padding:2px 8px;font-size:11px;">View / Edit</button>
+                    </div>
+                  </div>`;
+                })() : ""}
               </div>
               <button data-snum="${sess.session_num}" data-stype="${escapeHtml(sess.type)}" data-stitle="${escapeHtml(sess.title || "")}"
                 onclick="openNoteModal(+this.dataset.snum, this.dataset.stype, this.dataset.stitle)"
@@ -142,17 +154,31 @@ function renderClientProgram(root, program, notes) {
     weeksEl.appendChild(wkCard);
   });
 
-  // Store notes on window for modal access
+  // Store notes/goals on window for modal access
   window._programNotes   = noteMap;
   window._programId      = program.programId;
   window._programRoot    = root;
   window._programSp      = sp;
+  window._programGoals   = goals;
 }
 
 function openNoteModal(sessionNum, sessionType, sessionTitle) {
   const template = noteTemplateFor(sessionType);
   const existing = (window._programNotes || {})[sessionNum] || null;
-  const existFields = existing ? existing.fields : {};
+  const existFields = existing ? (existing.fields || {}) : {};
+  const checkedGoals = existing ? (existFields._goals_addressed || []) : [];
+  const goals = window._programGoals || [];
+
+  const goalsHtml = goals.length ? `
+    <div style="margin-bottom:20px;padding:14px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;"><i class="bi bi-flag-fill" style="color:var(--primary);margin-right:6px;"></i>Goals Addressed This Session</div>
+      ${goals.map((g, i) => `
+        <div class="checkbox-row" style="margin-bottom:7px;align-items:flex-start;">
+          <input type="checkbox" id="nm-goal-${i}" value="${escapeAttr(g.objective)}"
+            ${checkedGoals.includes(g.objective) ? "checked" : ""}>
+          <label for="nm-goal-${i}" style="font-size:13px;line-height:1.4;">${escapeHtml(g.objective)}</label>
+        </div>`).join("")}
+    </div>` : "";
 
   const modalArea = document.getElementById("note-modal-area");
   modalArea.innerHTML = `
@@ -166,6 +192,7 @@ function openNoteModal(sessionNum, sessionType, sessionTitle) {
           <button class="secondary icon-btn" onclick="closeNoteModal()"><i class="bi bi-x-lg"></i></button>
         </div>
         <div style="padding:20px 24px;">
+          ${goalsHtml}
           ${template.map(f => `
             <div style="margin-bottom:16px;">
               <label style="font-size:13px;font-weight:700;display:block;margin-bottom:5px;">${escapeHtml(f.label)}</label>
@@ -199,6 +226,9 @@ async function saveNoteModal(sessionNum, sessionType, sessionTitle) {
     const el = document.getElementById("note-field-" + f.key);
     if (el) fields[f.key] = el.value.trim();
   });
+  // Collect checked goals
+  const checkedGoals = Array.from(document.querySelectorAll('[id^="nm-goal-"]:checked')).map(cb => cb.value);
+  if (checkedGoals.length) fields._goals_addressed = checkedGoals;
 
   setStatus("note-save-status", "Saving…", "loading");
   try {

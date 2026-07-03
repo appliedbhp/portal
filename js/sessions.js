@@ -5,6 +5,7 @@
 let sessSessions = [];
 let sessNoteTemplates = [];
 let sessGoals = [];
+let sessProgramNotes = []; // from client program (data_session_notes)
 let sessView = "list"; // "list" | "calendar"
 let sessCalDate = new Date(); // current month being viewed in calendar mode
 let sessSelectedDay = null; // "YYYY-MM-DD" of the day expanded in calendar mode
@@ -118,11 +119,13 @@ function sessSwitchView(view) {
 
 async function loadSessions() {
   try {
-    const [{ sessions }, progData] = await Promise.all([
+    const [{ sessions }, progData, notesRes] = await Promise.all([
       apiCall("getSessions", {}),
-      apiCall("getMyProgram", {}).catch(() => ({ assignment: null, steps: [] }))
+      apiCall("getMyProgram", {}).catch(() => ({ assignment: null, steps: [] })),
+      apiCall("getSessionNotes", {}).catch(() => ({ notes: [] }))
     ]);
     sessSessions = sessions;
+    sessProgramNotes = notesRes.notes || [];
     sessProgByDay = buildSessProgByDay(progData);
     sessRenderView();
   } catch (e) {
@@ -234,12 +237,40 @@ function sessRenderView() {
 function sessRenderList() {
   const isProvider = getRole() === "provider";
   const body = document.getElementById("sess-viewBody");
-  if (sessSessions.length === 0) {
+
+  const NOTE_TYPE_LABEL = { "parent-only": "Parent-Only", "child-only": "Child-Only", "parent+child": "Parent + Child", "graduation": "Graduation" };
+  const NOTE_TYPE_COLOR = { "parent-only": "#3b82f6", "child-only": "#8b5cf6", "parent+child": "#059669", "graduation": "#f59e0b" };
+
+  const progNotesHtml = sessProgramNotes.length ? `
+    <div style="margin-top:20px;">
+      <h3 style="margin:0 0 10px;font-size:15px;"><i class="bi bi-calendar2-week-fill"></i> Program Session Notes</h3>
+      <table class="summary-table">
+        <thead><tr><th>#</th><th>Date</th><th>Type</th><th>Title</th><th>Notes</th></tr></thead>
+        <tbody>
+          ${sessProgramNotes.map(n => {
+            const color = NOTE_TYPE_COLOR[n.sessionType] || "#6b7280";
+            const label = NOTE_TYPE_LABEL[n.sessionType] || n.sessionType;
+            const fields = n.fields || {};
+            const fieldSummary = Object.values(fields).filter(Boolean).join(" · ").slice(0, 120);
+            return `<tr>
+              <td style="font-weight:700;">${n.sessionNum}</td>
+              <td>${escapeHtml((n.recordedAt || "").slice(0, 10))}</td>
+              <td><span style="font-size:11px;font-weight:700;background:${color}22;color:${color};padding:2px 7px;border-radius:8px;">${escapeHtml(label)}</span></td>
+              <td>${escapeHtml(n.title || "")}</td>
+              <td class="note-text" style="font-size:12px;color:var(--muted);">${escapeHtml(fieldSummary)}${fieldSummary.length >= 120 ? "…" : ""}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>` : "";
+
+  if (sessSessions.length === 0 && sessProgramNotes.length === 0) {
     body.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>No session notes on file yet.</span></div>';
     return;
   }
+
   body.innerHTML = `
-    <table class="summary-table">
+    ${sessSessions.length ? `<table class="summary-table">
       <thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Assessor</th><th>Note</th>${isProvider ? "<th></th>" : ""}</tr></thead>
       <tbody>
         ${sessSessions.map(s => `<tr>
@@ -251,7 +282,8 @@ function sessRenderList() {
           ${isProvider ? `<td><button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}
         </tr>`).join("")}
       </tbody>
-    </table>
+    </table>` : ""}
+    ${progNotesHtml}
   `;
 }
 
@@ -342,9 +374,12 @@ function sessSelectDay(key) {
 function sessRenderDayDetail(key, sessions, isProvider) {
   const el = document.getElementById("sess-dayDetail");
   if (!el) return;
+  const dayNotes = sessProgramNotes.filter(n => (n.recordedAt || "").slice(0, 10) === key);
+  const NOTE_TYPE_LABEL = { "parent-only": "Parent-Only", "child-only": "Child-Only", "parent+child": "Parent + Child", "graduation": "Graduation" };
+  const NOTE_TYPE_COLOR = { "parent-only": "#3b82f6", "child-only": "#8b5cf6", "parent+child": "#059669", "graduation": "#f59e0b" };
   el.innerHTML = `
     <div class="section-title"><h3><i class="bi bi-calendar-event"></i> ${escapeHtml(key)}</h3></div>
-    <table class="summary-table">
+    ${sessions.length ? `<table class="summary-table">
       <thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Assessor</th><th>Note</th>${isProvider ? "<th></th>" : ""}</tr></thead>
       <tbody>
         ${sessions.map(s => `<tr>
@@ -356,7 +391,25 @@ function sessRenderDayDetail(key, sessions, isProvider) {
           ${isProvider ? `<td><button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}
         </tr>`).join("")}
       </tbody>
-    </table>
+    </table>` : ""}
+    ${dayNotes.length ? `
+      <h4 style="margin:14px 0 8px;font-size:13px;"><i class="bi bi-calendar2-week-fill"></i> Program Notes</h4>
+      ${dayNotes.map(n => {
+        const color = NOTE_TYPE_COLOR[n.sessionType] || "#6b7280";
+        const label = NOTE_TYPE_LABEL[n.sessionType] || n.sessionType;
+        const fields = n.fields || {};
+        return `<div style="padding:12px 14px;background:var(--surface);border-radius:8px;border:1.5px solid var(--border);margin-bottom:8px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="font-size:11px;font-weight:700;background:${color}22;color:${color};padding:2px 8px;border-radius:8px;">${escapeHtml(label)}</span>
+            <span style="font-size:13px;font-weight:600;">Session ${n.sessionNum}: ${escapeHtml(n.title || "")}</span>
+          </div>
+          ${Object.entries(fields).filter(([,v]) => v).map(([k, v]) => `
+            <div style="margin-bottom:6px;">
+              <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${escapeHtml(k.replace(/_/g," "))}</div>
+              <div style="font-size:13px;margin-top:2px;">${escapeHtml(v)}</div>
+            </div>`).join("")}
+        </div>`;
+      }).join("")}` : ""}
   `;
 }
 
