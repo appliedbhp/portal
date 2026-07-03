@@ -351,7 +351,7 @@ async function openClient(clientId) {
 }
 
 async function loadClientList() {
-  const creds = JSON.parse(sessionStorage.getItem("portalCreds") || "{}");
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
   const listEl = document.getElementById("client-list-area");
   if (!listEl) return;
   try {
@@ -406,7 +406,7 @@ function hideAddClientForm() {
 }
 
 async function submitAddClient() {
-  const creds = JSON.parse(sessionStorage.getItem("portalCreds") || "{}");
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
   const clientId   = document.getElementById("nc-clientId").value.trim();
   const clientType = document.getElementById("nc-clientType").value;
   const email      = document.getElementById("nc-email").value.trim();
