@@ -1,8 +1,27 @@
 // Reports section — provider-only.
 // Generates a comprehensive EF + FBA report as a Google Doc via the backend.
 
+const REPORT_STEPS = [
+  "Pulling assessment data…",
+  "Analyzing behavioral functions…",
+  "Integrating BRIEF-2 and WIN findings…",
+  "Drafting clinical narrative…",
+  "Building individualized session plan…",
+  "Checking holiday schedule…",
+  "Creating Google Doc…"
+];
+
 function initReportsSection(root) {
   root.innerHTML = `
+    <style>
+      @keyframes hg-flip {
+        0%,35%  { transform: rotate(0deg); }
+        50%,85% { transform: rotate(180deg); }
+        100%    { transform: rotate(180deg); }
+      }
+      .report-timer { display:inline-block; font-size:28px; animation: hg-flip 2.4s ease-in-out infinite; }
+      .report-step  { font-size:13px; color:var(--muted); margin-top:6px; min-height:20px; transition:opacity .3s; }
+    </style>
     <div class="card">
       <h1><i class="bi bi-file-earmark-medical-fill"></i>Assessment Report</h1>
       <p style="color:var(--muted);font-size:14px;margin:0 0 20px;line-height:1.6;">
@@ -20,15 +39,36 @@ function initReportsSection(root) {
   loadReports();
 }
 
-async function doGenerateReport() {
+let _stepTimer = null;
+
+function startReportAnimation() {
+  let stepIdx = 0;
   const statusEl = document.getElementById("report-gen-status");
   statusEl.innerHTML = `
-    <div class="alert" style="border-color:var(--primary);color:var(--primary);background:#ede9fe;">
-      <i class="bi bi-hourglass-split"></i>
-      <span>Generating report — pulling all assessment data and drafting with AI. This takes 20–40 seconds…</span>
+    <div class="alert" style="border-color:var(--primary);color:var(--primary);background:#ede9fe;display:flex;align-items:flex-start;gap:14px;">
+      <span class="report-timer">⌛</span>
+      <div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:2px;">Generating report — this takes 30–60 seconds</div>
+        <div class="report-step" id="report-step-text">${REPORT_STEPS[0]}</div>
+      </div>
     </div>`;
+  _stepTimer = setInterval(() => {
+    stepIdx = (stepIdx + 1) % REPORT_STEPS.length;
+    const el = document.getElementById("report-step-text");
+    if (el) el.textContent = REPORT_STEPS[stepIdx];
+  }, 4000);
+}
+
+function stopReportAnimation() {
+  if (_stepTimer) { clearInterval(_stepTimer); _stepTimer = null; }
+}
+
+async function doGenerateReport() {
+  startReportAnimation();
   try {
-    const { docUrl } = await apiCall("generateReport", {});
+    const { docUrl, sessionPlan } = await apiCall("generateReport", {});
+    stopReportAnimation();
+    const statusEl = document.getElementById("report-gen-status");
     statusEl.innerHTML = `
       <div class="alert" style="border-color:#059669;color:#065f46;background:#d1fae5;">
         <i class="bi bi-check-circle-fill"></i>
@@ -38,10 +78,43 @@ async function doGenerateReport() {
             Open in Google Docs <i class="bi bi-box-arrow-up-right"></i>
           </a>
         </span>
-      </div>`;
+      </div>
+      ${sessionPlan ? `
+      <div style="margin-top:10px;padding:14px 16px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:var(--primary);">
+          <i class="bi bi-calendar2-check-fill"></i> Activate Client Program
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.5;">
+          The report includes an individualized <strong>${escapeHtml(sessionPlan.model || "8-week")}</strong> session plan.
+          Activate it to track sessions and use note templates for each appointment.
+        </p>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <label style="font-size:13px;font-weight:600;">Planned start date:</label>
+          <input type="date" id="program-start-date" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;">
+          <button onclick="doActivateProgram()" style="padding:7px 16px;">
+            <i class="bi bi-play-fill"></i> Activate Program
+          </button>
+        </div>
+        <div id="activate-program-status" style="margin-top:8px;"></div>
+      </div>` : ""}`;
+    window._latestSessionPlan = sessionPlan || null;
     await loadReports();
   } catch (e) {
+    stopReportAnimation();
     setStatus("report-gen-status", "Error: " + e.message, "error");
+  }
+}
+
+async function doActivateProgram() {
+  const startDate = document.getElementById("program-start-date")?.value || "";
+  const sessionPlan = window._latestSessionPlan;
+  if (!sessionPlan) return;
+  setStatus("activate-program-status", "Activating…", "loading");
+  try {
+    await apiCall("activateClientProgram", { sessionPlan, startDate });
+    setStatus("activate-program-status", "Program activated! Go to the Program tab to track sessions.", "success");
+  } catch (e) {
+    setStatus("activate-program-status", "Error: " + e.message, "error");
   }
 }
 

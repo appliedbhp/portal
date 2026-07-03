@@ -111,15 +111,57 @@
       </div>
     </div>
 
-    <!-- ===== Provider: pick which client to view (shown after provider login) ===== -->
+    <!-- ===== Provider: client roster (shown after provider login) ===== -->
     <div id="clientPicker" style="display:none;">
       <div class="divider"></div>
-      <h2><i class="bi bi-people-fill"></i>Open a Client</h2>
-      <div class="row">
-        <label>Client ID</label>
-        <input id="pickClientId" type="text" placeholder="e.g. C-1042">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="margin:0;"><i class="bi bi-people-fill"></i> Clients</h2>
+        <button class="secondary" onclick="showAddClientForm()" style="padding:6px 12px;font-size:13px;">
+          <i class="bi bi-person-plus-fill"></i> Add New Client
+        </button>
       </div>
-      <button onclick="pickClient()"><i class="bi bi-folder2-open"></i> Open</button>
+      <div id="client-list-area">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">
+          <i class="bi bi-arrow-repeat"></i> Loading clients…
+        </div>
+      </div>
+
+      <!-- Add New Client inline form -->
+      <div id="add-client-form" style="display:none;margin-top:16px;padding:16px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);">
+        <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--primary);">
+          <i class="bi bi-person-plus-fill"></i> New Client
+        </div>
+        <div class="row"><label>Client ID</label><input id="nc-clientId" type="text" placeholder="e.g. C-1043"></div>
+        <div class="row">
+          <label>Client Type</label>
+          <select id="nc-clientType" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#fff;">
+            <option value="child">Child / Adolescent</option>
+            <option value="adult">Adult</option>
+          </select>
+        </div>
+        <div class="row"><label>Email (optional)</label><input id="nc-email" type="email" placeholder="client@email.com"></div>
+        <div class="row"><label>License Key</label><input id="nc-licenseKey" type="text" placeholder="License key"></div>
+        <div class="row">
+          <label>5-Digit PIN</label>
+          <input id="nc-pin" class="pin" type="text" inputmode="numeric" pattern="\d*" maxlength="5" placeholder="•••••"
+            autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:4px;">
+          <div class="row" style="flex:1;margin:0;">
+            <label>License Start</label>
+            <input id="nc-dateStart" type="date">
+          </div>
+          <div class="row" style="flex:1;margin:0;">
+            <label>License Expiry</label>
+            <input id="nc-dateExp" type="date">
+          </div>
+        </div>
+        <div id="add-client-status" style="margin:8px 0;"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="secondary" onclick="hideAddClientForm()" style="flex:1;">Cancel</button>
+          <button onclick="submitAddClient()" style="flex:2;"><i class="bi bi-check-lg"></i> Create Client</button>
+        </div>
+      </div>
     </div>
 
     <div id="status"></div>
@@ -262,6 +304,7 @@ async function providerLogin() {
     setCreds({ asProvider: true, providerId, providerPassword, clientId: "" });
     setStatus("status", "", null);
     document.getElementById("clientPicker").style.display = "block";
+    loadClientList();
   } catch (e) {
     setStatus("status", e.message, "error");
   }
@@ -289,16 +332,15 @@ async function providerSetupPassword() {
     setCreds({ asProvider: true, providerId, providerPassword: newPassword, clientId: "" });
     setStatus("status", "", null);
     document.getElementById("clientPicker").style.display = "block";
+    loadClientList();
   } catch (e) {
     setStatus("status", e.message, "error");
   }
 }
 
-async function pickClient() {
-  const clientId = document.getElementById("pickClientId").value.trim();
-  if (!clientId) { setStatus("status", "Enter a Client ID.", "error"); return; }
+async function openClient(clientId) {
   setProviderClient(clientId);
-  setStatus("status", "Opening client...", "loading");
+  setStatus("status", "Opening " + clientId + "…", "loading");
   try {
     await apiCall("lookupClient", {});
     window.location.href = "portal.html";
@@ -308,9 +350,94 @@ async function pickClient() {
   }
 }
 
+async function loadClientList() {
+  const creds = JSON.parse(sessionStorage.getItem("portalCreds") || "{}");
+  const listEl = document.getElementById("client-list-area");
+  if (!listEl) return;
+  try {
+    const res = await apiCallNoCreds("getProviderClients", {
+      providerId: creds.providerId,
+      providerPassword: creds.providerPassword
+    });
+    const clients = res.clients || [];
+    if (!clients.length) {
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">No clients yet. Use <strong>Add New Client</strong> to create one.</div>`;
+      return;
+    }
+    listEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${clients.map(c => `
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      padding:10px 14px;background:var(--surface);border-radius:8px;
+                      border:1.5px solid var(--border);cursor:pointer;"
+               onclick="openClient('${escapeHtml(c.clientId)}')">
+            <div>
+              <div style="display:flex;align-items:center;gap:7px;">
+                <span style="font-weight:700;font-size:14px;">${escapeHtml(c.clientId)}</span>
+                <span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:8px;
+                  ${c.role === 'adult'
+                    ? 'background:#dbeafe;color:#1e40af;'
+                    : 'background:#ede9fe;color:#5b21b6;'}">
+                  ${c.role === 'adult' ? 'Adult' : 'Child'}
+                </span>
+              </div>
+              ${c.email ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHtml(c.email)}</div>` : ""}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              ${!c.active ? `<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:2px 7px;border-radius:8px;font-weight:700;">Inactive</span>` : ""}
+              ${!c.hasPassword ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:8px;font-weight:700;">No password</span>` : ""}
+              <i class="bi bi-chevron-right" style="color:var(--muted);font-size:13px;"></i>
+            </div>
+          </div>`).join("")}
+      </div>`;
+  } catch (e) {
+    listEl.innerHTML = `<div style="color:#dc2626;font-size:13px;padding:8px;">Could not load clients: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function showAddClientForm() {
+  document.getElementById("add-client-form").style.display = "block";
+  document.getElementById("nc-clientId").focus();
+}
+
+function hideAddClientForm() {
+  document.getElementById("add-client-form").style.display = "none";
+  setStatus("add-client-status", "", null);
+}
+
+async function submitAddClient() {
+  const creds = JSON.parse(sessionStorage.getItem("portalCreds") || "{}");
+  const clientId   = document.getElementById("nc-clientId").value.trim();
+  const clientType = document.getElementById("nc-clientType").value;
+  const email      = document.getElementById("nc-email").value.trim();
+  const licenseKey = document.getElementById("nc-licenseKey").value.trim();
+  const pin        = document.getElementById("nc-pin").value.trim();
+  const dateStart  = document.getElementById("nc-dateStart").value;
+  const dateExp    = document.getElementById("nc-dateExp").value;
+
+  if (!clientId || !licenseKey || !pin) {
+    setStatus("add-client-status", "Client ID, License Key, and PIN are required.", "error");
+    return;
+  }
+  setStatus("add-client-status", "Creating client…", "loading");
+  try {
+    await apiCallNoCreds("createClient", {
+      providerId: creds.providerId,
+      providerPassword: creds.providerPassword,
+      clientId, clientType, email, licenseKey, pin, dateStart, dateExp
+    });
+    hideAddClientForm();
+    ["nc-clientId","nc-email","nc-licenseKey","nc-pin","nc-dateStart","nc-dateExp"]
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    setStatus("status", "Client " + clientId + " created.", "success");
+    loadClientList();
+  } catch (e) {
+    setStatus("add-client-status", e.message, "error");
+  }
+}
+
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
-  if (document.getElementById("clientPicker").style.display === "block") { pickClient(); return; }
   if (document.getElementById("providerMode").style.display === "block") {
     if (document.getElementById("providerLoginFields").style.display === "block") providerLogin();
     else if (document.getElementById("providerSetupFields").style.display === "block") providerSetupPassword();
@@ -324,6 +451,7 @@ document.addEventListener("keydown", (e) => {
 if (isProvider()) {
   setMode("provider");
   document.getElementById("clientPicker").style.display = "block";
+  loadClientList();
 } else {
   setMode("client");
 }

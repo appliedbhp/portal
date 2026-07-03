@@ -199,6 +199,12 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .sidebar-link:hover { background: #eef4ff; }
 .sidebar-link.active { background: var(--gradient); color: #fff; }
 .sidebar-link i { font-size: 16px; width: 18px; text-align: center; flex-shrink: 0; }
+@keyframes nav-due-pulse {
+  0%,100% { background: transparent; }
+  50%     { background: #dbeafe; }
+}
+.sidebar-link.nav-due { animation: nav-due-pulse 1.8s ease-in-out infinite; color: #1e40af; font-weight: 700; }
+.sidebar-link.nav-due::after { content: " ●"; font-size: 8px; color: #3185fc; vertical-align: super; }
 .main-content { flex: 1; min-width: 0; }
 .main-content .page { max-width: 880px; }
 .section { display: none; }
