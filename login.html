@@ -405,6 +405,9 @@ async function loadClientList() {
                 <button class="secondary" style="font-size:12px;" onclick="doResetPassword('${escapeHtml(c.clientId)}')">
                   <i class="bi bi-lock-fill"></i> Reset Password
                 </button>
+                <button class="secondary" style="font-size:12px;" onclick="viewClientResponses('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-chat-square-text-fill"></i> View Responses
+                </button>
                 <button class="secondary" style="font-size:12px;${!c.active ? 'color:#16a34a;' : 'color:#dc2626;'}"
                   onclick="doArchiveClient('${escapeHtml(c.clientId)}', ${c.active})">
                   <i class="bi bi-${c.active ? 'archive-fill' : 'arrow-counterclockwise'}"></i>
@@ -568,6 +571,97 @@ async function doArchiveClient(clientId, isCurrentlyActive) {
   } catch (e) {
     setActionStatus(clientId, "Error: " + e.message, "error");
   }
+}
+
+async function viewClientResponses(clientId) {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  setActionStatus(clientId, "Loading responses…", "loading");
+
+  let data;
+  try {
+    data = await apiCallNoCreds("getClientProgramProgress", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      asProvider: true, clientId
+    });
+    setActionStatus(clientId, "", "");
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+    return;
+  }
+
+  // Build modal content
+  const steps = data.steps || [];
+  const completed = steps.filter(s => s.status === "completed");
+
+  let bodyHtml = "";
+  if (!data.assignment) {
+    bodyHtml = `<p style="color:var(--muted);font-size:14px;">No program assigned to this client.</p>`;
+  } else if (completed.length === 0) {
+    bodyHtml = `<p style="color:var(--muted);font-size:14px;">No activities completed yet.</p>`;
+  } else {
+    const FIELD_LABELS = {
+      reflection:       "Reflection",
+      moment1_context:  "Home moment #1 — context",
+      moment1_without:  "What happens without support",
+      moment1_prompt:   "Prompt approach",
+      moment2_context:  "Home moment #2 — context",
+      moment2_without:  "What happens without support",
+      moment2_prompt:   "Prompt approach"
+    };
+    bodyHtml = completed.map(step => {
+      let responseHtml = "";
+      if (step.response) {
+        try {
+          const saved = JSON.parse(step.response);
+          const entries = Object.entries(saved).filter(([, v]) => String(v).trim() !== "");
+          if (entries.length) {
+            responseHtml = entries.map(([k, v]) => `
+              <div style="margin-bottom:12px;">
+                <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">
+                  ${escapeHtml(FIELD_LABELS[k] || k.replace(/_/g, " "))}
+                </div>
+                <div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:#111827;">${escapeHtml(String(v))}</div>
+              </div>`).join("");
+          } else {
+            responseHtml = `<div style="font-size:13px;color:#6b7280;font-style:italic;">No text responses captured.</div>`;
+          }
+        } catch (_) {
+          responseHtml = `<div style="font-size:13px;color:#6b7280;font-style:italic;">Could not parse response.</div>`;
+        }
+      } else {
+        responseHtml = `<div style="font-size:13px;color:#6b7280;font-style:italic;">No response data.</div>`;
+      }
+      const completedDate = step.completedAt ? new Date(step.completedAt).toLocaleDateString() : "";
+      return `
+        <div style="border:1.5px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:12px;">
+          <div style="background:#f9fafb;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e5e7eb;">
+            <div style="font-weight:700;font-size:13px;">Step ${step.stepNum}: ${escapeHtml(step.title)}</div>
+            ${completedDate ? `<div style="font-size:11px;color:#6b7280;"><i class="bi bi-check-circle-fill" style="color:#059669;"></i> ${escapeHtml(completedDate)}</div>` : ""}
+          </div>
+          <div style="padding:12px 14px;">${responseHtml}</div>
+        </div>`;
+    }).join("");
+  }
+
+  const programName = data.assignment ? escapeHtml(data.assignment.programName) : "Program";
+  const modal = document.createElement("div");
+  modal.id = "responses-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;";
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:680px;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e5e7eb;">
+        <div>
+          <div style="font-weight:700;font-size:16px;">${clientId} — Program Responses</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">${programName}</div>
+        </div>
+        <button class="secondary" style="font-size:13px;padding:4px 10px;" onclick="document.getElementById('responses-modal').remove()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div style="padding:20px;">${bodyHtml}</div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
