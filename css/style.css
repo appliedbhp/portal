@@ -205,6 +205,12 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 }
 .sidebar-link.nav-due { animation: nav-due-pulse 1.8s ease-in-out infinite; color: #1e40af; font-weight: 700; }
 .sidebar-link.nav-due::after { content: " ●"; font-size: 8px; color: #3185fc; vertical-align: super; }
+@keyframes nav-alert-pulse {
+  0%,100% { background: transparent; }
+  50%     { background: #fef3c7; }
+}
+.sidebar-link.nav-alert { animation: nav-alert-pulse 2s ease-in-out infinite; color: #92400e; font-weight: 700; }
+.sidebar-link.nav-alert::after { content: " ●"; font-size: 8px; color: #f59e0b; vertical-align: super; }
 .main-content { flex: 1; min-width: 0; }
 .main-content .page { max-width: 880px; }
 .section { display: none; }
