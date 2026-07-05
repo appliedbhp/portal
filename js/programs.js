@@ -263,11 +263,29 @@ function showStep(stepNum) {
       const saved = JSON.parse(step.response);
       if (saved.bfa_scores_json) {
         completedExtra = `<div style="margin-top:20px;">${renderBfaScores(saved.bfa_scores_json)}</div>`;
-      } else if (saved.reflection) {
-        completedExtra = `<div class="activity-previous-response">
-          <div class="activity-response-label">Your reflection</div>
-          <p>${escapeHtml(saved.reflection)}</p>
-        </div>`;
+      } else {
+        const entries = Object.entries(saved).filter(([, v]) => String(v).trim() !== "");
+        if (entries.length) {
+          const FIELD_LABELS = {
+            reflection:       "Your reflection",
+            moment1_context:  "Home moment #1 — context",
+            moment1_without:  "What happens without support",
+            moment1_prompt:   "Prompt approach",
+            moment2_context:  "Home moment #2 — context",
+            moment2_without:  "What happens without support",
+            moment2_prompt:   "Prompt approach"
+          };
+          completedExtra = `<div class="activity-previous-response">
+            <div class="activity-response-label">Your responses</div>
+            ${entries.map(([k, v]) => `
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+                  ${escapeHtml(FIELD_LABELS[k] || k.replace(/_/g, " "))}
+                </div>
+                <div style="font-size:13px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(String(v))}</div>
+              </div>`).join("")}
+          </div>`;
+        }
       }
     } catch (_) {}
   }
