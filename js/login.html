@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applied Behavioral Health Practice — Log In</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body {
+    min-height: 100vh;
+    background: var(--gradient);
+    display: flex;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+<div class="page" style="max-width:480px;">
+  <div class="login-logo-wrap">
+    <img class="brand-logo" src="https://d1yei2z3i6k35z.cloudfront.net/15694166/695009dabcbb1_LogoWhite.png" alt="Applied Behavioral Health Practice">
+  </div>
+  <div class="card">
+    <h1 class="brand-title" style="text-align:center;">Applied Behavioral Health Practice</h1>
+
+    <!-- Decoy fields: absorb password-manager autofill targeting so it
+         doesn't land on the real numeric PIN field below. -->
+    <input type="text" name="username" autocomplete="username" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
+    <input type="password" name="password" autocomplete="new-password" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
+
+    <div class="btn-row" style="margin-bottom:20px;">
+      <button id="mode-client" onclick="setMode('client')">I'm a Client</button>
+      <button id="mode-provider" class="secondary" onclick="setMode('provider')">I'm a Provider</button>
+    </div>
+
+    <div class="checkbox-row" style="margin-bottom:20px;">
+      <input type="checkbox" id="privacyAck">
+      <label for="privacyAck">I have read and understood the <a href="https://www.getadhd.care/privacy" target="_blank" rel="noopener">Privacy Policy</a></label>
+    </div>
+
+    <!-- ===== Client mode ===== -->
+    <div id="clientMode">
+      <div class="row">
+        <label>Client ID</label>
+        <div style="display:flex;gap:8px;">
+          <input id="clientId" type="text" placeholder="e.g. C-1042" style="flex:1;"
+            onkeydown="if(event.key==='Enter')checkStatus()">
+          <button type="button" class="secondary" onclick="checkStatus()" style="white-space:nowrap;"><i class="bi bi-search"></i> Look Up</button>
+        </div>
+      </div>
+
+      <div id="loginFields" style="display:none;">
+        <div class="row">
+          <label>Password</label>
+          <input id="loginPassword" type="password" placeholder="Your password" autocomplete="current-password">
+        </div>
+        <button onclick="login()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
+      </div>
+
+      <div id="setupFields" style="display:none;">
+        <div class="field-hint"><i class="bi bi-info-circle-fill"></i> First time logging in — verify your License Key and PIN, then set a password.</div>
+        <div class="row"><label>License Key</label><input id="licenseKey" type="text" placeholder="Your license key"></div>
+        <div class="row">
+          <label>5-Digit PIN</label>
+          <input id="pin" class="pin" type="text" inputmode="numeric" pattern="\d*" maxlength="5" placeholder="•••••"
+            autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+            data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+        </div>
+        <div class="row"><label>New Password</label><input id="newPassword" type="password" placeholder="Choose a password" autocomplete="new-password"></div>
+        <div class="row"><label>Confirm Password</label><input id="confirmPassword" type="password" placeholder="Re-enter password" autocomplete="new-password"></div>
+        <button onclick="setupPassword()"><i class="bi bi-key-fill"></i> Set Password &amp; Log In</button>
+      </div>
+
+      <div class="row" id="assessorRow" style="display:none;">
+        <label>Your Name</label>
+        <input id="assessorName" type="text" placeholder="Your name">
+      </div>
+    </div>
+
+    <!-- ===== Provider mode ===== -->
+    <div id="providerMode" style="display:none;">
+      <div class="row">
+        <label>Provider ID</label>
+        <div style="display:flex;gap:8px;">
+          <input id="providerId" type="text" placeholder="e.g. your username" style="flex:1;"
+            onkeydown="if(event.key==='Enter')checkProviderStatus()">
+          <button type="button" class="secondary" onclick="checkProviderStatus()" style="white-space:nowrap;"><i class="bi bi-search"></i> Look Up</button>
+        </div>
+      </div>
+
+      <div id="providerLoginFields" style="display:none;">
+        <div class="row">
+          <label>Password</label>
+          <input id="providerLoginPassword" type="password" placeholder="Your password" autocomplete="current-password">
+        </div>
+        <button onclick="providerLogin()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
+      </div>
+
+      <div id="providerSetupFields" style="display:none;">
+        <div class="field-hint"><i class="bi bi-info-circle-fill"></i> First time logging in — verify your License Key and PIN, then set a password.</div>
+        <div class="row"><label>License Key</label><input id="providerLicenseKey" type="text" placeholder="Your license key"></div>
+        <div class="row">
+          <label>5-Digit PIN</label>
+          <input id="providerPin" class="pin" type="text" inputmode="numeric" pattern="\d*" maxlength="5" placeholder="•••••"
+            autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+            data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+        </div>
+        <div class="row"><label>New Password</label><input id="providerNewPassword" type="password" placeholder="Choose a password" autocomplete="new-password"></div>
+        <div class="row"><label>Confirm Password</label><input id="providerConfirmPassword" type="password" placeholder="Re-enter password" autocomplete="new-password"></div>
+        <button onclick="providerSetupPassword()"><i class="bi bi-key-fill"></i> Set Password &amp; Log In</button>
+      </div>
+    </div>
+
+    <!-- ===== Provider: client roster (shown after provider login) ===== -->
+    <div id="clientPicker" style="display:none;">
+      <div class="divider"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h2 style="margin:0;"><i class="bi bi-people-fill"></i> Clients</h2>
+        <button class="secondary" onclick="showAddClientForm()" style="padding:6px 12px;font-size:13px;">
+          <i class="bi bi-person-plus-fill"></i> Add New Client
+        </button>
+      </div>
+      <div id="client-list-area">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">
+          <i class="bi bi-arrow-repeat"></i> Loading clients…
+        </div>
+      </div>
+
+      <!-- Add New Client inline form -->
+      <div id="add-client-form" style="display:none;margin-top:16px;padding:16px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);">
+        <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--primary);">
+          <i class="bi bi-person-plus-fill"></i> New Client
+        </div>
+        <div class="row"><label>Client ID</label><input id="nc-clientId" type="text" placeholder="e.g. C-1043"></div>
+        <div class="row">
+          <label>Client Type</label>
+          <select id="nc-clientType" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#fff;">
+            <option value="child">Child / Adolescent</option>
+            <option value="adult">Adult</option>
+          </select>
+        </div>
+        <div class="row"><label>Email (optional)</label><input id="nc-email" type="email" placeholder="client@email.com"></div>
+        <div class="row"><label>License Key</label><input id="nc-licenseKey" type="text" placeholder="License key"></div>
+        <div class="row">
+          <label>5-Digit PIN</label>
+          <input id="nc-pin" class="pin" type="text" inputmode="numeric" pattern="\d*" maxlength="5" placeholder="•••••"
+            autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:4px;">
+          <div class="row" style="flex:1;margin:0;">
+            <label>License Start</label>
+            <input id="nc-dateStart" type="date">
+          </div>
+          <div class="row" style="flex:1;margin:0;">
+            <label>License Expiry</label>
+            <input id="nc-dateExp" type="date">
+          </div>
+        </div>
+        <div id="add-client-status" style="margin:8px 0;"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="secondary" onclick="hideAddClientForm()" style="flex:1;">Cancel</button>
+          <button onclick="submitAddClient()" style="flex:2;"><i class="bi bi-check-lg"></i> Create Client</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="status"></div>
+  </div>
+</div>
+
+<script src="js/common.js"></script>
+<script src="js/api.js"></script>
+<script>
+let statusKnown = false;
+
+function setMode(mode) {
+  document.getElementById("clientMode").style.display = mode === "client" ? "block" : "none";
+  document.getElementById("providerMode").style.display = mode === "provider" ? "block" : "none";
+  document.getElementById("clientPicker").style.display = "none";
+  document.getElementById("mode-client").className = mode === "client" ? "" : "secondary";
+  document.getElementById("mode-provider").className = mode === "provider" ? "" : "secondary";
+  setStatus("status", "", null);
+}
+
+// Required on every login/setup submission (not just once) — the box
+// un-checks itself on each page load since it's a plain checkbox with no
+// persisted state.
+function requirePrivacyAck() {
+  if (!document.getElementById("privacyAck").checked) {
+    setStatus("status", "Please confirm you've read the Privacy Policy before continuing.", "error");
+    return false;
+  }
+  return true;
+}
+
+// ---- Client login ----
+
+async function checkStatus() {
+  const clientId = document.getElementById("clientId").value.trim();
+  document.getElementById("loginFields").style.display = "none";
+  document.getElementById("setupFields").style.display = "none";
+  document.getElementById("assessorRow").style.display = "none";
+  statusKnown = false;
+  if (!clientId) return;
+
+  setStatus("status", "Checking...", "loading");
+  try {
+    const res = await apiCallNoCreds("checkClientStatus", { clientId });
+    setStatus("status", "", null);
+    statusKnown = true;
+    document.getElementById("assessorRow").style.display = "block";
+    document.getElementById(res.hasPassword ? "loginFields" : "setupFields").style.display = "block";
+  } catch (e) {
+    setStatus("status", e.message, "error");
+  }
+}
+
+async function apiCallNoCreds(action, params) {
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(Object.assign({ action }, params))
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+
+async function login() {
+  const clientId = document.getElementById("clientId").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  const assessorName = document.getElementById("assessorName").value.trim();
+  if (!clientId || !password || !assessorName) {
+    setStatus("status", "Please fill in all fields.", "error");
+    return;
+  }
+  if (!requirePrivacyAck()) return;
+  setStatus("status", "Logging in...", "loading");
+  try {
+    const res = await apiCallNoCreds("login", { clientId, password });
+    setCreds({ clientId, password, assessorName, role: res.role });
+    window.location.href = "portal.html";
+  } catch (e) {
+    setStatus("status", e.message, "error");
+  }
+}
+
+async function setupPassword() {
+  const clientId = document.getElementById("clientId").value.trim();
+  const licenseKey = document.getElementById("licenseKey").value.trim();
+  const pin = document.getElementById("pin").value.trim();
+  const newPassword = document.getElementById("newPassword").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
+  const assessorName = document.getElementById("assessorName").value.trim();
+
+  if (!clientId || !licenseKey || !pin || !newPassword || !assessorName) {
+    setStatus("status", "Please fill in all fields.", "error");
+    return;
+  }
+  if (!/^\d{5}$/.test(pin)) { setStatus("status", "PIN must be exactly 5 digits.", "error"); return; }
+  if (newPassword.length < 8) { setStatus("status", "Password must be at least 8 characters.", "error"); return; }
+  if (newPassword !== confirmPassword) { setStatus("status", "Passwords do not match.", "error"); return; }
+  if (!requirePrivacyAck()) return;
+
+  setStatus("status", "Setting up your password...", "loading");
+  try {
+    const res = await apiCallNoCreds("setupPassword", { clientId, licenseKey, pin, newPassword });
+    setCreds({ clientId, password: newPassword, assessorName, role: res.role });
+    window.location.href = "portal.html";
+  } catch (e) {
+    setStatus("status", e.message, "error");
+  }
+}
+
+// ---- Provider login ----
+
+async function checkProviderStatus() {
+  const providerId = document.getElementById("providerId").value.trim();
+  document.getElementById("providerLoginFields").style.display = "none";
+  document.getElementById("providerSetupFields").style.display = "none";
+  if (!providerId) return;
+
+  setStatus("status", "Checking...", "loading");
+  try {
+    const res = await apiCallNoCreds("checkProviderStatus", { providerId });
+    setStatus("status", "", null);
+    document.getElementById(res.hasPassword ? "providerLoginFields" : "providerSetupFields").style.display = "block";
+  } catch (e) {
+    setStatus("status", e.message, "error");
+  }
+}
+
+async function providerLogin() {
+  const providerId = document.getElementById("providerId").value.trim();
+  const providerPassword = document.getElementById("providerLoginPassword").value;
+  if (!providerId || !providerPassword) {
+    setStatus("status", "Please fill in all fields.", "error");
+    return;
+  }
+  if (!requirePrivacyAck()) return;
+  setStatus("status", "Logging in...", "loading");
+  try {
+    await apiCallNoCreds("providerLogin", { providerId, providerPassword });
+    setCreds({ asProvider: true, providerId, providerPassword, clientId: "" });
+    setStatus("status", "", null);
+    document.getElementById("clientPicker").style.display = "block";
+    loadClientList();
+  } catch (e) {
+    setStatus("status", e.message, "error");
+  }
+}
+
+async function providerSetupPassword() {
+  const providerId = document.getElementById("providerId").value.trim();
+  const licenseKey = document.getElementById("providerLicenseKey").value.trim();
+  const pin = document.getElementById("providerPin").value.trim();
+  const newPassword = document.getElementById("providerNewPassword").value;
+  const confirmPassword = document.getElementById("providerConfirmPassword").value;
+
+  if (!providerId || !licenseKey || !pin || !newPassword) {
+    setStatus("status", "Please fill in all fields.", "error");
+    return;
+  }
+  if (!/^\d{5}$/.test(pin)) { setStatus("status", "PIN must be exactly 5 digits.", "error"); return; }
+  if (newPassword.length < 8) { setStatus("status", "Password must be at least 8 characters.", "error"); return; }
+  if (newPassword !== confirmPassword) { setStatus("status", "Passwords do not match.", "error"); return; }
+  if (!requirePrivacyAck()) return;
+
+  setStatus("status", "Setting up your password...", "loading");
+  try {
+    await apiCallNoCreds("providerSetupPassword", { providerId, licenseKey, pin, newPassword });
+    setCreds({ asProvider: true, providerId, providerPassword: newPassword, clientId: "" });
+    setStatus("status", "", null);
+    document.getElementById("clientPicker").style.display = "block";
+    loadClientList();
+  } catch (e) {
+    setStatus("status", e.message, "error");
+  }
+}
+
+async function openClient(clientId) {
+  setProviderClient(clientId);
+  setStatus("status", "Opening " + clientId + "…", "loading");
+  try {
+    await apiCall("lookupClient", {});
+    window.location.href = "portal.html";
+  } catch (e) {
+    setProviderClient("");
+    setStatus("status", e.message, "error");
+  }
+}
+
+async function loadClientList() {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const listEl = document.getElementById("client-list-area");
+  if (!listEl) return;
+  try {
+    const res = await apiCallNoCreds("getProviderClients", {
+      providerId: creds.providerId,
+      providerPassword: creds.providerPassword
+    });
+    const clients = res.clients || [];
+    if (!clients.length) {
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">No clients yet. Use <strong>Add New Client</strong> to create one.</div>`;
+      return;
+    }
+    listEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${clients.map(c => `
+          <div style="background:var(--surface);border-radius:8px;border:1.5px solid var(--border);overflow:hidden;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;">
+              <div style="cursor:pointer;flex:1;" onclick="openClient('${escapeHtml(c.clientId)}')">
+                <div style="display:flex;align-items:center;gap:7px;">
+                  <span style="font-weight:700;font-size:14px;">${escapeHtml(c.clientId)}</span>
+                  <span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:8px;
+                    ${c.role === 'adult'
+                      ? 'background:#dbeafe;color:#1e40af;'
+                      : 'background:#ede9fe;color:#5b21b6;'}">
+                    ${c.role === 'adult' ? 'Adult' : 'Child'}
+                  </span>
+                  ${!c.active ? `<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:8px;font-weight:700;">Inactive</span>` : ""}
+                  ${!c.hasPassword ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:8px;font-weight:700;">No password</span>` : ""}
+                </div>
+                ${c.email ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">${escapeHtml(c.email)}</div>` : ""}
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;margin-left:10px;">
+                <button class="secondary" style="font-size:11px;padding:3px 8px;"
+                  onclick="toggleClientActions('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-three-dots"></i>
+                </button>
+                <button style="font-size:11px;padding:3px 8px;"
+                  onclick="openClient('${escapeHtml(c.clientId)}')">
+                  Open <i class="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+            <div id="actions-${escapeHtml(c.clientId)}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;background:var(--bg);">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                <button class="secondary" style="font-size:12px;" onclick="showEditClient('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-pencil-fill"></i> Edit
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="showChangePinClient('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-key-fill"></i> Change PIN
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="doResetPassword('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-lock-fill"></i> Reset Password
+                </button>
+                <button class="secondary" style="font-size:12px;${!c.active ? 'color:#16a34a;' : 'color:#dc2626;'}"
+                  onclick="doArchiveClient('${escapeHtml(c.clientId)}', ${c.active})">
+                  <i class="bi bi-${c.active ? 'archive-fill' : 'arrow-counterclockwise'}"></i>
+                  ${c.active ? 'Deactivate' : 'Reactivate'}
+                </button>
+              </div>
+              <div id="inline-form-${escapeHtml(c.clientId)}" style="display:none;"></div>
+              <div id="action-status-${escapeHtml(c.clientId)}" style="font-size:12px;margin-top:4px;"></div>
+            </div>
+          </div>`).join("")}
+      </div>`;
+  } catch (e) {
+    listEl.innerHTML = `<div style="color:#dc2626;font-size:13px;padding:8px;">Could not load clients: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// ── Client roster action helpers ──────────────────────────────────────────────
+
+function toggleClientActions(clientId) {
+  const el = document.getElementById("actions-" + clientId);
+  if (!el) return;
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+function setActionStatus(clientId, msg, type) {
+  const el = document.getElementById("action-status-" + clientId);
+  if (!el) return;
+  el.style.color = type === "error" ? "#dc2626" : type === "success" ? "#16a34a" : "var(--muted)";
+  el.textContent = msg;
+}
+
+function showEditClient(clientId) {
+  const el = document.getElementById("inline-form-" + clientId);
+  if (!el) return;
+  if (el.dataset.open === "edit") { el.style.display = "none"; el.dataset.open = ""; return; }
+  el.dataset.open = "edit";
+  // Find current data from the card DOM
+  el.innerHTML = `
+    <div style="padding:10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);margin-top:6px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Edit Client</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <div style="flex:1;min-width:160px;">
+          <label style="font-size:12px;color:var(--muted);">Email</label>
+          <input id="edit-email-${clientId}" type="email" style="width:100%;font-size:13px;" placeholder="email@example.com">
+        </div>
+        <div style="flex:1;min-width:130px;">
+          <label style="font-size:12px;color:var(--muted);">Type</label>
+          <select id="edit-type-${clientId}" style="width:100%;font-size:13px;">
+            <option value="child">Child (parent account)</option>
+            <option value="adult">Adult</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <label style="font-size:12px;color:var(--muted);">Start Date</label>
+          <input id="edit-start-${clientId}" type="date" style="width:100%;font-size:13px;">
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <label style="font-size:12px;color:var(--muted);">Expiry Date</label>
+          <input id="edit-exp-${clientId}" type="date" style="width:100%;font-size:13px;">
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <button style="font-size:12px;" onclick="doEditClient('${clientId}')"><i class="bi bi-save-fill"></i> Save</button>
+        <button class="secondary" style="font-size:12px;" onclick="closeInlineForm('${clientId}')">Cancel</button>
+      </div>
+    </div>`;
+  el.style.display = "block";
+}
+
+function showChangePinClient(clientId) {
+  const el = document.getElementById("inline-form-" + clientId);
+  if (!el) return;
+  if (el.dataset.open === "pin") { el.style.display = "none"; el.dataset.open = ""; return; }
+  el.dataset.open = "pin";
+  el.innerHTML = `
+    <div style="padding:10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);margin-top:6px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Change PIN</div>
+      <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
+        <div>
+          <label style="font-size:12px;color:var(--muted);">New 5-digit PIN</label>
+          <input id="edit-pin-${clientId}" type="text" maxlength="5" pattern="\\d{5}"
+            style="width:110px;font-size:13px;letter-spacing:4px;" placeholder="12345">
+        </div>
+        <button style="font-size:12px;" onclick="doChangePin('${clientId}')"><i class="bi bi-save-fill"></i> Save</button>
+        <button class="secondary" style="font-size:12px;" onclick="closeInlineForm('${clientId}')">Cancel</button>
+      </div>
+    </div>`;
+  el.style.display = "block";
+}
+
+function closeInlineForm(clientId) {
+  const el = document.getElementById("inline-form-" + clientId);
+  if (el) { el.style.display = "none"; el.dataset.open = ""; }
+}
+
+async function doEditClient(clientId) {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const email     = (document.getElementById("edit-email-" + clientId) || {}).value || "";
+  const clientType = (document.getElementById("edit-type-"  + clientId) || {}).value || "";
+  const dateStart = (document.getElementById("edit-start-"  + clientId) || {}).value || "";
+  const dateExp   = (document.getElementById("edit-exp-"    + clientId) || {}).value || "";
+  setActionStatus(clientId, "Saving…", "loading");
+  try {
+    await apiCallNoCreds("updateClient", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      clientId, email, clientType, dateStart, dateExp
+    });
+    setActionStatus(clientId, "Saved.", "success");
+    closeInlineForm(clientId);
+    loadClientList();
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+  }
+}
+
+async function doChangePin(clientId) {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const pin = (document.getElementById("edit-pin-" + clientId) || {}).value || "";
+  if (!/^\d{5}$/.test(pin)) { setActionStatus(clientId, "PIN must be exactly 5 digits.", "error"); return; }
+  setActionStatus(clientId, "Saving…", "loading");
+  try {
+    await apiCallNoCreds("changeClientPin", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      clientId, pin
+    });
+    setActionStatus(clientId, "PIN updated.", "success");
+    closeInlineForm(clientId);
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+  }
+}
+
+async function doResetPassword(clientId) {
+  if (!confirm(`Reset password for ${clientId}? They will need to set a new password on next login.`)) return;
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  setActionStatus(clientId, "Resetting…", "loading");
+  try {
+    await apiCallNoCreds("resetClientPassword", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      clientId
+    });
+    setActionStatus(clientId, "Password cleared — client must set a new one.", "success");
+    loadClientList();
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+  }
+}
+
+async function doArchiveClient(clientId, isCurrentlyActive) {
+  const action = isCurrentlyActive ? "deactivate" : "reactivate";
+  if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${clientId}?`)) return;
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  setActionStatus(clientId, "Updating…", "loading");
+  try {
+    const res = await apiCallNoCreds("archiveClient", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      clientId
+    });
+    setActionStatus(clientId, res.nowActive ? "Client reactivated." : "Client deactivated.", "success");
+    loadClientList();
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+function showAddClientForm() {
+  document.getElementById("add-client-form").style.display = "block";
+  document.getElementById("nc-clientId").focus();
+}
+
+function hideAddClientForm() {
+  document.getElementById("add-client-form").style.display = "none";
+  setStatus("add-client-status", "", null);
+}
+
+async function submitAddClient() {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const clientId   = document.getElementById("nc-clientId").value.trim();
+  const clientType = document.getElementById("nc-clientType").value;
+  const email      = document.getElementById("nc-email").value.trim();
+  const licenseKey = document.getElementById("nc-licenseKey").value.trim();
+  const pin        = document.getElementById("nc-pin").value.trim();
+  const dateStart  = document.getElementById("nc-dateStart").value;
+  const dateExp    = document.getElementById("nc-dateExp").value;
+
+  if (!clientId || !licenseKey || !pin) {
+    setStatus("add-client-status", "Client ID, License Key, and PIN are required.", "error");
+    return;
+  }
+  setStatus("add-client-status", "Creating client…", "loading");
+  try {
+    await apiCallNoCreds("createClient", {
+      providerId: creds.providerId,
+      providerPassword: creds.providerPassword,
+      clientId, clientType, email, licenseKey, pin, dateStart, dateExp
+    });
+    hideAddClientForm();
+    ["nc-clientId","nc-email","nc-licenseKey","nc-pin","nc-dateStart","nc-dateExp"]
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    setStatus("status", "Client " + clientId + " created.", "success");
+    loadClientList();
+  } catch (e) {
+    setStatus("add-client-status", e.message, "error");
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  if (document.getElementById("providerMode").style.display === "block") {
+    if (document.getElementById("providerLoginFields").style.display === "block") providerLogin();
+    else if (document.getElementById("providerSetupFields").style.display === "block") providerSetupPassword();
+    return;
+  }
+  if (!statusKnown) return;
+  if (document.getElementById("loginFields").style.display === "block") login();
+  else setupPassword();
+});
+
+if (isProvider()) {
+  setMode("provider");
+  document.getElementById("clientPicker").style.display = "block";
+  loadClientList();
+} else {
+  setMode("client");
+}
+</script>
+</body>
+</html>
