@@ -279,6 +279,18 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 /* Activity card */
 .activity-card { }
 .activity-body { }
+/* Reset the global label styles inside activity content so radio/checkbox
+   labels render inline and without forced uppercase or muted colour. */
+.activity-body label {
+  display: inline;
+  font-weight: inherit;
+  font-size: inherit;
+  color: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  margin-bottom: 0;
+  cursor: pointer;
+}
 .activity-intro { font-size: 15px; line-height: 1.7; color: var(--text); margin-bottom: 20px; }
 .activity-video { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 10px; background: #000; margin-bottom: 24px; }
 .activity-video iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 10px; }
@@ -317,6 +329,11 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .rec-triggers { margin: 0; padding-left: 18px; }
 .rec-triggers li { font-size: 13px; margin-bottom: 5px; line-height: 1.5; }
 .rec-narrative { font-size: 14px; line-height: 1.75; color: var(--text); white-space: pre-wrap; margin: 0; }
+
+/* Home program panels — stack on mobile */
+@media (max-width: 640px) {
+  #home-program-panels { grid-template-columns: 1fr !important; }
+}
 
 /* BFA antecedent analysis */
 .bfa-ant-section { margin-bottom:20px; }
