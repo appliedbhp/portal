@@ -53,9 +53,41 @@ function renderProgramTabs(myProgram, clientProgram, notes, goals) {
       <button id="prog-tab-assigned" onclick="progSwitchTab('assigned')" class="${_progActiveTab==='assigned' ? '' : 'secondary'}"><i class="bi bi-collection-play-fill"></i> Activities</button>
     </div>` : "";
 
+  // Build summary cards
+  const summaryCards = [];
+  if (hasClient) {
+    const sp = clientProgram.sessionPlan;
+    const noteMap2 = {}; notes.forEach(n => { noteMap2[n.sessionNum] = n; });
+    const total = (sp.weeks || []).reduce((s, w) => s + (w.sessions || []).length, 0);
+    const done  = notes.length;
+    const pct   = total ? Math.round(done / total * 100) : 0;
+    summaryCards.push(`
+      <div style="flex:1;min-width:200px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);padding:14px 16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;"><i class="bi bi-calendar2-week-fill" style="color:var(--primary);"></i> Session Plan</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:4px;">${done} / ${total} <span style="font-size:13px;font-weight:400;color:var(--muted);">sessions</span></div>
+        <div class="prog-progress-bar" style="margin:6px 0 4px;"><div class="prog-progress-fill" style="width:${pct}%;"></div></div>
+        <div style="font-size:12px;color:var(--muted);">${escapeHtml(sp.model || "")} · started ${escapeHtml(clientProgram.startDate || "—")}</div>
+      </div>`);
+  }
+  if (hasAssigned) {
+    const steps = myProgram.steps || [];
+    const done  = steps.filter(s => s.status === "completed").length;
+    const pct   = steps.length ? Math.round(done / steps.length * 100) : 0;
+    summaryCards.push(`
+      <div style="flex:1;min-width:200px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);padding:14px 16px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;"><i class="bi bi-collection-play-fill" style="color:var(--primary);"></i> ${escapeHtml(myProgram.assignment.programName)}</div>
+        <div style="font-size:18px;font-weight:700;margin-bottom:4px;">${done} / ${steps.length} <span style="font-size:13px;font-weight:400;color:var(--muted);">activities</span></div>
+        <div class="prog-progress-bar" style="margin:6px 0 4px;"><div class="prog-progress-fill" style="width:${pct}%;"></div></div>
+        <div style="font-size:12px;color:var(--muted);">${pct}% complete</div>
+      </div>`);
+  }
+
   document.getElementById("prog-content").innerHTML = `
     <div class="card" style="margin-bottom:0;">
-      <h1 style="margin-bottom:${hasClient && hasAssigned ? '16px' : '0'};"><i class="bi bi-play-circle-fill"></i> My Program</h1>
+      <h1 style="margin-bottom:16px;"><i class="bi bi-play-circle-fill"></i> My Program</h1>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:${hasClient && hasAssigned ? '16px' : '0'};">
+        ${summaryCards.join("")}
+      </div>
       ${tabBar}
     </div>
     <div id="prog-tab-client-panel"   style="display:${_progActiveTab==='client'   ? 'block' : 'none'};"></div>
@@ -231,11 +263,29 @@ function showStep(stepNum) {
       const saved = JSON.parse(step.response);
       if (saved.bfa_scores_json) {
         completedExtra = `<div style="margin-top:20px;">${renderBfaScores(saved.bfa_scores_json)}</div>`;
-      } else if (saved.reflection) {
-        completedExtra = `<div class="activity-previous-response">
-          <div class="activity-response-label">Your reflection</div>
-          <p>${escapeHtml(saved.reflection)}</p>
-        </div>`;
+      } else {
+        const entries = Object.entries(saved).filter(([, v]) => String(v).trim() !== "");
+        if (entries.length) {
+          const FIELD_LABELS = {
+            reflection:       "Your reflection",
+            moment1_context:  "Home moment #1 — context",
+            moment1_without:  "What happens without support",
+            moment1_prompt:   "Prompt approach",
+            moment2_context:  "Home moment #2 — context",
+            moment2_without:  "What happens without support",
+            moment2_prompt:   "Prompt approach"
+          };
+          completedExtra = `<div class="activity-previous-response">
+            <div class="activity-response-label">Your responses</div>
+            ${entries.map(([k, v]) => `
+              <div style="margin-bottom:14px;">
+                <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
+                  ${escapeHtml(FIELD_LABELS[k] || k.replace(/_/g, " "))}
+                </div>
+                <div style="font-size:13px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(String(v))}</div>
+              </div>`).join("")}
+          </div>`;
+        }
       }
     } catch (_) {}
   }
