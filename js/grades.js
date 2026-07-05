@@ -140,6 +140,10 @@ function _renderGrades() {
       </div>
     </div>
 
+    <div id="grades-comparison-area">
+      ${_renderComparison()}
+    </div>
+
     <div id="grades-history-area">
       ${_renderHistory()}
     </div>
@@ -358,4 +362,139 @@ function _renderHistory() {
         </div>
       </div>`;
   }).join("");
+}
+
+function _renderComparison() {
+  // Need at least 2 snapshots to compare
+  const snapshots = gradeHistory
+    .map(entry => {
+      let grades = [];
+      try { grades = JSON.parse(entry.gradesJson); } catch (_) {}
+      return { term: entry.term || entry.dateAdded, date: entry.dateAdded, gpa: entry.gpa, grades };
+    })
+    .filter(s => s.grades.some(g => g.grade && g.className))
+    .reverse(); // oldest → newest left → right
+
+  if (snapshots.length < 2) return "";
+
+  // Build union of class names (preserve order of first appearance)
+  const classOrder = [];
+  const seenClasses = new Set();
+  snapshots.forEach(s => {
+    s.grades.forEach(g => {
+      if (g.className && !seenClasses.has(g.className)) {
+        seenClasses.add(g.className);
+        classOrder.push(g.className);
+      }
+    });
+  });
+
+  // Build lookup: snapshot index → className → grade entry
+  const lookup = snapshots.map(s => {
+    const m = {};
+    s.grades.forEach(g => { if (g.className) m[g.className] = g; });
+    return m;
+  });
+
+  const thStyle = "font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:6px 10px;border-bottom:2px solid var(--border);white-space:nowrap;";
+  const tdStyle = "padding:6px 10px;text-align:center;border-bottom:1px solid var(--border);";
+
+  const headerCols = snapshots.map((s, i) => {
+    const isNewest = i === snapshots.length - 1;
+    return `<th style="${thStyle}text-align:center;${isNewest ? 'background:#f0fdf4;' : ''}">
+      <div style="font-weight:700;font-size:12px;color:var(--text);">${escapeHtml(s.term)}</div>
+      <div style="font-size:10px;color:var(--muted);margin-top:2px;">${escapeHtml(s.date)}</div>
+    </th>`;
+  }).join("");
+
+  const dataRows = classOrder.map(className => {
+    const cells = snapshots.map((s, si) => {
+      const entry = lookup[si][className];
+      const isNewest = si === snapshots.length - 1;
+      if (!entry || !entry.grade) {
+        return `<td style="${tdStyle}${isNewest ? 'background:#f0fdf4;' : ''}color:var(--muted);">—</td>`;
+      }
+      const sty = _gradeStyle(entry.grade);
+      // Grade change indicator vs previous snapshot
+      let changeHtml = "";
+      if (si > 0) {
+        const prev = lookup[si - 1][className];
+        if (prev && prev.grade) {
+          const prevPts = _gradePoints(prev.grade);
+          const currPts = _gradePoints(entry.grade);
+          if (currPts > prevPts)       changeHtml = `<span style="color:#059669;font-size:9px;display:block;margin-top:2px;">▲</span>`;
+          else if (currPts < prevPts)  changeHtml = `<span style="color:#dc2626;font-size:9px;display:block;margin-top:2px;">▼</span>`;
+          else                         changeHtml = `<span style="color:var(--muted);font-size:9px;display:block;margin-top:2px;">—</span>`;
+        }
+      }
+      return `<td style="${tdStyle}${isNewest ? 'background:#f0fdf4;' : ''}">
+        <span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;background:${sty.bg};color:${sty.fg};font-size:10px;font-weight:700;">${escapeHtml(entry.grade)}</span>
+        ${changeHtml}
+      </td>`;
+    }).join("");
+    return `<tr>
+      <td style="font-size:13px;padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:500;">${escapeHtml(className)}</td>
+      ${cells}
+    </tr>`;
+  }).join("");
+
+  const gpaRow = (() => {
+    const cells = snapshots.map((s, si) => {
+      const isNewest = si === snapshots.length - 1;
+      if (!s.gpa) return `<td style="${tdStyle}${isNewest ? 'background:#f0fdf4;' : ''}color:var(--muted);">—</td>`;
+      let changeHtml = "";
+      if (si > 0 && snapshots[si - 1].gpa) {
+        const diff = parseFloat(s.gpa) - parseFloat(snapshots[si - 1].gpa);
+        if (diff > 0.01)       changeHtml = `<span style="color:#059669;font-size:10px;margin-left:4px;">▲ ${diff.toFixed(2)}</span>`;
+        else if (diff < -0.01) changeHtml = `<span style="color:#dc2626;font-size:10px;margin-left:4px;">▼ ${Math.abs(diff).toFixed(2)}</span>`;
+      }
+      return `<td style="${tdStyle}${isNewest ? 'background:#f0fdf4;' : ''}">
+        <span style="font-size:15px;font-weight:800;color:${_gpaColor(s.gpa)};">${escapeHtml(s.gpa)}</span>${changeHtml}
+      </td>`;
+    }).join("");
+    return `<tr style="border-top:2px solid var(--border);">
+      <td style="font-size:12px;font-weight:700;color:var(--muted);padding:8px 10px;text-transform:uppercase;letter-spacing:.04em;">GPA</td>
+      ${cells}
+    </tr>`;
+  })();
+
+  return `
+    <div class="card" style="margin-top:12px;">
+      <h2 style="padding-top:0;margin-bottom:4px;"><i class="bi bi-table"></i> Grade Comparison</h2>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 14px;">
+        Each column is one snapshot. Newest on the right (shaded). ▲▼ show change from the previous snapshot.
+      </p>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">
+        <table style="border-collapse:collapse;min-width:400px;">
+          <thead>
+            <tr>
+              <th style="${thStyle}text-align:left;">Class</th>
+              ${headerCols}
+            </tr>
+          </thead>
+          <tbody>
+            ${dataRows}
+            ${gpaRow}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// Called from portal.html on page load — flashes the nav button if no grade
+// has been saved in the last 14 days.
+async function checkGradesAlert() {
+  try {
+    const res = await apiCall("getGrades", {});
+    const entries = res.entries || [];
+    const btn = document.querySelector('[data-section="grades"]');
+    if (!btn) return;
+    if (!entries.length) {
+      btn.classList.add("nav-alert");
+      return;
+    }
+    const latest = entries.reduce((a, b) => (a.dateAdded > b.dateAdded ? a : b));
+    const daysSince = (Date.now() - new Date(latest.dateAdded).getTime()) / 86400000;
+    btn.classList.toggle("nav-alert", daysSince > 14);
+  } catch (_) { /* silently skip if grades not yet accessible */ }
 }
