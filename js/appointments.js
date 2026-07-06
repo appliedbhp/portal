@@ -1,21 +1,22 @@
-// Appointments section — Calendly booking widget + upcoming appointments
+// Appointments section — Google Calendar Appointment Scheduling iframe + upcoming appointments
 // + a month-view calendar showing both appointments and program activity dates.
 
-const CALENDLY_BOOKING_URL = "https://calendly.com/appliedbhp/30min";
+const GCAL_BOOKING_IFRAME = `https://calendar.google.com/calendar/appointments/schedules/AcZssZ02i845ZrVqhR2CyB_5PqHv6WbWssmJ3p8ghbxUZCvZl5dngh3tQuAdOgy2FnVXm4v_yZl0LPe1?gv=true`;
 
 let calViewDate  = new Date();
 let calAppts     = [];
 let calProgSteps = [];
 
 function initAppointmentsSection(root) {
-  loadCalendlyWidget();
   root.innerHTML = `
     <div class="card no-print">
-      <h1><i class="bi bi-calendar-check-fill"></i>Appointments</h1>
-      <p style="color:var(--muted);font-size:14px;margin:0 0 20px;">
-        Book a 30-minute session. Your email is pre-filled automatically.
+      <h1><i class="bi bi-calendar-check-fill"></i>Book an Appointment</h1>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
+        Select a 30-minute session below. A confirmation will be sent to your email automatically.
       </p>
-      <button onclick="openBooking()"><i class="bi bi-calendar-plus"></i> Book Appointment</button>
+      <iframe src="${GCAL_BOOKING_IFRAME}"
+        style="border:0;border-radius:12px;display:block;max-width:100%;"
+        width="100%" height="600" frameborder="0" loading="lazy"></iframe>
     </div>
     <div id="appt-status"></div>
     <div class="card" id="cal-card">
@@ -29,32 +30,6 @@ function initAppointmentsSection(root) {
   loadAppointmentsData();
 }
 
-function loadCalendlyWidget() {
-  if (document.getElementById("calendly-widget-css")) return;
-  const link = document.createElement("link");
-  link.id   = "calendly-widget-css";
-  link.rel  = "stylesheet";
-  link.href = "https://assets.calendly.com/assets/external/widget.css";
-  document.head.appendChild(link);
-  const script  = document.createElement("script");
-  script.id     = "calendly-widget-js";
-  script.src    = "https://assets.calendly.com/assets/external/widget.js";
-  document.head.appendChild(script);
-}
-
-async function openBooking() {
-  let prefill = {};
-  try {
-    const data = await apiCall("getClientEmail", {});
-    if (data.email) prefill.email = data.email;
-  } catch (_) {}
-  if (typeof Calendly !== "undefined") {
-    Calendly.initPopupWidget({ url: CALENDLY_BOOKING_URL, prefill });
-  } else {
-    const qs = prefill.email ? "?email=" + encodeURIComponent(prefill.email) : "";
-    window.open(CALENDLY_BOOKING_URL + qs, "_blank");
-  }
-}
 
 async function loadAppointmentsData() {
   setStatus("appt-status", "Loading…", "loading");
