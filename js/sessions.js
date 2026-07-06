@@ -64,6 +64,7 @@ function initSessionsSection(root) {
     loadNoteTemplates();
     loadSessionGoals();
     document.getElementById("sess-dateTime").value = sessNowForInput_();
+    document.getElementById("sess-endTime").value = sessNowPlusMinutes_(30);
   }
 }
 
@@ -106,6 +107,12 @@ function sessSyncGoalsBlock() {
 // "YYYY-MM-DDTHH:mm" in local time, the format <input type="datetime-local"> expects.
 function sessNowForInput_() {
   const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function sessNowPlusMinutes_(mins) {
+  const d = new Date(Date.now() + mins * 60 * 1000);
   const pad = n => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
@@ -197,15 +204,18 @@ async function addSession() {
   }
   const dateTime = localDateTime.replace("T", " ");
   const endTime = localEndTime ? localEndTime.replace("T", " ") : "";
-  setStatus("sess-status", "Saving...", "loading");
+  setStatus("sess-status", "Saving…", "loading");
   try {
-    await apiCall("addSession", { noteText, dateTime, endTime });
-    setStatus("sess-status", "Session note saved.", "success");
+    const result = await apiCall("addSession", { noteText, dateTime, endTime });
+    const msg = result.redacted
+      ? "Session note saved. <strong>PHI was detected and redacted</strong> before storing. <i class='bi bi-shield-fill-check' style='color:#059669;'></i>"
+      : "Session note saved.";
+    setStatus("sess-status", msg, "success");
     document.getElementById("sess-noteText").value = "";
     document.getElementById("sess-templateSelect").value = "";
     document.querySelectorAll("#sess-goalsChecklist input:checked").forEach(cb => { cb.checked = false; });
     document.getElementById("sess-dateTime").value = sessNowForInput_();
-    document.getElementById("sess-endTime").value = "";
+    document.getElementById("sess-endTime").value = sessNowPlusMinutes_(30);
     loadSessions();
   } catch (e) {
     setStatus("sess-status", "Error: " + e.message, "error");
