@@ -146,15 +146,15 @@ function renderProgramBuilder(recommendedTier) {
   const selectedPkg = (recommendedTier || "sprint").toLowerCase();
 
   const goalsHtml = recGoals.length ? recGoals.map((g, i) => `
-    <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;cursor:pointer;font-size:13px;">
-      <input type="checkbox" class="rec-goal-check" data-idx="${i}"
-             data-objective="${escapeAttr(g.objective)}" style="margin-top:2px;flex-shrink:0;">
-      <span>
+    <div class="checkbox-row" style="margin-bottom:10px;align-items:flex-start;">
+      <input type="checkbox" id="rec-goal-${i}" class="rec-goal-check" data-idx="${i}"
+             data-objective="${escapeAttr(g.objective)}">
+      <label for="rec-goal-${i}" style="line-height:1.4;">
         ${g.domain ? `<span style="font-size:10px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.04em;margin-right:4px;">${escapeHtml(g.domain)}</span>` : ""}
         ${escapeHtml(g.objective)}
-        ${g.source === "report" && g.rationale ? `<br><span style="font-size:11px;color:var(--muted);">${escapeHtml(g.rationale)}</span>` : ""}
-      </span>
-    </label>`).join("")
+        ${g.source === "report" && g.rationale ? `<br><span style="font-size:11px;color:var(--muted);font-weight:400;">${escapeHtml(g.rationale)}</span>` : ""}
+      </label>
+    </div>`).join("")
     : `<p style="color:var(--muted);font-size:13px;">No goals found. Generate an assessment report first, or add goals in Goals &amp; Plan.</p>`;
 
   el.innerHTML = `
