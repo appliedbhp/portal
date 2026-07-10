@@ -129,18 +129,19 @@ function initClientProgramSection(root) {
 
 async function loadClientProgram(root) {
   try {
-    const [{ program }, { notes }, goalsRes] = await Promise.all([
+    const [{ program }, { notes }, goalsRes, schedRes] = await Promise.all([
       apiCall("getClientProgram", {}),
       apiCall("getSessionNotes", {}),
-      apiCall("getPlan", {}).catch(() => ({ goals: [] }))
+      apiCall("getPlan", {}).catch(() => ({ goals: [] })),
+      apiCall("getScheduledSessions", {}).catch(() => ({ schedule: [] }))
     ]);
-    renderClientProgram(root, program, notes || [], goalsRes.goals || []);
+    renderClientProgram(root, program, notes || [], goalsRes.goals || [], schedRes.schedule || []);
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Could not load program: ${escapeHtml(e.message)}</span></div></div>`;
   }
 }
 
-function renderClientProgram(root, program, notes, goals) {
+function renderClientProgram(root, program, notes, goals, schedule) {
   if (!program || !program.sessionPlan) {
     root.innerHTML = `
       <div class="card">
@@ -155,9 +156,39 @@ function renderClientProgram(root, program, notes, goals) {
   const sp      = program.sessionPlan;
   const noteMap = {};
   notes.forEach(n => { noteMap[n.sessionNum] = n; });
+  const schedMap = {};
+  (schedule || []).forEach(s => { schedMap[s.sessionNum] = s; });
 
-  const totalSessions = (sp.weeks || []).reduce((sum, w) => sum + (w.sessions || []).length, 0);
+  const totalSessions  = (sp.weeks || []).reduce((sum, w) => sum + (w.sessions || []).length, 0);
   const completedCount = notes.length;
+  const scheduledCount = Object.keys(schedMap).length;
+
+  // Projected completion date
+  let projectedEnd = "—";
+  if (program.startDate && sp.weeks) {
+    const numWeeks = sp.weeks.length;
+    const endDate  = new Date(program.startDate + "T00:00:00");
+    endDate.setDate(endDate.getDate() + numWeeks * 7);
+    projectedEnd = endDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+
+  // On-track: compare sessions logged vs sessions expected at this point
+  let onTrackHtml = "";
+  if (program.startDate && totalSessions > 0) {
+    const startMs  = new Date(program.startDate + "T00:00:00").getTime();
+    const elapsedDays = Math.max(0, (Date.now() - startMs) / 86400000);
+    const totalDays   = (sp.weeks || []).length * 7;
+    const expectedPct = Math.min(elapsedDays / totalDays, 1);
+    const expectedSess = Math.round(expectedPct * totalSessions);
+    if (completedCount >= expectedSess) {
+      onTrackHtml = `<span style="font-size:12px;font-weight:700;background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:10px;">
+        <i class="bi bi-check-circle-fill"></i> On Track</span>`;
+    } else {
+      const behind = expectedSess - completedCount;
+      onTrackHtml = `<span style="font-size:12px;font-weight:700;background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:10px;">
+        <i class="bi bi-exclamation-triangle-fill"></i> ${behind} session${behind > 1 ? "s" : ""} behind</span>`;
+    }
+  }
 
   root.innerHTML = `
     <div class="card">
@@ -170,12 +201,18 @@ function renderClientProgram(root, program, notes, goals) {
       <div class="stat-row" style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0;">
         ${statCard("calendar-check-fill", "Model", escapeHtml(sp.model || "—"))}
         ${statCard("list-ol", "Sessions", completedCount + " / " + totalSessions + " logged")}
+        ${statCard("calendar2-date", "Scheduled", scheduledCount + " / " + totalSessions + " scheduled")}
         ${statCard("calendar-event", "Started", escapeHtml(program.startDate || "Not set"))}
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:${sp.model_rationale ? "10px" : "0"};">
+        <span style="font-size:13px;color:var(--muted);"><i class="bi bi-flag-fill" style="color:var(--primary);"></i> Projected completion: <strong>${escapeHtml(projectedEnd)}</strong></span>
+        ${onTrackHtml}
       </div>
       ${sp.model_rationale ? `<p style="font-size:13px;color:var(--muted);margin:0;font-style:italic;">${escapeHtml(sp.model_rationale)}</p>` : ""}
     </div>
     <div id="program-weeks"></div>
-    <div id="note-modal-area"></div>`;
+    <div id="note-modal-area"></div>
+    <div id="schedule-modal-area"></div>`;
 
   const weeksEl = root.querySelector("#program-weeks");
   const projections = cpProjectWeeks(program.startDate, (sp.weeks || []).length, noteMap);
@@ -197,7 +234,6 @@ function renderClientProgram(root, program, notes, goals) {
     wkCard.className = "card";
     wkCard.style.marginBottom = "12px";
 
-    const allDone = (wk.sessions || []).every(s => noteMap[s.session_num]);
     const statusStyle = STATUS_STYLE[proj.status] || STATUS_STYLE.upcoming;
     const statusLabel = STATUS_LABEL[proj.status] || "";
     const holHtml = (proj.holidays || []).map(h =>
@@ -219,13 +255,22 @@ function renderClientProgram(root, program, notes, goals) {
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;">
         ${(wk.sessions || []).map(sess => {
-          const done = !!noteMap[sess.session_num];
+          const done      = !!noteMap[sess.session_num];
+          const scheduled = schedMap[sess.session_num];
           const TYPE_COLOR = { "parent-only":"#3b82f6", "child-only":"#8b5cf6", "parent+child":"#059669", "graduation":"#f59e0b" };
           const TYPE_MAP   = { "parent-only":"Parent-Only", "child-only":"Child-Only", "parent+child":"Parent + Child", "graduation":"Graduation" };
           const color = TYPE_COLOR[sess.type] || "#6b7280";
+
+          // Format scheduled date nicely
+          const schedBadge = scheduled
+            ? `<span style="font-size:11px;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:10px;font-weight:600;">
+                <i class="bi bi-calendar-check"></i> ${escapeHtml(new Date(scheduled.scheduledDate + "T00:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric" }))}
+               </span>`
+            : "";
+
           return `
             <div style="display:flex;justify-content:space-between;align-items:flex-start;
-                        padding:12px 14px;background:var(--surface);border-radius:8px;
+                        padding:12px 14px;border-radius:8px;
                         border:1.5px solid ${done ? "#bbf7d0" : "var(--border)"};
                         background:${done ? "#f0fdf4" : "var(--surface)"};">
               <div style="flex:1;min-width:0;">
@@ -234,6 +279,7 @@ function renderClientProgram(root, program, notes, goals) {
                                padding:2px 8px;border-radius:10px;">${escapeHtml(TYPE_MAP[sess.type] || sess.type)}</span>
                   <span style="font-size:13px;font-weight:600;">Session ${sess.session_num}: ${escapeHtml(sess.title || "")}</span>
                   ${done ? `<i class="bi bi-check-circle-fill" style="color:#059669;font-size:14px;"></i>` : ""}
+                  ${schedBadge}
                 </div>
                 ${sess.description ? `<div style="font-size:12px;color:var(--text);margin:4px 0 2px;line-height:1.5;">${escapeHtml(sess.description)}</div>` : ""}
                 ${sess.focus ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;font-style:italic;">${escapeHtml(sess.focus)}</div>` : ""}
@@ -254,20 +300,31 @@ function renderClientProgram(root, program, notes, goals) {
                   </div>`;
                 })() : ""}
               </div>
-              <button data-snum="${sess.session_num}" data-stype="${escapeHtml(sess.type)}" data-stitle="${escapeHtml(sess.title || "")}"
-                onclick="openNoteModal(+this.dataset.snum, this.dataset.stype, this.dataset.stitle)"
-                style="margin-left:12px;flex-shrink:0;padding:6px 12px;font-size:12px;
-                       ${done ? "opacity:.7;" : ""}">
-                <i class="bi bi-${done ? "pencil" : "plus-lg"}"></i> ${done ? "Edit" : "Log Note"}
-              </button>
+              <div style="display:flex;flex-direction:column;gap:6px;margin-left:12px;flex-shrink:0;">
+                <button data-snum="${sess.session_num}" data-stype="${escapeHtml(sess.type)}" data-stitle="${escapeHtml(sess.title || "")}"
+                  onclick="openNoteModal(+this.dataset.snum, this.dataset.stype, this.dataset.stitle)"
+                  style="padding:6px 12px;font-size:12px;${done ? "opacity:.7;" : ""}">
+                  <i class="bi bi-${done ? "pencil" : "plus-lg"}"></i> ${done ? "Edit Note" : "Log Note"}
+                </button>
+                <button class="secondary"
+                  data-snum="${sess.session_num}"
+                  data-stitle="${escapeHtml(sess.title || "")}"
+                  data-stype="${escapeHtml(sess.type || "")}"
+                  data-sched="${escapeHtml(scheduled ? scheduled.scheduledDate : "")}"
+                  onclick="openScheduleModal(+this.dataset.snum, this.dataset.stitle, this.dataset.stype, this.dataset.sched)"
+                  style="padding:6px 12px;font-size:12px;">
+                  <i class="bi bi-calendar-plus"></i> ${scheduled ? "Reschedule" : "Schedule"}
+                </button>
+              </div>
             </div>`;
         }).join("")}
       </div>`;
     weeksEl.appendChild(wkCard);
   });
 
-  // Store notes/goals on window for modal access
+  // Store state on window for modal access
   window._programNotes   = noteMap;
+  window._programSched   = schedMap;
   window._programId      = program.programId;
   window._programRoot    = root;
   window._programSp      = sp;
@@ -366,4 +423,75 @@ function viewSessionNote(sessionNum) {
 
 function printClientProgram() {
   window.print();
+}
+
+// ── Session scheduling ────────────────────────────────────────────────────────
+
+function openScheduleModal(sessionNum, sessionTitle, sessionType, existingDate) {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const modalArea = document.getElementById("schedule-modal-area");
+  modalArea.innerHTML = `
+    <div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px;">
+      <div style="background:#fff;border-radius:14px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <div style="font-weight:700;font-size:16px;"><i class="bi bi-calendar-plus" style="color:var(--primary);margin-right:6px;"></i>Schedule Session ${sessionNum}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:2px;">${escapeHtml(sessionTitle)}</div>
+          </div>
+          <button class="secondary icon-btn" onclick="closeScheduleModal()"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div style="padding:20px 24px;">
+          <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px;">Session Date</label>
+          <input type="date" id="sched-date-input" value="${escapeHtml(existingDate || todayStr)}"
+            style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;">
+          <p style="font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.5;">
+            Saving the date will also open Google Calendar so you can create the event with session details pre-filled.
+          </p>
+          <div id="sched-status" style="margin-top:10px;"></div>
+          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px;">
+            <button class="secondary" onclick="closeScheduleModal()">Cancel</button>
+            <button data-snum="${sessionNum}" data-stitle="${escapeHtml(sessionTitle)}" data-stype="${escapeHtml(sessionType)}"
+              onclick="saveScheduleDate(+this.dataset.snum, this.dataset.stitle, this.dataset.stype)">
+              <i class="bi bi-calendar-check-fill"></i> Save & Open Calendar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function closeScheduleModal() {
+  const el = document.getElementById("schedule-modal-area");
+  if (el) el.innerHTML = "";
+}
+
+async function saveScheduleDate(sessionNum, sessionTitle, sessionType) {
+  const dateInput = document.getElementById("sched-date-input");
+  const date = dateInput ? dateInput.value : "";
+  if (!date) { setStatus("sched-status", "Please select a date.", "error"); return; }
+
+  setStatus("sched-status", "Saving…", "loading");
+  try {
+    await apiCall("scheduleSession", {
+      sessionNum,
+      scheduledDate: date,
+      sessionTitle,
+      sessionType
+    });
+
+    // Build Google Calendar event creation URL with pre-filled details
+    const dateObj   = new Date(date + "T09:00:00");
+    const endObj    = new Date(date + "T09:30:00");
+    const fmtGcal   = d => d.toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z";
+    const TYPE_MAP  = { "parent-only":"Parent-Only Session", "child-only":"Child Session", "parent+child":"Family Session", "graduation":"Graduation Session" };
+    const title     = encodeURIComponent(`Session ${sessionNum}: ${sessionTitle}`);
+    const details   = encodeURIComponent(`${TYPE_MAP[sessionType] || sessionType}\n\n${sessionTitle}`);
+    const gcalUrl   = `https://calendar.google.com/calendar/r/eventedit?text=${title}&dates=${fmtGcal(dateObj)}/${fmtGcal(endObj)}&details=${details}`;
+
+    closeScheduleModal();
+    window.open(gcalUrl, "_blank", "noopener");
+    loadClientProgram(window._programRoot);
+  } catch (e) {
+    setStatus("sched-status", "Error: " + e.message, "error");
+  }
 }
