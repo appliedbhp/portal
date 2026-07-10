@@ -10,8 +10,38 @@ let sessView = "list"; // "list" | "calendar"
 let sessCalDate = new Date(); // current month being viewed in calendar mode
 let sessSelectedDay = null; // "YYYY-MM-DD" of the day expanded in calendar mode
 let sessProgByDay = {}; // "YYYY-MM-DD" -> [{stepNum, title, programName}]
+let _sessQuill = null;
 
-const GOALS_BLOCK_HEADING = "Goals Addressed This Session:";
+// ── Built-in format templates ─────────────────────────────────────────────────
+const SESS_FORMAT_TEMPLATES = [
+  {
+    id: "soap", label: "SOAP",
+    html: `<h3>Subjective</h3><p>Client/parent report…</p>
+           <h3>Objective</h3><p>Observed behavior and measurable data…</p>
+           <h3>Assessment</h3><p>Clinical interpretation…</p>
+           <h3>Plan</h3><p>Next steps and homework…</p>`
+  },
+  {
+    id: "dap", label: "DAP",
+    html: `<h3>Data</h3><p>Behavioral observations and measurable data…</p>
+           <h3>Assessment</h3><p>Clinical interpretation of data…</p>
+           <h3>Plan</h3><p>Next steps and homework…</p>`
+  },
+  {
+    id: "abc", label: "ABC",
+    html: `<h3>Antecedent</h3><p>What happened before the behavior…</p>
+           <h3>Behavior</h3><p>Description of the behavior observed…</p>
+           <h3>Consequence</h3><p>What happened after the behavior…</p>
+           <h3>Intervention</h3><p>Strategies used and response…</p>`
+  },
+  {
+    id: "progress", label: "Progress",
+    html: `<h3>Goals Reviewed</h3><p>Goals addressed this session…</p>
+           <h3>Progress</h3><p>Observable progress since last session…</p>
+           <h3>Session Activity</h3><p>Skills practiced or content covered…</p>
+           <h3>Homework</h3><p>Assignments for next session…</p>`
+  }
+];
 
 function initSessionsSection(root) {
   const isProvider = getRole() === "provider";
@@ -28,23 +58,50 @@ function initSessionsSection(root) {
     ${isProvider ? `
     <div class="card">
       <h2><i class="bi bi-plus-circle-fill"></i>Add a Session Note</h2>
+      <style>
+        .sess-editor-wrap .ql-container { font-size:13px; font-family:inherit; border-radius:0 0 8px 8px; border:1.5px solid var(--border); border-top:none; min-height:180px; }
+        .sess-editor-wrap .ql-toolbar { border-radius:8px 8px 0 0; border:1.5px solid var(--border); background:var(--surface); flex-wrap:wrap; }
+        .sess-editor-wrap .ql-editor { min-height:180px; padding:12px 14px; line-height:1.7; }
+        .sess-editor-wrap .ql-editor.ql-blank::before { color:var(--muted); font-style:italic; font-size:13px; }
+        .sess-editor-wrap .ql-editor h3 { font-size:14px; font-weight:700; margin:14px 0 4px; color:var(--text); }
+        .format-tpl-btn { font-size:12px; padding:4px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--surface); color:var(--text); cursor:pointer; }
+        .format-tpl-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+      </style>
+
       <div class="row">
-        <label>Start from Template</label>
-        <select id="sess-templateSelect" style="max-width:520px;" onchange="sessApplyTemplate()">
-          <option value="">— None —</option>
-        </select>
+        <label>Format Template</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${SESS_FORMAT_TEMPLATES.map(t =>
+            `<button class="format-tpl-btn" onclick="sessInsertFormatTemplate('${t.id}')">${t.label}</button>`
+          ).join("")}
+          <span style="font-size:12px;color:var(--muted);margin-left:4px;">Quick-insert a structured format</span>
+        </div>
       </div>
-      <div class="btn-row" style="margin-bottom:10px;">
-        <button class="secondary" onclick="sessCopyPrevious()"><i class="bi bi-clipboard-fill"></i> Copy from Previous Session</button>
+
+      <div class="row">
+        <label>Saved Templates</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="sess-templateSelect" style="max-width:340px;" onchange="sessApplyTemplate()">
+            <option value="">— None —</option>
+          </select>
+          <button class="secondary" style="font-size:12px;padding:5px 12px;" onclick="sessCopyPrevious()">
+            <i class="bi bi-clipboard-fill"></i> Copy Previous
+          </button>
+        </div>
       </div>
+
       <div class="row">
         <label>Goals Addressed This Session</label>
         <div id="sess-goalsChecklist">Loading goals...</div>
       </div>
+
       <div class="row">
         <label>Note</label>
-        <textarea id="sess-noteText" style="min-height:160px;" placeholder="Session note..."></textarea>
+        <div class="sess-editor-wrap">
+          <div id="sess-noteEditor"></div>
+        </div>
       </div>
+
       <div class="row">
         <label>Start Time</label>
         <input id="sess-dateTime" type="datetime-local">
@@ -53,7 +110,7 @@ function initSessionsSection(root) {
         <label>End Time</label>
         <input id="sess-endTime" type="datetime-local">
       </div>
-      <div class="field-hint"><i class="bi bi-clock-fill"></i> Start is pre-filled with right now; set an end time to record session duration. Both are editable.</div>
+      <div class="field-hint"><i class="bi bi-clock-fill"></i> Start is pre-filled with right now; end time is pre-filled to +30 min. Both are editable.</div>
       <button onclick="addSession()"><i class="bi bi-save-fill"></i> Save Session Note</button>
       <div id="sess-status"></div>
     </div>
@@ -65,6 +122,16 @@ function initSessionsSection(root) {
     loadSessionGoals();
     document.getElementById("sess-dateTime").value = sessNowForInput_();
     document.getElementById("sess-endTime").value = sessNowPlusMinutes_(30);
+    _sessQuill = new Quill("#sess-noteEditor", {
+      theme: "snow",
+      placeholder: "Session note…",
+      modules: { toolbar: [
+        [{ header: [2, 3, false] }],
+        ["bold", "italic", "underline"],
+        [{ list: "ordered" }, { list: "bullet" }],
+        ["blockquote", "clean"]
+      ]}
+    });
   }
 }
 
@@ -86,22 +153,25 @@ async function loadSessionGoals() {
   }
 }
 
-// Keeps a "Goals Addressed This Session:" block in sync with whichever
-// checkboxes are checked, without disturbing the rest of the note text.
-// The block always lives at the very top of the textarea.
+// Replaces a goals block at the top of the Quill editor when checkboxes change.
+// The block is identified by a data-goals-block attribute on the first element.
 function sessSyncGoalsBlock() {
-  const box = document.getElementById("sess-noteText");
-  const checked = Array.from(document.querySelectorAll("#sess-goalsChecklist input:checked")).map(cb => cb.dataset.objective);
+  if (!_sessQuill) return;
+  const checked = Array.from(document.querySelectorAll("#sess-goalsChecklist input:checked"))
+    .map(cb => cb.dataset.objective);
 
-  const blockRe = new RegExp(`^${GOALS_BLOCK_HEADING}\\n(?:- .*\\n)*\\n?`);
-  const rest = box.value.replace(blockRe, "");
+  // Remove existing goals block (first element with data attr, if present)
+  const editor = _sessQuill.root;
+  const existing = editor.querySelector("[data-goals-block]");
+  if (existing) existing.remove();
 
-  if (checked.length === 0) {
-    box.value = rest;
-    return;
-  }
-  const block = `${GOALS_BLOCK_HEADING}\n${checked.map(o => `- ${o}`).join("\n")}\n\n`;
-  box.value = block + rest;
+  if (!checked.length) return;
+
+  const items = checked.map(o => `<li>${escapeHtml(o)}</li>`).join("");
+  const block = `<p data-goals-block="1"><strong>Goals Addressed This Session:</strong></p><ul>${items}</ul><p><br></p>`;
+
+  const currentHtml = editor.innerHTML;
+  _sessQuill.clipboard.dangerouslyPasteHTML(0, block);
 }
 
 // "YYYY-MM-DDTHH:mm" in local time, the format <input type="datetime-local"> expects.
@@ -166,31 +236,44 @@ async function loadNoteTemplates() {
   }
 }
 
+function sessInsertFormatTemplate(id) {
+  if (!_sessQuill) return;
+  const tpl = SESS_FORMAT_TEMPLATES.find(t => t.id === id);
+  if (!tpl) return;
+  if (_sessQuill.getText().trim() && !confirm("Replace the current note with the " + tpl.label + " template?")) return;
+  _sessQuill.setText("");
+  _sessQuill.clipboard.dangerouslyPasteHTML(0, tpl.html);
+  document.getElementById("sess-templateSelect").value = "";
+}
+
 function sessApplyTemplate() {
+  if (!_sessQuill) return;
   const id = document.getElementById("sess-templateSelect").value;
   if (!id) return;
   const tpl = sessNoteTemplates.find(t => t.templateId === id);
   if (!tpl) return;
-  const box = document.getElementById("sess-noteText");
-  if (box.value.trim() && !confirm("Replace the current note text with this template?")) return;
-  box.value = tpl.text || "";
+  if (_sessQuill.getText().trim() && !confirm("Replace the current note text with this template?")) return;
+  _sessQuill.setText("");
+  _sessQuill.clipboard.dangerouslyPasteHTML(0, tpl.text || "");
 }
 
 function sessCopyPrevious() {
-  if (sessSessions.length === 0) {
+  if (!_sessQuill || sessSessions.length === 0) {
     setStatus("sess-status", "No previous session notes to copy from.", "error");
     return;
   }
-  const box = document.getElementById("sess-noteText");
-  if (box.value.trim() && !confirm("Replace the current note text with the previous session's note?")) return;
-  box.value = sessSessions[0].noteText || ""; // sessSessions is sorted newest-first
+  if (_sessQuill.getText().trim() && !confirm("Replace the current note with the previous session's note?")) return;
+  const prev = sessSessions[0].noteText || "";
+  _sessQuill.setText("");
+  _sessQuill.clipboard.dangerouslyPasteHTML(0, prev);
 }
 
 async function addSession() {
-  const noteText = document.getElementById("sess-noteText").value.trim();
-  const localDateTime = document.getElementById("sess-dateTime").value; // "YYYY-MM-DDTHH:mm"
-  const localEndTime = document.getElementById("sess-endTime").value;
-  if (!noteText) {
+  const noteText = _sessQuill ? _sessQuill.root.innerHTML : "";
+  const isBlank  = !_sessQuill || !_sessQuill.getText().trim();
+  const localDateTime = document.getElementById("sess-dateTime").value;
+  const localEndTime  = document.getElementById("sess-endTime").value;
+  if (isBlank) {
     setStatus("sess-status", "Please enter note text.", "error");
     return;
   }
@@ -203,7 +286,7 @@ async function addSession() {
     return;
   }
   const dateTime = localDateTime.replace("T", " ");
-  const endTime = localEndTime ? localEndTime.replace("T", " ") : "";
+  const endTime  = localEndTime ? localEndTime.replace("T", " ") : "";
   setStatus("sess-status", "Saving…", "loading");
   try {
     const result = await apiCall("addSession", { noteText, dateTime, endTime });
@@ -211,7 +294,7 @@ async function addSession() {
       ? "Session note saved. <strong>PHI was detected and redacted</strong> before storing. <i class='bi bi-shield-fill-check' style='color:#059669;'></i>"
       : "Session note saved.";
     setStatus("sess-status", msg, "success");
-    document.getElementById("sess-noteText").value = "";
+    if (_sessQuill) _sessQuill.setText("");
     document.getElementById("sess-templateSelect").value = "";
     document.querySelectorAll("#sess-goalsChecklist input:checked").forEach(cb => { cb.checked = false; });
     document.getElementById("sess-dateTime").value = sessNowForInput_();
@@ -288,7 +371,7 @@ function sessRenderList() {
           <td>${escapeHtml(s.endTime || "—")}</td>
           <td>${sessFormatDuration(s.durationMin)}</td>
           <td>${escapeHtml(s.assessor)}</td>
-          <td class="note-text">${escapeHtml(s.noteText)}</td>
+          <td class="note-text" style="max-width:340px;">${s.noteText || ""}</td>
           ${isProvider ? `<td><button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}
         </tr>`).join("")}
       </tbody>
@@ -413,7 +496,7 @@ function sessRenderDayDetail(key, sessions, isProvider) {
           <td>${escapeHtml((s.endTime || "").slice(11) || "—")}</td>
           <td>${sessFormatDuration(s.durationMin)}</td>
           <td>${escapeHtml(s.assessor)}</td>
-          <td class="note-text">${escapeHtml(s.noteText)}</td>
+          <td class="note-text" style="max-width:340px;">${s.noteText || ""}</td>
           ${isProvider ? `<td><button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}
         </tr>`).join("")}
       </tbody>
@@ -429,10 +512,10 @@ function sessRenderDayDetail(key, sessions, isProvider) {
             <span style="font-size:11px;font-weight:700;background:${color}22;color:${color};padding:2px 8px;border-radius:8px;">${escapeHtml(label)}</span>
             <span style="font-size:13px;font-weight:600;">Session ${n.sessionNum}: ${escapeHtml(n.title || "")}</span>
           </div>
-          ${Object.entries(fields).filter(([,v]) => v).map(([k, v]) => `
+          ${Object.entries(fields).filter(([k, v]) => v && !k.startsWith("_")).map(([k, v]) => `
             <div style="margin-bottom:6px;">
               <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;">${escapeHtml(k.replace(/_/g," "))}</div>
-              <div style="font-size:13px;margin-top:2px;">${escapeHtml(v)}</div>
+              <div style="font-size:13px;margin-top:2px;line-height:1.6;">${v}</div>
             </div>`).join("")}
         </div>`;
       }).join("")}` : ""}
