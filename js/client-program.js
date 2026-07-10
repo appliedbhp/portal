@@ -43,8 +43,8 @@ function cpFederalHolidays(year) {
 // status: "completed" | "current" | "upcoming" | "overdue" | "holiday-delay"
 function cpProjectWeeks(startDateStr, numWeeks, noteMap) {
   if (!startDateStr) return Array.from({ length: numWeeks }, () => ({ projectedLabel: "—", holidays: [], status: "upcoming" }));
-  const start = new Date(startDateStr + "T00:00:00");
-  if (isNaN(start)) return Array.from({ length: numWeeks }, () => ({ projectedLabel: "—", holidays: [], status: "upcoming" }));
+  const start = cpParseDate_(startDateStr);
+  if (!start) return Array.from({ length: numWeeks }, () => ({ projectedLabel: "—", holidays: [], status: "upcoming" }));
 
   const endYear = new Date(start.getTime() + numWeeks * 7 * 86400000).getFullYear();
   const allHolidays = [];
@@ -122,6 +122,16 @@ function noteTemplateFor(type) {
   return NOTE_TEMPLATES[type] || NOTE_TEMPLATES["child-only"];
 }
 
+// Parse a date string safely — handles YYYY-MM-DD, sheet-serialized Date strings, and slashes
+function cpParseDate_(str) {
+  if (!str) return null;
+  // Extract YYYY-MM-DD if present anywhere in the string
+  const iso = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return new Date(iso[0] + "T00:00:00");
+  const d = new Date(str);
+  return isNaN(d) ? null : d;
+}
+
 function initClientProgramSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading program…</p></div>`;
   loadClientProgram(root);
@@ -165,17 +175,17 @@ function renderClientProgram(root, program, notes, goals, schedule) {
 
   // Projected completion date
   let projectedEnd = "—";
-  if (program.startDate && sp.weeks) {
+  const startDateObj = cpParseDate_(program.startDate);
+  if (startDateObj && sp.weeks) {
     const numWeeks = sp.weeks.length;
-    const endDate  = new Date(program.startDate + "T00:00:00");
-    endDate.setDate(endDate.getDate() + numWeeks * 7);
+    const endDate  = new Date(startDateObj.getTime() + numWeeks * 7 * 86400000);
     projectedEnd = endDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   }
 
   // On-track: compare sessions logged vs sessions expected at this point
   let onTrackHtml = "";
-  if (program.startDate && totalSessions > 0) {
-    const startMs  = new Date(program.startDate + "T00:00:00").getTime();
+  if (startDateObj && totalSessions > 0) {
+    const startMs     = startDateObj.getTime();
     const elapsedDays = Math.max(0, (Date.now() - startMs) / 86400000);
     const totalDays   = (sp.weeks || []).length * 7;
     const expectedPct = Math.min(elapsedDays / totalDays, 1);
