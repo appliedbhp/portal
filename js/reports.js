@@ -129,23 +129,6 @@ async function doGenerateReport() {
     const { docUrl } = await apiCall("generateReport", { selectedResources });
     stopReportAnimation();
     const statusEl = document.getElementById("report-gen-status");
-
-    // Load goals for the checklist in parallel
-    let goalOptions = [];
-    try { const r = await apiCall("getPlan", {}); goalOptions = r.goals || []; } catch (_) {}
-
-    const goalsHtml = goalOptions.length ? `
-      <div style="margin-bottom:14px;">
-        <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">
-          <i class="bi bi-flag-fill" style="color:var(--primary);"></i> Select Goals to Address in This Program
-        </div>
-        ${goalOptions.map((g, i) => `
-          <label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;font-size:13px;cursor:pointer;">
-            <input type="checkbox" class="plan-goal-check" data-objective="${escapeAttr(g.objective)}" style="margin-top:2px;">
-            <span>${escapeHtml(g.objective)}</span>
-          </label>`).join("")}
-      </div>` : "";
-
     statusEl.innerHTML = `
       <div class="alert" style="border-color:#059669;color:#065f46;background:#d1fae5;">
         <i class="bi bi-check-circle-fill"></i>
@@ -156,41 +139,13 @@ async function doGenerateReport() {
           </a>
         </span>
       </div>
-      <div style="margin-top:12px;padding:16px;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;">
-        <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:var(--primary);">
-          <i class="bi bi-calendar2-check-fill"></i> Build &amp; Activate Client Program
-        </div>
-
-        <div style="margin-bottom:14px;">
-          <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Package</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            ${[
-              { key:"sprint",  label:"Sprint",  sub:"8 wks · ~14 sessions · $2,050" },
-              { key:"journey", label:"Journey", sub:"16 wks · ~28 sessions · $3,850" },
-              { key:"odyssey", label:"Odyssey", sub:"32 wks · ~57 sessions · $7,450" }
-            ].map(p => `
-              <label style="cursor:pointer;flex:1;min-width:130px;">
-                <input type="radio" name="pkg-select" value="${p.key}" ${p.key==="sprint"?"checked":""} style="display:none;">
-                <div class="pkg-btn" data-pkg="${p.key}" onclick="reportSelectPkg('${p.key}')"
-                     style="border:2px solid var(--border);border-radius:10px;padding:10px 12px;text-align:center;transition:.15s;${p.key==="sprint"?"border-color:var(--primary);background:#ede9fe;":""}">
-                  <div style="font-weight:700;font-size:13px;">${p.label}</div>
-                  <div style="font-size:11px;color:var(--muted);margin-top:2px;">${p.sub}</div>
-                </div>
-              </label>`).join("")}
-          </div>
-        </div>
-
-        ${goalsHtml}
-
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-          <label style="font-size:13px;font-weight:600;">Program start date:</label>
-          <input type="date" id="program-start-date" style="padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;">
-        </div>
-
-        <button onclick="doGeneratePlan()" id="gen-plan-btn" style="padding:8px 20px;">
-          <i class="bi bi-stars"></i> Generate &amp; Activate Plan
+      <div style="margin-top:10px;">
+        <button onclick="showSection('recommendation')" style="font-size:13px;">
+          <i class="bi bi-calendar2-check-fill"></i> Build Client Program
         </button>
-        <div id="activate-program-status" style="margin-top:10px;"></div>
+        <span style="font-size:12px;color:var(--muted);margin-left:10px;">
+          Go to Package Rec to select a package, choose goals, and generate the session plan.
+        </span>
       </div>`;
 
     await loadReports();
@@ -200,36 +155,6 @@ async function doGenerateReport() {
   }
 }
 
-function reportSelectPkg(key) {
-  document.querySelectorAll(".pkg-btn").forEach(el => {
-    const active = el.dataset.pkg === key;
-    el.style.borderColor  = active ? "var(--primary)" : "var(--border)";
-    el.style.background   = active ? "#ede9fe" : "";
-  });
-  document.querySelector(`input[name="pkg-select"][value="${key}"]`).checked = true;
-}
-
-async function doGeneratePlan() {
-  const packageKey  = document.querySelector('input[name="pkg-select"]:checked')?.value || "sprint";
-  const startDate   = document.getElementById("program-start-date")?.value || "";
-  const selectedGoals = Array.from(document.querySelectorAll(".plan-goal-check:checked"))
-                              .map(cb => cb.dataset.objective);
-
-  const btn = document.getElementById("gen-plan-btn");
-  if (btn) btn.disabled = true;
-  setStatus("activate-program-status", "Generating session plan — this may take 30–60 seconds…", "loading");
-
-  try {
-    const { sessionPlan } = await apiCall("generateSessionPlan", { packageKey, selectedGoals, startDate });
-    setStatus("activate-program-status", "Plan generated. Activating…", "loading");
-    await apiCall("activateClientProgram", { sessionPlan, startDate });
-    setStatus("activate-program-status", "Program activated! Go to the Client Program tab to track sessions.", "success");
-    if (btn) btn.disabled = false;
-  } catch (e) {
-    setStatus("activate-program-status", "Error: " + e.message, "error");
-    if (btn) btn.disabled = false;
-  }
-}
 
 async function loadReports() {
   const el = document.getElementById("reports-history-area");
