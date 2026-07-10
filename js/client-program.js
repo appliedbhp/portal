@@ -272,9 +272,10 @@ function renderClientProgram(root, program, notes, goals, schedule) {
           const color = TYPE_COLOR[sess.type] || "#6b7280";
 
           // Format scheduled date nicely
-          const schedBadge = scheduled
+          const schedDateObj = scheduled ? cpParseDate_(scheduled.scheduledDate) : null;
+          const schedBadge = schedDateObj
             ? `<span style="font-size:11px;background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:10px;font-weight:600;">
-                <i class="bi bi-calendar-check"></i> ${escapeHtml(new Date(scheduled.scheduledDate + "T00:00:00").toLocaleDateString(undefined, { month:"short", day:"numeric" }))}
+                <i class="bi bi-calendar-check"></i> ${escapeHtml(schedDateObj.toLocaleDateString(undefined, { month:"short", day:"numeric" }))}
                </span>`
             : "";
 
