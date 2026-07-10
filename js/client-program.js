@@ -342,9 +342,18 @@ function renderClientProgram(root, program, notes, goals, schedule) {
   window._programGoals   = goals;
 }
 
+const QUILL_TOOLBAR = [
+  [{ header: [2, 3, false] }],
+  ["bold", "italic", "underline"],
+  [{ list: "ordered" }, { list: "bullet" }],
+  ["clean"]
+];
+
+let _noteEditors = {}; // key → Quill instance
+
 function openNoteModal(sessionNum, sessionType, sessionTitle) {
-  const template = noteTemplateFor(sessionType);
-  const existing = (window._programNotes || {})[sessionNum] || null;
+  const template    = noteTemplateFor(sessionType);
+  const existing    = (window._programNotes || {})[sessionNum] || null;
   const existFields = existing ? (existing.fields || {}) : {};
   const checkedGoals = existing ? (existFields._goals_addressed || []) : [];
   const goals = window._programGoals || [];
@@ -362,9 +371,15 @@ function openNoteModal(sessionNum, sessionType, sessionTitle) {
 
   const modalArea = document.getElementById("note-modal-area");
   modalArea.innerHTML = `
+    <style>
+      .note-editor-wrap .ql-container { font-size:13px; font-family:inherit; border-radius:0 0 8px 8px; border:1.5px solid var(--border); border-top:none; min-height:90px; }
+      .note-editor-wrap .ql-toolbar { border-radius:8px 8px 0 0; border:1.5px solid var(--border); background:var(--surface); }
+      .note-editor-wrap .ql-editor { min-height:90px; padding:10px 12px; line-height:1.6; }
+      .note-editor-wrap .ql-editor.ql-blank::before { color:var(--muted); font-style:italic; font-size:13px; }
+    </style>
     <div style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:16px;">
-      <div style="background:#fff;border-radius:14px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <div style="background:#fff;border-radius:14px;width:100%;max-width:640px;max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+        <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;z-index:1;">
           <div>
             <div style="font-weight:700;font-size:16px;">Session ${sessionNum} Note</div>
             <div style="font-size:13px;color:var(--muted);margin-top:2px;">${escapeHtml(sessionTitle)}</div>
@@ -374,12 +389,11 @@ function openNoteModal(sessionNum, sessionType, sessionTitle) {
         <div style="padding:20px 24px;">
           ${goalsHtml}
           ${template.map(f => `
-            <div style="margin-bottom:16px;">
-              <label style="font-size:13px;font-weight:700;display:block;margin-bottom:5px;">${escapeHtml(f.label)}</label>
-              <textarea id="note-field-${f.key}" rows="3"
-                style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;
-                       font-size:13px;resize:vertical;font-family:inherit;"
-                placeholder="${escapeHtml(f.placeholder)}">${escapeHtml(existFields[f.key] || "")}</textarea>
+            <div style="margin-bottom:20px;">
+              <label style="font-size:13px;font-weight:700;display:block;margin-bottom:6px;">${escapeHtml(f.label)}</label>
+              <div class="note-editor-wrap" id="note-wrap-${f.key}">
+                <div id="note-editor-${f.key}"></div>
+              </div>
             </div>`).join("")}
           <div id="note-save-status" style="margin-bottom:12px;"></div>
           <div style="display:flex;gap:10px;justify-content:flex-end;">
@@ -392,9 +406,25 @@ function openNoteModal(sessionNum, sessionType, sessionTitle) {
         </div>
       </div>
     </div>`;
+
+  // Mount Quill on each field after DOM is ready
+  _noteEditors = {};
+  template.forEach(f => {
+    const el = document.getElementById("note-editor-" + f.key);
+    if (!el) return;
+    const q = new Quill(el, {
+      theme: "snow",
+      placeholder: f.placeholder,
+      modules: { toolbar: QUILL_TOOLBAR }
+    });
+    const saved = existFields[f.key] || "";
+    if (saved) q.clipboard.dangerouslyPasteHTML(saved);
+    _noteEditors[f.key] = q;
+  });
 }
 
 function closeNoteModal() {
+  _noteEditors = {};
   const el = document.getElementById("note-modal-area");
   if (el) el.innerHTML = "";
 }
@@ -403,8 +433,12 @@ async function saveNoteModal(sessionNum, sessionType, sessionTitle) {
   const template = noteTemplateFor(sessionType);
   const fields = {};
   template.forEach(f => {
-    const el = document.getElementById("note-field-" + f.key);
-    if (el) fields[f.key] = el.value.trim();
+    const q = _noteEditors[f.key];
+    if (q) {
+      const html = q.getSemanticHTML ? q.getSemanticHTML() : q.root.innerHTML;
+      // Store empty string if editor is blank
+      fields[f.key] = q.getText().trim() ? html : "";
+    }
   });
   // Collect checked goals
   const checkedGoals = Array.from(document.querySelectorAll('[id^="nm-goal-"]:checked')).map(cb => cb.value);
