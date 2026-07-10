@@ -192,6 +192,42 @@ function renderClientProgramPanel(program, notes, goals) {
     ${weeksHtml}`;
 }
 
+const STEP_FIELD_LABELS = {
+  reflection:       "Reflection",
+  moment1_context:  "Home moment #1 — context",
+  moment1_without:  "What happens without support",
+  moment1_prompt:   "Prompt approach",
+  moment2_context:  "Home moment #2 — context",
+  moment2_without:  "What happens without support",
+  moment2_prompt:   "Prompt approach"
+};
+
+function buildStepResponseHtml(responseJson) {
+  if (!responseJson) return `<div style="font-size:12px;color:var(--muted);font-style:italic;">No responses recorded.</div>`;
+  try {
+    const saved = JSON.parse(responseJson);
+    if (saved.bfa_scores_json) return `<div style="font-size:12px;color:var(--muted);">BFA scores — open the activity to view.</div>`;
+    const entries = Object.entries(saved).filter(([, v]) => String(v).trim() !== "");
+    if (!entries.length) return `<div style="font-size:12px;color:var(--muted);font-style:italic;">No text responses recorded.</div>`;
+    return entries.map(([k, v]) => `
+      <div class="step-resp-field">
+        <div class="step-resp-field-label">${escapeHtml(STEP_FIELD_LABELS[k] || k.replace(/_/g, " "))}</div>
+        <div class="step-resp-field-value">${escapeHtml(String(v))}</div>
+      </div>`).join("");
+  } catch (_) {
+    return `<div style="font-size:12px;color:var(--muted);font-style:italic;">Could not parse responses.</div>`;
+  }
+}
+
+function toggleStepResponses(stepNum, btn) {
+  const panel = document.getElementById("step-resp-" + stepNum);
+  if (!panel) return;
+  const open = panel.classList.toggle("open");
+  btn.innerHTML = open
+    ? `<i class="bi bi-chevron-up"></i> Hide`
+    : `<i class="bi bi-chat-square-text"></i> Responses`;
+}
+
 function renderProgram(data) {
   const { assignment, steps } = data;
   const completed = steps.filter(s => s.status === "completed").length;
@@ -207,14 +243,29 @@ function renderProgram(data) {
     } else if (step.status === "completed" && step.completedAt) {
       sublabel = `<span class="step-sublabel">Completed ${new Date(step.completedAt).toLocaleDateString()}</span>`;
     }
+
+    const responsePanel = step.status === "completed" ? `
+      <div id="step-resp-${step.stepNum}" class="step-response-panel">
+        ${buildStepResponseHtml(step.response)}
+      </div>` : "";
+
+    const respBtn = step.status === "completed" ? `
+      <button class="step-view-btn" onclick="event.stopPropagation(); toggleStepResponses(${step.stepNum}, this)">
+        <i class="bi bi-chat-square-text"></i> Responses
+      </button>` : "";
+
     return `
-      <div class="step-item ${step.status}" data-step="${step.stepNum}"
-        ${clickable ? `onclick="showStep(${step.stepNum})"` : ""}>
-        <i class="bi bi-${icon}"></i>
-        <div>
-          <div class="step-title">${escapeHtml(step.title)}</div>
-          ${sublabel}
+      <div class="step-container">
+        <div class="step-item ${step.status}" data-step="${step.stepNum}"
+          ${clickable ? `onclick="showStep(${step.stepNum})"` : ""}>
+          <i class="bi bi-${icon}"></i>
+          <div style="flex:1;min-width:0;">
+            <div class="step-title">${escapeHtml(step.title)}</div>
+            ${sublabel}
+            ${respBtn}
+          </div>
         </div>
+        ${responsePanel}
       </div>`;
   }).join("");
 
@@ -266,21 +317,12 @@ function showStep(stepNum) {
       } else {
         const entries = Object.entries(saved).filter(([, v]) => String(v).trim() !== "");
         if (entries.length) {
-          const FIELD_LABELS = {
-            reflection:       "Your reflection",
-            moment1_context:  "Home moment #1 — context",
-            moment1_without:  "What happens without support",
-            moment1_prompt:   "Prompt approach",
-            moment2_context:  "Home moment #2 — context",
-            moment2_without:  "What happens without support",
-            moment2_prompt:   "Prompt approach"
-          };
           completedExtra = `<div class="activity-previous-response">
             <div class="activity-response-label">Your responses</div>
             ${entries.map(([k, v]) => `
               <div style="margin-bottom:14px;">
                 <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">
-                  ${escapeHtml(FIELD_LABELS[k] || k.replace(/_/g, " "))}
+                  ${escapeHtml(STEP_FIELD_LABELS[k] || k.replace(/_/g, " "))}
                 </div>
                 <div style="font-size:13px;line-height:1.6;white-space:pre-wrap;">${escapeHtml(String(v))}</div>
               </div>`).join("")}
