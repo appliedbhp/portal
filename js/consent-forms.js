@@ -13,9 +13,9 @@ async function initConsentFormsSection(root) {
   try {
     const [docsRes, templatesRes] = await Promise.all([
       apiCall("getConsentDocs", {}),
-      apiCall("getConsentTemplates", {}).catch(() => ({ templates: [] }))
+      apiCall("getConsentTemplates", {}).catch(e => ({ templates: [], _error: e.message }))
     ]);
-    renderConsentForms(root, docsRes.docs || [], templatesRes.templates || []);
+    renderConsentForms(root, docsRes.docs || [], templatesRes.templates || [], templatesRes._error || null);
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
@@ -24,7 +24,7 @@ async function initConsentFormsSection(root) {
   }
 }
 
-function renderConsentForms(root, docs, templates) {
+function renderConsentForms(root, docs, templates, templateError) {
   const statusOptions = Object.entries(CONSENT_STATUSES)
     .map(([v, s]) => `<option value="${v}">${escapeHtml(s.label)}</option>`).join("");
 
@@ -60,7 +60,9 @@ function renderConsentForms(root, docs, templates) {
   }).join("") : `<p style="color:var(--muted);font-size:13px;margin:0;">No consent documents added yet.</p>`;
 
   // Build template picker grouped by subfolder
-  const templatePickerHtml = buildTemplatePickerHtml(templates);
+  const templatePickerHtml = templateError
+    ? `<div class="alert alert-error" style="margin:0;"><i class="bi bi-exclamation-triangle-fill"></i> <span>Could not load template library: ${escapeHtml(templateError)}</span></div>`
+    : buildTemplatePickerHtml(templates);
 
   root.innerHTML = `
     <div class="card">
