@@ -31,6 +31,7 @@ function initHomeSection(root) {
         <button class="home-tile" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i><div><div class="home-tile-label">Standardized Scores</div><div class="home-tile-sub">BRIEF-2 &amp; ESQR</div></div></button>
         <button class="home-tile" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i><div><div class="home-tile-label">Session Notes</div><div class="home-tile-sub">List &amp; calendar view</div></div></button>
         ${isClient ? `<button class="home-tile" onclick="showSection('programs')"><i class="bi bi-play-circle-fill"></i><div><div class="home-tile-label">My Program</div><div class="home-tile-sub">Sessions &amp; activities</div></div></button>` : ""}
+        ${isClient ? `<button class="home-tile" onclick="showSection('client-viz')"><i class="bi bi-bar-chart-fill"></i><div><div class="home-tile-label">My Progress</div><div class="home-tile-sub">Charts &amp; goal activity</div></div></button>` : ""}
       </div>
     </div>
   `;
