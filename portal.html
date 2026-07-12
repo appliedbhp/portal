@@ -58,6 +58,11 @@
     </div>
 
     <div class="sidebar-group">
+      <div class="sidebar-group-title">Billing</div>
+      <button class="sidebar-link" data-section="superbill" onclick="showSection('superbill')" id="superbillNavBtn" style="display:none;"><i class="bi bi-receipt-cutoff"></i> Superbill</button>
+    </div>
+
+    <div class="sidebar-group">
       <div class="sidebar-group-title">My Journey</div>
       <button class="sidebar-link" data-section="programs" onclick="showSection('programs')" id="programsNavBtn"><i class="bi bi-play-circle-fill"></i> My Program</button>
     </div>
@@ -83,6 +88,7 @@
       <div id="section-client-program" class="section"></div>
       <div id="section-grades" class="section"></div>
       <div id="section-intake" class="section"></div>
+      <div id="section-superbill" class="section"></div>
     </div>
   </div>
 </div>
@@ -107,6 +113,7 @@
 <script src="js/grades.js"></script>
 <script src="js/intake.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/superbill.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -122,6 +129,7 @@ if (_role !== "provider") document.getElementById("clientProgramNavBtn").style.d
 if (_role !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("programsNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
+if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
 if (_role === "adult") {
   document.getElementById("roadmapNavBtn").style.display = "none";
   document.getElementById("winNavBtn").style.display = "none";
@@ -139,6 +147,7 @@ function toggleSidebar() {
 
 const SECTION_INIT = {
   dashboard: initDashboardSection,
+  superbill: initSuperbillSection,
   home: initHomeSection,
   roadmap: initRoadmapSection,
   win: initWinSection,
