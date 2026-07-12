@@ -114,6 +114,21 @@ function initSessionsSection(root) {
       <button onclick="addSession()"><i class="bi bi-save-fill"></i> Save Session Note</button>
       <div id="sess-status"></div>
     </div>
+
+    ${isProvider ? `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;"
+           onclick="sessToggleAuditLog()">
+        <h2 style="margin:0;"><i class="bi bi-shield-lock-fill" style="color:var(--primary);"></i> PHI Redaction Audit Log</h2>
+        <i class="bi bi-chevron-down" id="sess-audit-chevron"></i>
+      </div>
+      <div id="sess-audit-body" style="display:none;margin-top:14px;">
+        <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">
+          Records every session note where PHI was detected and redacted. The original text is never stored here — only what types of PHI were found.
+        </p>
+        <div id="sess-audit-content"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
+      </div>
+    </div>` : ""}
     ` : ""}
   `;
   loadSessions();
@@ -526,4 +541,62 @@ function sessCalStep(dir) {
   sessCalDate = new Date(sessCalDate.getFullYear(), sessCalDate.getMonth() + dir, 1);
   sessSelectedDay = null;
   sessRenderCalendar();
+}
+
+// ── PHI Audit Log ─────────────────────────────────────────────────────────────
+
+let _auditLoaded = false;
+
+function sessToggleAuditLog() {
+  const body    = document.getElementById("sess-audit-body");
+  const chevron = document.getElementById("sess-audit-chevron");
+  const open    = body.style.display === "none";
+  body.style.display    = open ? "block" : "none";
+  chevron.className     = open ? "bi bi-chevron-up" : "bi bi-chevron-down";
+  if (open && !_auditLoaded) { _auditLoaded = true; sessLoadAuditLog(); }
+}
+
+async function sessLoadAuditLog() {
+  const el = document.getElementById("sess-audit-content");
+  try {
+    const { entries } = await apiCall("getPhiAuditLog", {});
+    if (!entries.length) {
+      el.innerHTML = `<p style="color:var(--muted);font-size:14px;">No PHI redactions recorded for this client yet.</p>`;
+      return;
+    }
+    const ACTION_LABEL = { addSession: "Quick session note", addSessionNote: "Program session note" };
+    el.innerHTML = `
+      <div style="overflow-x:auto;">
+        <table class="summary-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Action</th>
+              <th>Field</th>
+              <th>PHI Types Found</th>
+              <th>Chars (before → after)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${entries.map(e => `
+              <tr>
+                <td style="white-space:nowrap;">${escapeHtml(e.timestamp)}</td>
+                <td>${escapeHtml(ACTION_LABEL[e.action] || e.action)}</td>
+                <td style="font-size:12px;color:var(--muted);">${escapeHtml(e.fieldKey.replace(/_/g," "))}</td>
+                <td>
+                  ${e.phiTypesFound.split(", ").map(t =>
+                    `<span style="display:inline-block;background:#fee2e2;color:#991b1b;font-size:11px;
+                      font-weight:700;padding:1px 7px;border-radius:8px;margin:1px 3px 1px 0;">
+                      <i class="bi bi-shield-fill-exclamation"></i> ${escapeHtml(t)}
+                    </span>`
+                  ).join("")}
+                </td>
+                <td style="font-size:12px;color:var(--muted);">${e.originalChars} → ${e.redactedChars}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>`;
+  } catch (err) {
+    el.innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Could not load audit log: ${escapeHtml(err.message)}</span></div>`;
+  }
 }
