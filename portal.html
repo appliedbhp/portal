@@ -60,6 +60,8 @@
         <button class="sidebar-link" data-section="client-program" onclick="showSection('client-program')" id="clientProgramNavBtn"><i class="bi bi-calendar2-week-fill"></i> Client Program</button>
         <button class="sidebar-link" data-section="program-admin" onclick="showSection('program-admin')" id="programAdminNavBtn"><i class="bi bi-collection-play-fill"></i> Programs</button>
         <button class="sidebar-link" data-section="appointments" onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i> Appointments</button>
+        <button class="sidebar-link" data-section="consent-forms" onclick="showSection('consent-forms')" id="consentFormsNavBtn"><i class="bi bi-pen-fill"></i> Consent Forms</button>
+        <button class="sidebar-link" data-section="discharge" onclick="showSection('discharge')" id="dischargeNavBtn" style="display:none;"><i class="bi bi-clipboard2-x-fill"></i> Discharge Summary</button>
       </div>
     </div>
 
@@ -102,7 +104,9 @@
       <div id="section-intake" class="section"></div>
       <div id="section-superbill" class="section"></div>
       <div id="section-client-billing" class="section"></div>
+      <div id="section-consent-forms" class="section"></div>
       <div id="section-client-viz" class="section"></div>
+      <div id="section-discharge" class="section"></div>
     </div>
   </div>
 </div>
@@ -128,7 +132,10 @@
 <script src="js/intake.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/superbill.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/consent-forms.js"></script>
 <script src="js/client-viz.js"></script>
+<script src="js/discharge.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -147,6 +154,8 @@ if (_role === "provider") document.getElementById("clientVizNavBtn").style.displ
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
 if (_role !== "provider") document.getElementById("clientBillingNavBtn").style.display = "block";
+if (_role !== "provider") document.getElementById("consentFormsNavBtn").style.display = "none";
+if (_role === "provider") document.getElementById("dischargeNavBtn").style.display = "block";
 if (_role === "adult") {
   document.getElementById("roadmapNavBtn").style.display = "none";
   document.getElementById("winNavBtn").style.display = "none";
@@ -200,7 +209,9 @@ const SECTION_INIT = {
   "intake": initIntakeSection,
   "grades": initGradesSection,
   "client-viz": initClientVizSection,
-  "client-billing": initClientBillingSection
+  "client-billing": initClientBillingSection,
+  "consent-forms": initConsentFormsSection,
+  "discharge": initDischargeSection
 };
 const initialized = {};
 
@@ -218,6 +229,7 @@ showSection("home");
 if (_role === "provider") checkProgressReportDue();
 checkGradesAlert();
 startTimeoutWatcher();
+if (_role !== "provider") initNotifications();
 </script>
 </body>
 </html>
