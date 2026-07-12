@@ -106,6 +106,21 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 8);
 
+  // ── Goal measurements over time ──────────────────────────────────────────
+  // Build: { goalName: [ { sessionNum, recordedAt, frequency, duration, intensity } ] }
+  const goalMeasureMap = {};
+  const sortedNotes = [...notes].sort((a, b) => Number(a.sessionNum) - Number(b.sessionNum));
+  sortedNotes.forEach(n => {
+    const m = n.fields && n.fields._goal_measurements;
+    if (!m) return;
+    Object.entries(m).forEach(([goal, vals]) => {
+      if (!goalMeasureMap[goal]) goalMeasureMap[goal] = [];
+      goalMeasureMap[goal].push({ sessionNum: n.sessionNum, recordedAt: n.recordedAt, ...vals });
+    });
+  });
+  // Only keep goals with ≥2 data points for a meaningful trend
+  const trendGoals = Object.entries(goalMeasureMap).filter(([, pts]) => pts.length >= 2);
+
   // ── Total session time ───────────────────────────────────────────────────
   const totalMin = sessions.reduce((s, n) => s + (n.durationMin || 0), 0);
 
@@ -173,6 +188,18 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
       <h2 style="margin:0 0 16px;"><i class="bi bi-bullseye"></i> Goals Addressed in Sessions</h2>
       ${goalsBlock}
     </div>` : ""}
+
+    <!-- Measurement trends -->
+    ${trendGoals.length ? `
+    <div class="card">
+      <h2 style="margin:0 0 4px;"><i class="bi bi-activity"></i> Goal Measurement Trends</h2>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 20px;">Frequency, duration, and intensity tracked across sessions for goals with recorded data.</p>
+      ${trendGoals.map(([goal], gi) => `
+        <div style="margin-bottom:28px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">${escapeHtml(goal)}</div>
+          <canvas id="viz-trend-${gi}" height="70"></canvas>
+        </div>`).join("")}
+    </div>` : ""}
   `;
 
   // ── Render charts ────────────────────────────────────────────────────────
@@ -228,6 +255,44 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
       });
       _vizCharts.push(weekly);
     }
+
+    // Measurement trend lines (one chart per goal)
+    trendGoals.forEach(([goal, pts], gi) => {
+      const el = document.getElementById("viz-trend-" + gi);
+      if (!el) return;
+      const labels   = pts.map(p => "Sess " + p.sessionNum);
+      const datasets = [];
+      const COLORS = { frequency: "#6366f1", duration: "#0ea5e9", intensity: "#f59e0b" };
+      const LABELS = { frequency: "Frequency (#)", duration: "Duration (min)", intensity: "Intensity (1–10)" };
+      ["frequency", "duration", "intensity"].forEach(metric => {
+        if (pts.some(p => p[metric] !== undefined)) {
+          datasets.push({
+            label:           LABELS[metric],
+            data:            pts.map(p => p[metric] ?? null),
+            borderColor:     COLORS[metric],
+            backgroundColor: COLORS[metric] + "20",
+            borderWidth:     2,
+            pointRadius:     4,
+            tension:         0.3,
+            spanGaps:        true
+          });
+        }
+      });
+      if (!datasets.length) return;
+      const chart = new Chart(el, {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+          plugins: { legend: { position: "top", labels: { font: { size: 11 }, boxWidth: 10, padding: 10 } } },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+            y: { beginAtZero: true, ticks: { font: { size: 11 } } }
+          },
+          animation: { duration: 400 }
+        }
+      });
+      _vizCharts.push(chart);
+    });
 
     // Goals horizontal bar
     if (topGoals.length) {

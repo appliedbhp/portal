@@ -303,10 +303,17 @@ function renderClientProgram(root, program, notes, goals, schedule) {
                         font-size:11px;font-weight:600;padding:1px 7px;border-radius:8px;margin:2px 3px 2px 0;">
                         <i class="bi bi-check2"></i> ${escapeHtml(g)}</span>`).join("")}
                     </div>` : ""}
-                    <div style="font-size:11px;color:var(--muted);">
-                      <i class="bi bi-pencil-fill"></i> Note logged ${escapeHtml(n.recordedAt.slice(0,10))}
+                    <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;flex-wrap:wrap;gap:6px;">
+                      <span><i class="bi bi-pencil-fill"></i> Note logged ${escapeHtml(n.recordedAt.slice(0,10))}</span>
+                      ${(() => {
+                        const m = n.fields && n.fields._goal_measurements;
+                        if (!m || !Object.keys(m).length) return "";
+                        const count = Object.keys(m).length;
+                        return `<span style="background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:8px;font-weight:600;font-size:10px;">
+                          <i class="bi bi-activity"></i> ${count} goal${count > 1 ? "s" : ""} measured</span>`;
+                      })()}
                       <button class="secondary" onclick="viewSessionNote(${sess.session_num})"
-                        style="margin-left:8px;padding:2px 8px;font-size:11px;">View / Edit</button>
+                        style="padding:2px 8px;font-size:11px;">View / Edit</button>
                     </div>
                   </div>`;
                 })() : ""}
@@ -358,15 +365,50 @@ function openNoteModal(sessionNum, sessionType, sessionTitle) {
   const checkedGoals = existing ? (existFields._goals_addressed || []) : [];
   const goals = window._programGoals || [];
 
+  const existMeasures = existFields._goal_measurements || {};
+
   const goalsHtml = goals.length ? `
     <div style="margin-bottom:20px;padding:14px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);">
-      <div style="font-size:13px;font-weight:700;margin-bottom:10px;"><i class="bi bi-flag-fill" style="color:var(--primary);margin-right:6px;"></i>Goals Addressed This Session</div>
-      ${goals.map((g, i) => `
-        <div class="checkbox-row" style="margin-bottom:7px;align-items:flex-start;">
-          <input type="checkbox" id="nm-goal-${i}" value="${escapeAttr(g.objective)}"
-            ${checkedGoals.includes(g.objective) ? "checked" : ""}>
-          <label for="nm-goal-${i}" style="font-size:13px;line-height:1.4;">${escapeHtml(g.objective)}</label>
-        </div>`).join("")}
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px;"><i class="bi bi-flag-fill" style="color:var(--primary);margin-right:6px;"></i>Goals Addressed This Session</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px;">Check goals worked on, then optionally enter measurable data.</div>
+      ${goals.map((g, i) => {
+        const isChecked = checkedGoals.includes(g.objective);
+        const m = existMeasures[g.objective] || {};
+        return `
+        <div style="margin-bottom:8px;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;background:#fff;">
+          <div class="checkbox-row" style="margin:0;padding:9px 12px;cursor:pointer;"
+               onclick="document.getElementById('nm-goal-${i}').click()">
+            <input type="checkbox" id="nm-goal-${i}" value="${escapeAttr(g.objective)}"
+              ${isChecked ? "checked" : ""}
+              onclick="event.stopPropagation();cpToggleMeasure(${i})"
+              style="width:15px;height:15px;flex-shrink:0;accent-color:var(--primary);">
+            <label for="nm-goal-${i}" style="font-size:13px;line-height:1.4;font-weight:500;cursor:pointer;">${escapeHtml(g.objective)}</label>
+          </div>
+          <div id="nm-measure-${i}" style="padding:10px 12px 12px;border-top:1px solid var(--border);background:#f8fafc;${isChecked ? "" : "display:none;"}">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:8px;">Measurable Data (optional)</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+              <div>
+                <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;margin-bottom:4px;">Frequency (#)</label>
+                <input type="number" id="nm-freq-${i}" min="0" placeholder="—"
+                  value="${m.frequency !== undefined ? m.frequency : ""}"
+                  style="width:100%;max-width:100%;padding:7px 9px;font-size:13px;border-radius:7px;">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;margin-bottom:4px;">Duration (min)</label>
+                <input type="number" id="nm-dur-${i}" min="0" placeholder="—"
+                  value="${m.duration !== undefined ? m.duration : ""}"
+                  style="width:100%;max-width:100%;padding:7px 9px;font-size:13px;border-radius:7px;">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--muted);font-weight:600;text-transform:none;letter-spacing:0;margin-bottom:4px;">Intensity (1–10)</label>
+                <input type="number" id="nm-int-${i}" min="1" max="10" placeholder="—"
+                  value="${m.intensity !== undefined ? m.intensity : ""}"
+                  style="width:100%;max-width:100%;padding:7px 9px;font-size:13px;border-radius:7px;">
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join("")}
     </div>` : "";
 
   const modalArea = document.getElementById("note-modal-area");
@@ -423,6 +465,12 @@ function openNoteModal(sessionNum, sessionType, sessionTitle) {
   });
 }
 
+function cpToggleMeasure(i) {
+  const cb  = document.getElementById("nm-goal-" + i);
+  const row = document.getElementById("nm-measure-" + i);
+  if (row) row.style.display = cb && cb.checked ? "" : "none";
+}
+
 function closeNoteModal() {
   _noteEditors = {};
   const el = document.getElementById("note-modal-area");
@@ -440,9 +488,24 @@ async function saveNoteModal(sessionNum, sessionType, sessionTitle) {
       fields[f.key] = q.getText().trim() ? html : "";
     }
   });
-  // Collect checked goals
-  const checkedGoals = Array.from(document.querySelectorAll('[id^="nm-goal-"]:checked')).map(cb => cb.value);
+  // Collect checked goals + measurements
+  const checkedBoxes = Array.from(document.querySelectorAll('[id^="nm-goal-"]:checked'));
+  const checkedGoals = checkedBoxes.map(cb => cb.value);
   if (checkedGoals.length) fields._goals_addressed = checkedGoals;
+
+  const measures = {};
+  checkedBoxes.forEach(cb => {
+    const i    = cb.id.replace("nm-goal-", "");
+    const freq = document.getElementById("nm-freq-" + i);
+    const dur  = document.getElementById("nm-dur-"  + i);
+    const intn = document.getElementById("nm-int-"  + i);
+    const entry = {};
+    if (freq && freq.value !== "") entry.frequency = Number(freq.value);
+    if (dur  && dur.value  !== "") entry.duration  = Number(dur.value);
+    if (intn && intn.value !== "") entry.intensity = Number(intn.value);
+    if (Object.keys(entry).length) measures[cb.value] = entry;
+  });
+  if (Object.keys(measures).length) fields._goal_measurements = measures;
 
   setStatus("note-save-status", "Saving…", "loading");
   try {
