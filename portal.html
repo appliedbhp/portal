@@ -31,40 +31,51 @@
     <button class="sidebar-link" data-section="dashboard" onclick="showSection('dashboard')" id="dashboardNavBtn" style="display:none;"><i class="bi bi-speedometer2"></i> Dashboard</button>
 
     <div class="sidebar-group">
-      <div class="sidebar-group-title">Assessments</div>
-      <button class="sidebar-link" data-section="roadmap" onclick="showSection('roadmap')" id="roadmapNavBtn"><i class="bi bi-signpost-split-fill"></i> Roadmap</button>
-      <button class="sidebar-link" data-section="win" onclick="showSection('win')" id="winNavBtn"><i class="bi bi-heart-pulse-fill"></i> What I Need</button>
-      <button class="sidebar-link" data-section="bfa" onclick="showSection('bfa')" id="bfaNavBtn"><i class="bi bi-clipboard2-check-fill"></i> Behavior Assessment</button>
-      <button class="sidebar-link" data-section="grades" onclick="showSection('grades')"><i class="bi bi-mortarboard-fill"></i> Grades</button>
-      <button class="sidebar-link" data-section="intake" onclick="showSection('intake')" id="intakeNavBtn"><i class="bi bi-clipboard2-pulse-fill"></i> Intake &amp; Validity</button>
+      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Assessments<i class="bi bi-chevron-down sg-chevron"></i></div>
+      <div class="sidebar-group-links">
+        <button class="sidebar-link" data-section="roadmap" onclick="showSection('roadmap')" id="roadmapNavBtn"><i class="bi bi-signpost-split-fill"></i> Roadmap</button>
+        <button class="sidebar-link" data-section="win" onclick="showSection('win')" id="winNavBtn"><i class="bi bi-heart-pulse-fill"></i> What I Need</button>
+        <button class="sidebar-link" data-section="bfa" onclick="showSection('bfa')" id="bfaNavBtn"><i class="bi bi-clipboard2-check-fill"></i> Behavior Assessment</button>
+        <button class="sidebar-link" data-section="grades" onclick="showSection('grades')"><i class="bi bi-mortarboard-fill"></i> Grades</button>
+        <button class="sidebar-link" data-section="intake" onclick="showSection('intake')" id="intakeNavBtn"><i class="bi bi-clipboard2-pulse-fill"></i> Intake &amp; Validity</button>
+      </div>
     </div>
 
     <div class="sidebar-group">
-      <div class="sidebar-group-title">Records</div>
-      <button class="sidebar-link" data-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
-      <button class="sidebar-link" data-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i> Progress</button>
-      <button class="sidebar-link" data-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i> Standardized Scores</button>
-      <button class="sidebar-link" data-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i> Session Notes</button>
+      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Records<i class="bi bi-chevron-down sg-chevron"></i></div>
+      <div class="sidebar-group-links">
+        <button class="sidebar-link" data-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
+        <button class="sidebar-link" data-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i> Progress</button>
+        <button class="sidebar-link" data-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i> Standardized Scores</button>
+        <button class="sidebar-link" data-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i> Session Notes</button>
+      </div>
     </div>
 
     <div class="sidebar-group">
-      <div class="sidebar-group-title">Insights</div>
-      <button class="sidebar-link" data-section="recommendation" onclick="showSection('recommendation')" id="recNavBtn"><i class="bi bi-stars"></i> Package Rec</button>
-      <button class="sidebar-link" data-section="reports" onclick="showSection('reports')" id="reportsNavBtn"><i class="bi bi-file-earmark-medical-fill"></i> Assessment Report</button>
-      <button class="sidebar-link" data-section="progress-report" onclick="showSection('progress-report')" id="progressReportNavBtn"><i class="bi bi-graph-up-arrow"></i> Progress Report</button>
-      <button class="sidebar-link" data-section="client-program" onclick="showSection('client-program')" id="clientProgramNavBtn"><i class="bi bi-calendar2-week-fill"></i> Client Program</button>
-      <button class="sidebar-link" data-section="program-admin" onclick="showSection('program-admin')" id="programAdminNavBtn"><i class="bi bi-collection-play-fill"></i> Programs</button>
-      <button class="sidebar-link" data-section="appointments" onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i> Appointments</button>
+      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Insights<i class="bi bi-chevron-down sg-chevron"></i></div>
+      <div class="sidebar-group-links">
+        <button class="sidebar-link" data-section="recommendation" onclick="showSection('recommendation')" id="recNavBtn"><i class="bi bi-stars"></i> Package Rec</button>
+        <button class="sidebar-link" data-section="reports" onclick="showSection('reports')" id="reportsNavBtn"><i class="bi bi-file-earmark-medical-fill"></i> Assessment Report</button>
+        <button class="sidebar-link" data-section="progress-report" onclick="showSection('progress-report')" id="progressReportNavBtn"><i class="bi bi-graph-up-arrow"></i> Progress Report</button>
+        <button class="sidebar-link" data-section="client-program" onclick="showSection('client-program')" id="clientProgramNavBtn"><i class="bi bi-calendar2-week-fill"></i> Client Program</button>
+        <button class="sidebar-link" data-section="program-admin" onclick="showSection('program-admin')" id="programAdminNavBtn"><i class="bi bi-collection-play-fill"></i> Programs</button>
+        <button class="sidebar-link" data-section="appointments" onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i> Appointments</button>
+      </div>
     </div>
 
     <div class="sidebar-group">
-      <div class="sidebar-group-title">Billing</div>
-      <button class="sidebar-link" data-section="superbill" onclick="showSection('superbill')" id="superbillNavBtn" style="display:none;"><i class="bi bi-receipt-cutoff"></i> Superbill</button>
+      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Billing<i class="bi bi-chevron-down sg-chevron"></i></div>
+      <div class="sidebar-group-links">
+        <button class="sidebar-link" data-section="superbill" onclick="showSection('superbill')" id="superbillNavBtn" style="display:none;"><i class="bi bi-receipt-cutoff"></i> Superbill</button>
+      </div>
     </div>
 
     <div class="sidebar-group">
-      <div class="sidebar-group-title">My Journey</div>
-      <button class="sidebar-link" data-section="programs" onclick="showSection('programs')" id="programsNavBtn"><i class="bi bi-play-circle-fill"></i> My Program</button>
+      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">My Journey<i class="bi bi-chevron-down sg-chevron"></i></div>
+      <div class="sidebar-group-links">
+        <button class="sidebar-link" data-section="programs" onclick="showSection('programs')" id="programsNavBtn"><i class="bi bi-play-circle-fill"></i> My Program</button>
+        <button class="sidebar-link" data-section="client-viz" onclick="showSection('client-viz')" id="clientVizNavBtn"><i class="bi bi-bar-chart-fill"></i> My Progress</button>
+      </div>
     </div>
   </aside>
 
@@ -89,6 +100,7 @@
       <div id="section-grades" class="section"></div>
       <div id="section-intake" class="section"></div>
       <div id="section-superbill" class="section"></div>
+      <div id="section-client-viz" class="section"></div>
     </div>
   </div>
 </div>
@@ -114,6 +126,7 @@
 <script src="js/intake.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/superbill.js"></script>
+<script src="js/client-viz.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -128,6 +141,7 @@ if (_role !== "provider") document.getElementById("progressReportNavBtn").style.
 if (_role !== "provider") document.getElementById("clientProgramNavBtn").style.display = "none";
 if (_role !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("programsNavBtn").style.display = "none";
+if (_role === "provider") document.getElementById("clientVizNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
 if (_role === "adult") {
@@ -144,6 +158,23 @@ function switchClient() {
 function toggleSidebar() {
   document.getElementById("sidebar").classList.toggle("collapsed");
 }
+
+function toggleSidebarGroup(titleEl) {
+  const group = titleEl.closest(".sidebar-group");
+  const key   = "sbg_" + titleEl.textContent.trim().replace(/\s+/g, "_");
+  group.classList.toggle("collapsed");
+  try { localStorage.setItem(key, group.classList.contains("collapsed") ? "1" : "0"); } catch (_) {}
+}
+
+// Restore collapsed state from localStorage
+document.querySelectorAll(".sidebar-group-title").forEach(titleEl => {
+  const key = "sbg_" + titleEl.textContent.trim().replace(/\s+/g, "_");
+  try {
+    if (localStorage.getItem(key) === "1") {
+      titleEl.closest(".sidebar-group").classList.add("collapsed");
+    }
+  } catch (_) {}
+});
 
 const SECTION_INIT = {
   dashboard: initDashboardSection,
@@ -164,7 +195,8 @@ const SECTION_INIT = {
   "progress-report": initProgressReportSection,
   "client-program": initClientProgramSection,
   "intake": initIntakeSection,
-  "grades": initGradesSection
+  "grades": initGradesSection,
+  "client-viz": initClientVizSection
 };
 const initialized = {};
 
