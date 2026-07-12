@@ -70,7 +70,13 @@ function renderDischargeSection(root, discharges) {
 
     <!-- Generate form -->
     <div class="card">
-      <h2><i class="bi bi-file-earmark-plus-fill"></i> Generate Discharge Summary</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+        <h2 style="margin:0;"><i class="bi bi-file-earmark-plus-fill"></i> Generate Discharge Summary</h2>
+        <button class="secondary" id="ds-ai-btn" onclick="prepopulateDischargeWithAI()" style="font-size:13px;">
+          <i class="bi bi-stars"></i> Pre-populate with AI
+        </button>
+      </div>
+      <div id="ds-ai-status" style="margin:6px 0;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;" class="ds-grid">
         <div class="row">
           <label>Discharge Date</label>
@@ -134,6 +140,34 @@ function renderDischargeSection(root, discharges) {
     <style>
       @media (max-width: 700px) { .ds-grid { grid-template-columns: 1fr !important; } }
     </style>`;
+}
+
+async function prepopulateDischargeWithAI() {
+  const btn = document.getElementById("ds-ai-btn");
+  if (btn) { btn.disabled = true; btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Generating…`; }
+  setStatus("ds-ai-status", "Analyzing session notes, goals, and progress — this may take 15–30 seconds…", "loading");
+  try {
+    const res = await apiCall("prepopulateDischarge", {});
+    const f   = res.fields || {};
+
+    const fill = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val) el.value = val;
+    };
+    fill("ds-presentingProbs",  f.presentingProbs);
+    fill("ds-goalsOutcome",     f.goalsOutcome);
+    fill("ds-servicesProvided", f.servicesProvided);
+    fill("ds-recommendations",  f.recommendations);
+    fill("ds-treatmentStart",   f.treatmentStart);
+
+    setStatus("ds-ai-status",
+      "Fields pre-populated from session data — review and edit before generating.",
+      "success");
+  } catch (e) {
+    setStatus("ds-ai-status", "AI error: " + e.message, "error");
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = `<i class="bi bi-stars"></i> Pre-populate with AI`; }
+  }
 }
 
 async function generateDischargeSummary() {
