@@ -67,6 +67,7 @@
       <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Billing<i class="bi bi-chevron-down sg-chevron"></i></div>
       <div class="sidebar-group-links">
         <button class="sidebar-link" data-section="superbill" onclick="showSection('superbill')" id="superbillNavBtn" style="display:none;"><i class="bi bi-receipt-cutoff"></i> Superbill</button>
+        <button class="sidebar-link" data-section="client-billing" onclick="showSection('client-billing')" id="clientBillingNavBtn" style="display:none;"><i class="bi bi-receipt-cutoff"></i> My Superbills</button>
       </div>
     </div>
 
@@ -100,6 +101,7 @@
       <div id="section-grades" class="section"></div>
       <div id="section-intake" class="section"></div>
       <div id="section-superbill" class="section"></div>
+      <div id="section-client-billing" class="section"></div>
       <div id="section-client-viz" class="section"></div>
     </div>
   </div>
@@ -144,6 +146,7 @@ if (_role === "provider") document.getElementById("programsNavBtn").style.displa
 if (_role === "provider") document.getElementById("clientVizNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
+if (_role !== "provider") document.getElementById("clientBillingNavBtn").style.display = "block";
 if (_role === "adult") {
   document.getElementById("roadmapNavBtn").style.display = "none";
   document.getElementById("winNavBtn").style.display = "none";
@@ -196,7 +199,8 @@ const SECTION_INIT = {
   "client-program": initClientProgramSection,
   "intake": initIntakeSection,
   "grades": initGradesSection,
-  "client-viz": initClientVizSection
+  "client-viz": initClientVizSection,
+  "client-billing": initClientBillingSection
 };
 const initialized = {};
 
