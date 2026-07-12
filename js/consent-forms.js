@@ -11,8 +11,11 @@ const CONSENT_STATUSES = {
 async function initConsentFormsSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading consent forms…</p></div>`;
   try {
-    const res = await apiCall("getConsentDocs", {});
-    renderConsentForms(root, res.docs || []);
+    const [docsRes, templatesRes] = await Promise.all([
+      apiCall("getConsentDocs", {}),
+      apiCall("getConsentTemplates", {}).catch(() => ({ templates: [] }))
+    ]);
+    renderConsentForms(root, docsRes.docs || [], templatesRes.templates || []);
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
@@ -21,7 +24,7 @@ async function initConsentFormsSection(root) {
   }
 }
 
-function renderConsentForms(root, docs) {
+function renderConsentForms(root, docs, templates) {
   const statusOptions = Object.entries(CONSENT_STATUSES)
     .map(([v, s]) => `<option value="${v}">${escapeHtml(s.label)}</option>`).join("");
 
@@ -56,18 +59,41 @@ function renderConsentForms(root, docs) {
       </div>`;
   }).join("") : `<p style="color:var(--muted);font-size:13px;margin:0;">No consent documents added yet.</p>`;
 
+  // Build template picker grouped by subfolder
+  const templatePickerHtml = buildTemplatePickerHtml(templates);
+
   root.innerHTML = `
     <div class="card">
       <h1><i class="bi bi-pen-fill"></i> Consent Forms</h1>
       <p style="color:var(--muted);font-size:14px;margin:0;">
-        Link Google Doc consent forms for this client. Setting status to
-        <strong>Pending Signature</strong> sends a notification badge to the client portal.
+        Select templates from the practice library to copy to this client's folder, or link individual Google Docs manually.
       </p>
     </div>
 
-    <!-- Add new -->
+    <!-- Template picker -->
     <div class="card">
-      <h2><i class="bi bi-plus-circle-fill"></i> Add Consent Document</h2>
+      <h2><i class="bi bi-folder2-open"></i> Send Forms from Template Library</h2>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">
+        Check the forms needed for this client. Copies will be saved to their Drive folder and they'll receive an email notification.
+      </p>
+      <div id="cf-template-list">${templatePickerHtml}</div>
+      <div id="cf-copy-status" style="margin:10px 0;"></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;">
+        <button onclick="copySelectedConsentForms()">
+          <i class="bi bi-files"></i> Copy Selected &amp; Email Client
+        </button>
+        <button class="secondary" onclick="toggleAllConsentTemplates(true)" style="font-size:12px;">Select All</button>
+        <button class="secondary" onclick="toggleAllConsentTemplates(false)" style="font-size:12px;">Deselect All</button>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin:10px 0 0;">
+        Copies are saved to <strong>Clients/${getClientId()}/Consent Forms/</strong> in Google Drive.
+        You can open each copy to add a signature page before the client signs.
+      </p>
+    </div>
+
+    <!-- Add new manually -->
+    <div class="card">
+      <h2><i class="bi bi-plus-circle-fill"></i> Link a Document Manually</h2>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px;" class="cf-grid">
         <div class="row">
           <label>Document Title</label>
@@ -100,7 +126,101 @@ function renderConsentForms(root, docs) {
 
     <style>
       @media (max-width: 640px) { .cf-grid { grid-template-columns: 1fr !important; } }
+      .cf-template-group { margin-bottom: 16px; }
+      .cf-template-group-label { font-size: 11px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+      .cf-template-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+        border: 1.5px solid var(--border); border-radius: 8px; margin-bottom: 6px;
+        cursor: pointer; transition: border-color .15s, background .15s; }
+      .cf-template-item:hover { border-color: var(--primary); background: #f0f4ff; }
+      .cf-template-item input[type=checkbox] { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+      .cf-template-item-name { font-size: 13px; flex: 1; }
+      .cf-template-item a { font-size: 11px; color: var(--primary); text-decoration: none; flex-shrink: 0; }
     </style>`;
+}
+
+function buildTemplatePickerHtml(templates) {
+  if (!templates.length) {
+    return `<p style="color:var(--muted);font-size:13px;">Could not load template library — check Drive permissions.</p>`;
+  }
+
+  // Group by subfolder
+  const groups = {};
+  templates.forEach(t => {
+    const key = t.subfolder || "__root__";
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(t);
+  });
+
+  return Object.entries(groups).map(([groupKey, files]) => {
+    const label = groupKey === "__root__" ? "General" : groupKey;
+    const items = files.map(t => `
+      <label class="cf-template-item">
+        <input type="checkbox" class="cf-template-chk" value="${escapeAttr(t.fileId)}">
+        <span class="cf-template-item-name">${escapeHtml(t.name)}</span>
+        <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+          <i class="bi bi-box-arrow-up-right"></i> Preview
+        </a>
+      </label>`).join("");
+    return `<div class="cf-template-group">
+      <div class="cf-template-group-label"><i class="bi bi-folder-fill"></i> ${escapeHtml(label)}</div>
+      ${items}
+    </div>`;
+  }).join("");
+}
+
+function toggleAllConsentTemplates(checked) {
+  document.querySelectorAll(".cf-template-chk").forEach(cb => { cb.checked = checked; });
+}
+
+async function copySelectedConsentForms() {
+  const checked = [...document.querySelectorAll(".cf-template-chk:checked")];
+  if (!checked.length) {
+    setStatus("cf-copy-status", "Please select at least one form.", "error");
+    return;
+  }
+  const fileIds = checked.map(cb => cb.value);
+  setStatus("cf-copy-status", `Copying ${fileIds.length} form${fileIds.length !== 1 ? "s" : ""} and sending email — please wait…`, "loading");
+  try {
+    const res = await apiCall("copyConsentForms", { fileIds });
+    const emailNote = res.emailed
+      ? `Email sent to ${escapeHtml(res.clientEmail)}.`
+      : res.clientEmail
+        ? "Email could not be sent — check GmailApp permissions."
+        : "No client email on file — notification not sent.";
+    document.getElementById("cf-copy-status").innerHTML = `
+      <div class="alert" style="border-color:#059669;color:#065f46;background:#d1fae5;">
+        <i class="bi bi-check-circle-fill"></i>
+        <span>
+          ${res.copied} form${res.copied !== 1 ? "s" : ""} copied to client folder. ${emailNote}
+          ${res.folderUrl ? `&nbsp;<a href="${escapeHtml(res.folderUrl)}" target="_blank"
+            style="color:var(--primary);font-weight:700;text-decoration:none;">
+            Open Folder <i class="bi bi-box-arrow-up-right"></i></a>` : ""}
+        </span>
+      </div>`;
+    // Uncheck all and refresh docs list
+    toggleAllConsentTemplates(false);
+    try {
+      const docsRes = await apiCall("getConsentDocs", {});
+      document.getElementById("cf-docs-list").innerHTML =
+        (docsRes.docs || []).length
+          ? docsRes.docs.map(d => {
+              const s = CONSENT_STATUSES[d.status] || CONSENT_STATUSES.draft;
+              return `<div style="padding:14px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:10px;background:#fff;">
+                <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${escapeHtml(d.title)}</div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                  <span style="font-size:11px;font-weight:700;background:${s.bg};color:${s.color};padding:2px 8px;border-radius:8px;">${escapeHtml(s.label)}</span>
+                  ${d.docUrl ? `<a href="${escapeHtml(d.docUrl)}" target="_blank" rel="noopener"
+                    style="font-size:12px;color:var(--primary);font-weight:600;text-decoration:none;">
+                    <i class="bi bi-box-arrow-up-right"></i> Open Doc</a>` : ""}
+                </div>
+              </div>`;
+            }).join("")
+          : `<p style="color:var(--muted);font-size:13px;margin:0;">No consent documents added yet.</p>`;
+    } catch (_) {}
+  } catch (e) {
+    setStatus("cf-copy-status", "Error: " + e.message, "error");
+  }
 }
 
 async function addConsentDoc() {
