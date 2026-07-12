@@ -28,6 +28,7 @@
 <div class="app-shell">
   <aside class="sidebar no-print" id="sidebar">
     <button class="sidebar-link" data-section="home" onclick="showSection('home')"><i class="bi bi-house-fill"></i> Home</button>
+    <button class="sidebar-link" data-section="dashboard" onclick="showSection('dashboard')" id="dashboardNavBtn" style="display:none;"><i class="bi bi-speedometer2"></i> Dashboard</button>
 
     <div class="sidebar-group">
       <div class="sidebar-group-title">Assessments</div>
@@ -64,6 +65,7 @@
 
   <div class="main-content">
     <div class="page">
+      <div id="section-dashboard" class="section"></div>
       <div id="section-home" class="section"></div>
       <div id="section-roadmap" class="section"></div>
       <div id="section-win" class="section"></div>
@@ -104,6 +106,7 @@
 <script src="js/client-program.js"></script>
 <script src="js/grades.js"></script>
 <script src="js/intake.js"></script>
+<script src="js/dashboard.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -118,6 +121,7 @@ if (_role !== "provider") document.getElementById("progressReportNavBtn").style.
 if (_role !== "provider") document.getElementById("clientProgramNavBtn").style.display = "none";
 if (_role !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("programsNavBtn").style.display = "none";
+if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
 if (_role === "adult") {
   document.getElementById("roadmapNavBtn").style.display = "none";
   document.getElementById("winNavBtn").style.display = "none";
@@ -134,6 +138,7 @@ function toggleSidebar() {
 }
 
 const SECTION_INIT = {
+  dashboard: initDashboardSection,
   home: initHomeSection,
   roadmap: initRoadmapSection,
   win: initWinSection,
