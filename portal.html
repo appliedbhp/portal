@@ -63,6 +63,7 @@
         <button class="sidebar-link" data-section="consent-forms" onclick="showSection('consent-forms')" id="consentFormsNavBtn"><i class="bi bi-pen-fill"></i> Consent Forms</button>
         <button class="sidebar-link" data-section="discharge" onclick="showSection('discharge')" id="dischargeNavBtn" style="display:none;"><i class="bi bi-clipboard2-x-fill"></i> Discharge Summary</button>
         <button class="sidebar-link" data-section="reminders" onclick="showSection('reminders')" id="remindersNavBtn" style="display:none;"><i class="bi bi-bell-fill"></i> Reminders &amp; Messages</button>
+        <button class="sidebar-link" data-section="settings" onclick="showSection('settings')" id="settingsNavBtn" style="display:none;"><i class="bi bi-gear-fill"></i> Settings</button>
       </div>
     </div>
 
@@ -109,6 +110,7 @@
       <div id="section-client-viz" class="section"></div>
       <div id="section-discharge" class="section"></div>
       <div id="section-reminders" class="section"></div>
+    <div id="section-settings" class="section"></div>
     </div>
   </div>
 </div>
@@ -139,6 +141,7 @@
 <script src="js/client-viz.js"></script>
 <script src="js/discharge.js"></script>
 <script src="js/reminders.js"></script>
+<script src="js/settings.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -160,6 +163,7 @@ if (_role !== "provider") document.getElementById("clientBillingNavBtn").style.d
 if (_role !== "provider") document.getElementById("consentFormsNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("dischargeNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("remindersNavBtn").style.display = "block";
+if (_role !== "provider") document.getElementById("settingsNavBtn").style.display = "block";
 if (_role === "adult") {
   document.getElementById("roadmapNavBtn").style.display = "none";
   document.getElementById("winNavBtn").style.display = "none";
@@ -216,7 +220,8 @@ const SECTION_INIT = {
   "client-billing": initClientBillingSection,
   "consent-forms": initConsentFormsSection,
   "discharge": initDischargeSection,
-  "reminders": initRemindersSection
+  "reminders": initRemindersSection,
+  "settings": initSettingsSection
 };
 const initialized = {};
 
