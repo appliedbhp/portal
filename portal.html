@@ -20,6 +20,15 @@
   </div>
   <div class="who" id="whoami"></div>
   <div class="btn-row" style="margin:0;">
+    <div style="position:relative;display:inline-block;">
+      <button class="secondary" id="bell-btn" onclick="showSection('notifications')"
+              style="padding:6px 10px;font-size:16px;line-height:1;" title="Notifications">
+        <i class="bi bi-bell-fill"></i>
+        <span id="bell-badge" style="display:none;position:absolute;top:-4px;right:-4px;
+          background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;
+          border-radius:9px;align-items:center;justify-content:center;padding:0 4px;">0</span>
+      </button>
+    </div>
     <button id="switchClientBtn" class="secondary" onclick="switchClient()" style="display:none;"><i class="bi bi-arrow-left-right"></i> Switch Client</button>
     <button class="secondary" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Log Out</button>
   </div>
@@ -64,6 +73,8 @@
         <button class="sidebar-link" data-section="discharge" onclick="showSection('discharge')" id="dischargeNavBtn" style="display:none;"><i class="bi bi-clipboard2-x-fill"></i> Discharge Summary</button>
         <button class="sidebar-link" data-section="reminders" onclick="showSection('reminders')" id="remindersNavBtn" style="display:none;"><i class="bi bi-bell-fill"></i> Reminders &amp; Messages</button>
         <button class="sidebar-link" data-section="settings" onclick="showSection('settings')" id="settingsNavBtn" style="display:none;"><i class="bi bi-gear-fill"></i> Settings</button>
+        <button class="sidebar-link" data-section="notifications" onclick="showSection('notifications')" id="notificationsNavBtn" style="display:none;"><i class="bi bi-bell-fill"></i> Notifications</button>
+        <button class="sidebar-link" data-section="broadcasts" onclick="showSection('broadcasts')" id="broadcastsNavBtn" style="display:none;"><i class="bi bi-megaphone-fill"></i> Broadcasts</button>
       </div>
     </div>
 
@@ -86,7 +97,18 @@
 
   <div class="main-content">
     <div class="page">
-      <div id="section-dashboard" class="section"></div>
+      <div id="broadcast-banner" style="display:none;padding:0 0 16px;">
+      <style>
+        .bcast-banner-item { display:flex;align-items:flex-start;gap:12px;
+          background:linear-gradient(135deg,#fffbeb,#fef3c7);
+          border:1.5px solid #fcd34d;border-radius:12px;
+          padding:14px 16px;margin-bottom:8px;color:#92400e; }
+        @media (prefers-color-scheme:dark) {
+          .bcast-banner-item { background:linear-gradient(135deg,#3d2e00,#4a3800);border-color:#92400e;color:#fcd34d; } }
+        :root[data-theme="dark"] .bcast-banner-item { background:linear-gradient(135deg,#3d2e00,#4a3800);border-color:#92400e;color:#fcd34d; }
+      </style>
+    </div>
+    <div id="section-dashboard" class="section"></div>
       <div id="section-home" class="section"></div>
       <div id="section-roadmap" class="section"></div>
       <div id="section-win" class="section"></div>
@@ -111,6 +133,8 @@
       <div id="section-discharge" class="section"></div>
       <div id="section-reminders" class="section"></div>
     <div id="section-settings" class="section"></div>
+    <div id="section-notifications" class="section"></div>
+    <div id="section-broadcasts" class="section"></div>
     </div>
   </div>
 </div>
@@ -142,6 +166,8 @@
 <script src="js/discharge.js"></script>
 <script src="js/reminders.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/broadcasts.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -164,11 +190,16 @@ if (_role !== "provider") document.getElementById("consentFormsNavBtn").style.di
 if (_role === "provider") document.getElementById("dischargeNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("remindersNavBtn").style.display = "block";
 if (_role !== "provider") document.getElementById("settingsNavBtn").style.display = "block";
+if (_role !== "provider") document.getElementById("notificationsNavBtn").style.display = "block";
+if (_role === "provider") document.getElementById("broadcastsNavBtn").style.display = "block";
 if (_role === "adult") {
   document.getElementById("roadmapNavBtn").style.display = "none";
   document.getElementById("winNavBtn").style.display = "none";
   document.getElementById("bfaNavBtn").style.display = "none";
 }
+
+loadBroadcastBanner();
+if (typeof updateBellBadge === "function" && typeof getRole === "function" && getRole() !== "provider") updateBellBadge();
 
 function switchClient() {
   setProviderClient("");
@@ -221,7 +252,9 @@ const SECTION_INIT = {
   "consent-forms": initConsentFormsSection,
   "discharge": initDischargeSection,
   "reminders": initRemindersSection,
-  "settings": initSettingsSection
+  "settings": initSettingsSection,
+  "notifications": initNotificationsSection,
+  "broadcasts": initBroadcastsSection
 };
 const initialized = {};
 
