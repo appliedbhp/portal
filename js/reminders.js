@@ -32,10 +32,11 @@ async function initRemindersSection(root) {
       .sort((a, b) => String(b.dateTime).localeCompare(String(a.dateTime)));
 
     renderRemindersSection(root, {
-      reminders: remindersRes.reminders || [],
-      notes:     allNotes,
-      phone:     phoneRes.phone   || "",
-      messages:  msgsRes.messages || []
+      reminders:  remindersRes.reminders || [],
+      notes:      allNotes,
+      phone:      phoneRes.phone       || "",
+      smsConsent: phoneRes.smsConsent  || false,
+      messages:   msgsRes.messages     || []
     });
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
@@ -45,7 +46,9 @@ async function initRemindersSection(root) {
   }
 }
 
-function renderRemindersSection(root, { reminders, notes, phone, messages }) {
+function renderRemindersSection(root, { reminders, notes, phone, smsConsent, messages }) {
+  const role = (typeof getCreds === "function" ? getCreds().role : null) || "provider";
+  const isProvider = role === "provider";
   const pendingReminders  = reminders.filter(r => r.status === "pending");
   const sentReminders     = reminders.filter(r => r.status === "sent");
 
@@ -77,9 +80,17 @@ function renderRemindersSection(root, { reminders, notes, phone, messages }) {
       </p>
     </div>
 
-    <!-- Client phone -->
+    <!-- SMS Consent & Client Phone -->
+    ${isProvider ? `
     <div class="card">
-      <h2><i class="bi bi-phone-fill"></i> Client Contact</h2>
+      <h2><i class="bi bi-phone-fill"></i> Client Contact &amp; SMS Consent</h2>
+      ${!smsConsent ? `<div class="alert alert-error" style="margin-bottom:14px;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span><strong>SMS not enabled.</strong> The client has not yet accepted the SMS Terms of Service. SMS messaging is disabled until they consent.</span>
+      </div>` : `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:8px 12px;background:#d1fae5;border-radius:8px;font-size:13px;">
+        <i class="bi bi-check-circle-fill" style="color:#059669;"></i>
+        <span style="color:#065f46;font-weight:600;">SMS consent on file</span>
+      </div>`}
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
         <div class="row" style="margin:0;flex:1;min-width:200px;">
           <label>Client Mobile Number (for SMS)</label>
@@ -91,6 +102,42 @@ function renderRemindersSection(root, { reminders, notes, phone, messages }) {
         <div id="rm-phone-status"></div>
       </div>
     </div>
+    ` : `
+    <div class="card" id="rm-consent-card">
+      <h2><i class="bi bi-phone-fill"></i> SMS Consent &amp; Contact</h2>
+      ${smsConsent ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:10px 14px;background:#d1fae5;border-radius:8px;font-size:13px;">
+        <i class="bi bi-check-circle-fill" style="color:#059669;font-size:16px;"></i>
+        <div>
+          <div style="color:#065f46;font-weight:700;">You have consented to SMS messages.</div>
+          <div style="color:#065f46;opacity:.8;">Reply STOP to any message to opt out at any time.</div>
+        </div>
+      </div>` : ""}
+      <div style="background:var(--bg-alt,#f8f9fa);border:1.5px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:16px;font-size:13px;line-height:1.7;">
+        <div style="font-weight:700;font-size:14px;margin-bottom:10px;color:var(--primary);">SMS Terms of Service</div>
+        <p style="margin:0 0 8px;">By providing your mobile phone number, you agree to receive SMS text messages from <strong>Applied Behavioral Health Practice</strong> regarding your appointments, program updates, and task reminders.</p>
+        <ul style="margin:0 0 8px;padding-left:20px;">
+          <li><strong>Frequency:</strong> Message frequency varies based on your scheduled appointments and active tasks.</li>
+          <li><strong>Opt-Out:</strong> You may opt out at any time by replying <strong>STOP</strong> to any message. After texting STOP, you will receive one final confirmation message.</li>
+          <li><strong>Help:</strong> Reply <strong>HELP</strong> for assistance or contact us directly at <a href="tel:6193676445" style="color:var(--primary);">619-367-6445</a>.</li>
+          <li><strong>Cost:</strong> Message and data rates may apply depending on your wireless carrier plan.</li>
+          <li><strong>Privacy:</strong> Your information will remain confidential and will not be shared with third parties for marketing purposes.</li>
+        </ul>
+        <p style="margin:0;font-style:italic;font-size:12px;color:var(--muted);">By accepting these terms, you acknowledge that you have read and understood these terms and consent to receiving text messages at the number provided.</p>
+      </div>
+      <div class="row" style="max-width:320px;">
+        <label>Your Mobile Number</label>
+        <input id="rm-phone" value="${escapeHtml(phone)}" placeholder="+1 555 555 5555">
+      </div>
+      <label style="display:flex;align-items:flex-start;gap:10px;margin:12px 0 16px;cursor:pointer;font-size:13px;">
+        <input type="checkbox" id="rm-consent-cb" ${smsConsent ? "checked" : ""} style="margin-top:2px;flex-shrink:0;">
+        <span>I agree to the SMS Terms of Service above and consent to receiving text messages at the number provided.</span>
+      </label>
+      <div id="rm-consent-status" style="margin-bottom:8px;"></div>
+      <button onclick="saveSmsConsent()" ${smsConsent ? 'class="secondary"' : ""}>
+        <i class="bi bi-check-circle-fill"></i> ${smsConsent ? "Update Consent" : "Accept &amp; Save"}
+      </button>
+    </div>
+    `}
 
     <!-- Detect reminders from note -->
     <div class="card">
@@ -121,9 +168,10 @@ function renderRemindersSection(root, { reminders, notes, phone, messages }) {
         <div class="row">
           <label>Channel</label>
           <select id="rm-channel" onchange="updateRmRecipient()">
-            <option value="sms">SMS (Twilio)</option>
-            <option value="email">Email</option>
+            <option value="sms" ${!smsConsent ? "disabled" : ""}>SMS (Twilio)${!smsConsent ? " — consent required" : ""}</option>
+            <option value="email" ${!smsConsent ? "selected" : ""}>Email</option>
           </select>
+          ${!smsConsent ? `<p style="color:#b45309;font-size:11px;margin:4px 0 0;">SMS disabled — client must accept SMS terms first.</p>` : ""}
         </div>
         <div class="row">
           <label>Recipient</label>
@@ -252,13 +300,34 @@ function toggleSchedule(cb) {
   if (btnLabel) btnLabel.textContent = cb.checked ? "Send Now" : "Schedule Message";
 }
 
+async function saveSmsConsent() {
+  const phone   = ((document.getElementById("rm-phone") || {}).value || "").trim();
+  const consent = (document.getElementById("rm-consent-cb") || {}).checked || false;
+  if (!phone) { setStatus("rm-consent-status", "Please enter a mobile number.", "error"); return; }
+  if (!consent) { setStatus("rm-consent-status", "Please check the box to agree to the SMS Terms.", "error"); return; }
+  setStatus("rm-consent-status", "Saving…", "loading");
+  try {
+    await apiCall("saveSmsConsent", { phone, consent: true });
+    setStatus("rm-consent-status", "Saved! SMS messaging is now enabled.", "success");
+    // Update recipient field
+    const r = document.getElementById("rm-recipient");
+    if (r) r.value = phone;
+    // Re-enable SMS option in channel selects
+    document.querySelectorAll("option[value='sms'][disabled]").forEach(o => {
+      o.disabled = false;
+      o.textContent = "SMS";
+    });
+  } catch (e) {
+    setStatus("rm-consent-status", "Error: " + e.message, "error");
+  }
+}
+
 async function saveClientPhone() {
   const phone = (document.getElementById("rm-phone") || {}).value || "";
   setStatus("rm-phone-status", "Saving…", "loading");
   try {
     await apiCall("saveClientPhone", { phone: phone.trim() });
     setStatus("rm-phone-status", "Saved.", "success");
-    // Update recipient field if on SMS
     const ch = (document.getElementById("rm-channel") || {}).value;
     if (ch === "sms") {
       const r = document.getElementById("rm-recipient");
@@ -297,8 +366,10 @@ async function detectRemindersFromNote() {
 
 function renderSuggestions(suggestions) {
   const phone = (document.getElementById("rm-phone") || {}).value || "";
+  // Read current smsConsent from the DOM (consent badge present = consented)
+  const smsOk = !!document.querySelector("#rm-consent-card .bi-check-circle-fill, [style*='#d1fae5'] .bi-check-circle-fill") ||
+                !document.querySelector("[disabled][value='sms']");
   document.getElementById("rm-suggestions").innerHTML = suggestions.map((s, i) => {
-    // Compute suggested datetime
     const suggestedDt = suggestDatetime(s.timing);
     return `
       <div class="rm-suggestion-item">
@@ -309,8 +380,8 @@ function renderSuggestions(suggestions) {
           <div class="row" style="margin:0;">
             <label>Channel</label>
             <select id="sg-channel-${i}" style="max-width:100%;">
-              <option value="sms">SMS</option>
-              <option value="email">Email</option>
+              <option value="sms" ${!smsOk ? "disabled" : ""}>SMS${!smsOk ? " — consent required" : ""}</option>
+              <option value="email" ${!smsOk ? "selected" : ""}>Email</option>
             </select>
           </div>
           <div class="row" style="margin:0;">
