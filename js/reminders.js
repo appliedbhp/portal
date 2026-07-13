@@ -4,15 +4,32 @@
 async function initRemindersSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
-    const [remindersRes, notesRes, phoneRes, msgsRes] = await Promise.all([
+    const [remindersRes, progNotesRes, sessionsRes, phoneRes, msgsRes] = await Promise.all([
       apiCall("getReminders", {}),
       apiCall("getSessionNotes", {}).catch(() => ({ notes: [] })),
+      apiCall("getSessions",    {}).catch(() => ({ sessions: [] })),
       apiCall("getClientPhone", {}).catch(() => ({ phone: "" })),
       apiCall("getTwilioMessages", {}).catch(() => ({ messages: [] }))
     ]);
+
+    // Merge program session notes + quick session notes, newest first
+    const progNotes  = (progNotesRes.notes    || []).map(n => ({
+      noteId:      n.noteId      || n.NOTE_ID      || "",
+      dateTime:    n.dateTime    || n.DATE_TIME     || "",
+      sessionType: (n.sessionType || n.SESSION_TYPE || "Program Session") + " (Program)"
+    }));
+    const quickNotes = (sessionsRes.sessions || []).map(s => ({
+      noteId:      s.sessionId   || s.SESSION_ID   || "",
+      dateTime:    s.dateTime    || s.DATE_TIME     || "",
+      sessionType: (s.sessionType || s.SESSION_TYPE || "Session Note") + " (Quick)"
+    }));
+    const allNotes = [...progNotes, ...quickNotes]
+      .filter(n => n.noteId)
+      .sort((a, b) => String(b.dateTime).localeCompare(String(a.dateTime)));
+
     renderRemindersSection(root, {
       reminders: remindersRes.reminders || [],
-      notes:     notesRes.notes         || [],
+      notes:     allNotes,
       phone:     phoneRes.phone         || "",
       messages:  msgsRes.messages       || []
     });
