@@ -1,5 +1,8 @@
 // Client notification center — AI-scheduled reminders with read/unread tracking
 
+let _ntfNotifications = [];  // module-level cache updated on render + toggle
+let _ntfActiveFilter  = "all";
+
 async function initNotificationsSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
@@ -69,6 +72,10 @@ function renderNotificationsSection(root, { notifications, broadcasts }) {
       .ntf-unread-dot { width:8px;height:8px;background:#ef4444;border-radius:50%;flex-shrink:0;margin-top:5px; }
       .ntf-read-dot   { width:8px;height:8px;background:var(--border);border-radius:50%;flex-shrink:0;margin-top:5px; }
     </style>`;
+
+  // Store notifications in module cache for filter re-renders
+  _ntfNotifications = notifications;
+  _ntfActiveFilter  = "all";
 
   // Set active tab style
   ntfSetActiveTab("all");
@@ -158,16 +165,11 @@ function broadcastNotifHtml(b) {
 }
 
 // Filter tabs
-let _ntfAllNotifs = [];
 function ntfFilter(filter) {
+  _ntfActiveFilter = filter;
   ntfSetActiveTab(filter);
-  // Re-read from DOM (we stash them on the root dataset)
-  const root = document.getElementById("section-notifications");
-  const data = root && root._ntfData;
-  if (data) {
-    const el = document.getElementById("ntf-list");
-    if (el) el.innerHTML = renderNotifList(data, filter);
-  }
+  const el = document.getElementById("ntf-list");
+  if (el) el.innerHTML = renderNotifList(_ntfNotifications, filter);
 }
 
 function ntfSetActiveTab(active) {
@@ -184,29 +186,30 @@ async function toggleNotifRead(reminderId, markRead) {
   const action = markRead ? "markNotificationRead" : "markNotificationUnread";
   try {
     await apiCall(action, { reminderId });
-    // Update item in place
-    const item = document.getElementById(`ntf-${reminderId}`);
-    if (item) {
-      const dot = item.querySelector(".ntf-unread-dot, .ntf-read-dot");
-      if (markRead) {
-        item.classList.remove("unread");
-        if (dot) { dot.className = "ntf-read-dot"; }
-        const btn = item.querySelector("button");
-        if (btn) btn.outerHTML = `<button class="secondary" style="font-size:11px;padding:3px 10px;"
-          onclick="toggleNotifRead('${escapeAttr(reminderId)}', false)">
-          <i class="bi bi-envelope-fill"></i> Mark Unread</button>`;
-        const badge = item.querySelector('[style*="fef2f2"]');
-        if (badge) badge.remove();
+
+    // Update the cached array in place
+    const cached = _ntfNotifications.find(n => n.reminderId === reminderId);
+    if (cached) {
+      cached.isRead  = markRead;
+      cached.readAt  = markRead ? new Date().toISOString() : "";
+    }
+
+    // Re-render the current filter so tabs stay consistent
+    const el = document.getElementById("ntf-list");
+    if (el) el.innerHTML = renderNotifList(_ntfNotifications, _ntfActiveFilter);
+
+    // Update unread count in section header
+    const unreadCount = _ntfNotifications.filter(n => !n.isRead && n.status !== "cancelled").length;
+    const badge = document.querySelector("#section-notifications h1 span");
+    if (badge) {
+      if (unreadCount > 0) {
+        badge.textContent = unreadCount;
+        badge.style.display = "inline";
       } else {
-        item.classList.add("unread");
-        if (dot) { dot.className = "ntf-unread-dot"; }
-        const btn = item.querySelector("button");
-        if (btn) btn.outerHTML = `<button class="secondary" style="font-size:11px;padding:3px 10px;"
-          onclick="toggleNotifRead('${escapeAttr(reminderId)}', true)">
-          <i class="bi bi-envelope-open-fill"></i> Mark Read</button>`;
+        badge.style.display = "none";
       }
     }
-    // Update bell badge
+
     updateBellBadge();
   } catch (e) {
     alert("Error: " + e.message);
