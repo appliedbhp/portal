@@ -75,6 +75,9 @@
         <button class="sidebar-link" data-section="settings" onclick="showSection('settings')" id="settingsNavBtn" style="display:none;"><i class="bi bi-gear-fill"></i> Settings</button>
         <button class="sidebar-link" data-section="notifications" onclick="showSection('notifications')" id="notificationsNavBtn" style="display:none;"><i class="bi bi-bell-fill"></i> Notifications</button>
         <button class="sidebar-link" data-section="broadcasts" onclick="showSection('broadcasts')" id="broadcastsNavBtn" style="display:none;"><i class="bi bi-megaphone-fill"></i> Broadcasts</button>
+        <button class="sidebar-link" data-section="assessments-library" onclick="showSection('assessments-library')" id="assessmentsLibraryNavBtn" style="display:none;"><i class="bi bi-journal-medical"></i> Assessment Library</button>
+        <button class="sidebar-link" data-section="assessments-assign" onclick="showSection('assessments-assign')" id="assessmentsAssignNavBtn" style="display:none;"><i class="bi bi-person-check-fill"></i> Assign Assessments</button>
+        <button class="sidebar-link" data-section="assessments" onclick="showSection('assessments')" id="assessmentsNavBtn" style="display:none;"><i class="bi bi-clipboard2-check-fill"></i> Assessments</button>
       </div>
     </div>
 
@@ -135,6 +138,9 @@
     <div id="section-settings" class="section"></div>
     <div id="section-notifications" class="section"></div>
     <div id="section-broadcasts" class="section"></div>
+    <div id="section-assessments-library" class="section"></div>
+    <div id="section-assessments-assign" class="section"></div>
+    <div id="section-assessments" class="section"></div>
     </div>
   </div>
 </div>
@@ -168,6 +174,9 @@
 <script src="js/settings.js"></script>
 <script src="js/notifications.js"></script>
 <script src="js/broadcasts.js"></script>
+<script src="js/assessments-library.js"></script>
+<script src="js/assessments-assign.js"></script>
+<script src="js/assessments-client.js"></script>
 <script>
 requireLogin();
 if (isProvider() && !getClientId()) {
@@ -192,6 +201,9 @@ if (_role === "provider") document.getElementById("remindersNavBtn").style.displ
 if (_role !== "provider") document.getElementById("settingsNavBtn").style.display = "block";
 if (_role !== "provider") document.getElementById("notificationsNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("broadcastsNavBtn").style.display = "block";
+if (_role === "provider") document.getElementById("assessmentsLibraryNavBtn").style.display = "block";
+if (_role === "provider") document.getElementById("assessmentsAssignNavBtn").style.display = "block";
+if (_role !== "provider") document.getElementById("assessmentsNavBtn").style.display = "block";
 if (_role === "adult") {
   document.getElementById("roadmapNavBtn").style.display = "none";
   document.getElementById("winNavBtn").style.display = "none";
@@ -254,7 +266,10 @@ const SECTION_INIT = {
   "reminders": initRemindersSection,
   "settings": initSettingsSection,
   "notifications": initNotificationsSection,
-  "broadcasts": initBroadcastsSection
+  "broadcasts": initBroadcastsSection,
+  "assessments-library": initAssessmentsLibrarySection,
+  "assessments-assign": initAssessmentsAssignSection,
+  "assessments": initAssessmentsClientSection
 };
 const initialized = {};
 
