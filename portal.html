@@ -77,7 +77,7 @@
         <button class="sidebar-link" data-section="broadcasts" onclick="showSection('broadcasts')" id="broadcastsNavBtn" style="display:none;"><i class="bi bi-megaphone-fill"></i> Broadcasts</button>
         <button class="sidebar-link" data-section="assessments-library" onclick="showSection('assessments-library')" id="assessmentsLibraryNavBtn" style="display:none;"><i class="bi bi-journal-medical"></i> Assessment Library</button>
         <button class="sidebar-link" data-section="assessments-assign" onclick="showSection('assessments-assign')" id="assessmentsAssignNavBtn" style="display:none;"><i class="bi bi-person-check-fill"></i> Assign Assessments</button>
-        <button class="sidebar-link" data-section="assessments" onclick="showSection('assessments')" id="assessmentsNavBtn" style="display:none;"><i class="bi bi-clipboard2-check-fill"></i> Assessments</button>
+        <button class="sidebar-link" data-section="assessments" onclick="showSection('assessments')" id="assessmentsNavBtn" style="display:none;"><i class="bi bi-clipboard2-pulse-fill"></i> Progress &amp; Assessments</button>
       </div>
     </div>
 
@@ -93,7 +93,6 @@
       <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">My Journey<i class="bi bi-chevron-down sg-chevron"></i></div>
       <div class="sidebar-group-links">
         <button class="sidebar-link" data-section="programs" onclick="showSection('programs')" id="programsNavBtn"><i class="bi bi-play-circle-fill"></i> My Program</button>
-        <button class="sidebar-link" data-section="client-viz" onclick="showSection('client-viz')" id="clientVizNavBtn"><i class="bi bi-bar-chart-fill"></i> My Progress</button>
       </div>
     </div>
   </aside>
@@ -132,7 +131,6 @@
       <div id="section-superbill" class="section"></div>
       <div id="section-client-billing" class="section"></div>
       <div id="section-consent-forms" class="section"></div>
-      <div id="section-client-viz" class="section"></div>
       <div id="section-discharge" class="section"></div>
       <div id="section-reminders" class="section"></div>
     <div id="section-settings" class="section"></div>
@@ -191,7 +189,6 @@ if (_role !== "provider") document.getElementById("progressReportNavBtn").style.
 if (_role !== "provider") document.getElementById("clientProgramNavBtn").style.display = "none";
 if (_role !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("programsNavBtn").style.display = "none";
-if (_role === "provider") document.getElementById("clientVizNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
 if (_role !== "provider") document.getElementById("clientBillingNavBtn").style.display = "block";
@@ -259,7 +256,6 @@ const SECTION_INIT = {
   "client-program": initClientProgramSection,
   "intake": initIntakeSection,
   "grades": initGradesSection,
-  "client-viz": initClientVizSection,
   "client-billing": initClientBillingSection,
   "consent-forms": initConsentFormsSection,
   "discharge": initDischargeSection,
