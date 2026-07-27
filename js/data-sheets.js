@@ -86,7 +86,7 @@ function renderDsModalBody(existing) {
                       padding:10px 14px;border:1.5px solid var(--border);border-radius:8px;margin-bottom:6px;">
             <div>
               <div style="font-weight:600;font-size:13px;">${escapeHtml(MEASURE_TYPE_LABELS[s.measureType]?.label || s.measureType)}</div>
-              <div style="font-size:11px;color:var(--muted);">${escapeHtml(s.tabName)} · created ${escapeHtml(s.createdAt)}</div>
+              <div style="font-size:11px;color:var(--muted);">${escapeHtml(s.docName)} · created ${escapeHtml(s.createdAt)}</div>
             </div>
             <a href="${escapeAttr(s.url)}" target="_blank"
                style="font-size:12px;padding:5px 12px;border:1.5px solid var(--primary);
