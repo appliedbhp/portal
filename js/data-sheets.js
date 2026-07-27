@@ -139,7 +139,7 @@ function dsSelectType(type) {
       </div>
       <div id="ds-gen-status" style="margin-bottom:8px;"></div>
       <button onclick="dsGenerate()">
-        <i class="bi bi-table"></i> Generate Sheet in Google Sheets
+        <i class="bi bi-file-earmark-text-fill"></i> Generate Data Sheet (Google Doc)
       </button>
     </div>`;
 }
@@ -162,12 +162,12 @@ async function dsGenerate() {
           </div>
           <div style="font-size:13px;color:#166534;margin-bottom:12px;">
             <strong>${escapeHtml(MEASURE_TYPE_LABELS[res.measureType]?.label || res.measureType)}</strong>
-            data sheet is ready in your Google Sheet.
+            data sheet created — open it in Google Docs to print or share with staff.
           </div>
           <a href="${escapeAttr(res.url)}" target="_blank"
              style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
                     background:#15803d;color:#fff;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">
-            <i class="bi bi-box-arrow-up-right"></i> Open in Google Sheets
+            <i class="bi bi-box-arrow-up-right"></i> Open in Google Docs
           </a>
         </div>`;
     }
