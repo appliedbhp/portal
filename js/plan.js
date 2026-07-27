@@ -1,4 +1,12 @@
 // Goals & Plan section — reads/writes tbl_plan for the logged-in client.
+
+function dataSheetButtonHtml(goalId) {
+  return `<button class="secondary" style="font-size:11px;padding:4px 10px;"
+    onclick="openDataSheetModal('${escapeAttr(goalId)}')">
+    <i class="bi bi-table"></i> Data Sheet
+  </button>`;
+}
+
 // Adding/removing goals is provider-only (enforced server-side too, in
 // Code.gs addGoal_/deleteGoal_ — the role check here is just UI convenience).
 
