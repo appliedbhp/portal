@@ -147,7 +147,11 @@ async function prepopulateDischargeWithAI() {
   if (btn) { btn.disabled = true; btn.innerHTML = `<i class="bi bi-hourglass-split"></i> Generating…`; }
   setStatus("ds-ai-status", "Analyzing session notes, goals, and progress — this may take 15–30 seconds…", "loading");
   try {
-    const res = await apiCall("prepopulateDischarge", {});
+    // Long timeout needed — Claude API call inside Apps Script can take 30–60s
+    const res = await Promise.race([
+      apiCall("prepopulateDischarge", {}),
+      new Promise((_, rej) => setTimeout(() => rej(new Error("Request timed out — try again")), 90000))
+    ]);
     const f   = res.fields || {};
 
     const fill = (id, val) => {
