@@ -24,6 +24,9 @@ function hexToRgba(hex, alpha) {
 function escapeHtml(s) {
   return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
+function escapeAttr(s) {
+  return String(s == null ? "" : s).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+}
 
 if (typeof Chart !== "undefined") {
   Chart.defaults.font.family = "-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif";
