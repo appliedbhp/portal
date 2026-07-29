@@ -183,8 +183,8 @@ requireLogin();
 if (isProvider() && !getClientId()) {
   window.location.href = "login.html";
 }
-if (isLinkedAdult()) {
-  const eff = getEffectiveClientId();
+if (typeof isLinkedAdult === "function" && isLinkedAdult()) {
+  const eff = typeof getEffectiveClientId === "function" ? getEffectiveClientId() : getClientId();
   document.getElementById("whoami").textContent = `${getAssessorName()} — viewing ${eff}`;
   // Inject a small banner under the header
   const banner = document.createElement("div");
