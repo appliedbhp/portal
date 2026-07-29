@@ -7,27 +7,141 @@ let calViewDate  = new Date();
 let calAppts     = [];
 let calProgSteps = [];
 
-function initAppointmentsSection(root) {
-  root.innerHTML = `
-    <div class="card no-print">
-      <h1><i class="bi bi-calendar-check-fill"></i>Book an Appointment</h1>
-      <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
-        Select a 30-minute session below. A confirmation will be sent to your email automatically.
-      </p>
-      <iframe src="${GCAL_BOOKING_IFRAME}"
-        style="border:0;border-radius:12px;display:block;max-width:100%;"
-        width="100%" height="600" frameborder="0" loading="lazy"></iframe>
-    </div>
-    <div id="appt-status"></div>
-    <div class="card" id="cal-card">
-      <div id="cal-widget"><p style="color:var(--muted);font-size:14px;">Loading calendar…</p></div>
-    </div>
-    <div class="card">
-      <h2><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
-      <div id="appt-list"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
-    </div>
-  `;
+async function initAppointmentsSection(root) {
+  const isProvider = getRole() === "provider";
+
+  if (isProvider) {
+    // Provider view: scheduling form + appointment list
+    let clientEmail = "";
+    let smsConsent  = false;
+    try {
+      const res = await apiCall("getClientEmail", {});
+      clientEmail = res.email || "";
+      smsConsent  = res.smsConsent || false;
+    } catch(_) {}
+
+    root.innerHTML = `
+      <div class="card no-print">
+        <h1><i class="bi bi-calendar-plus-fill"></i> Schedule Appointment</h1>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:560px;">
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Title</label>
+            <input type="text" id="appt-title" placeholder="e.g. Session — ${escapeHtml(getClientId())}"
+                   value="Session — ${escapeHtml(getClientId())}" style="width:100%;" />
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; Start Time</label>
+            <input type="datetime-local" id="appt-start" style="width:100%;" />
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; End Time</label>
+            <input type="datetime-local" id="appt-end" style="width:100%;" />
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Notes (optional)</label>
+            <textarea id="appt-notes" rows="2" placeholder="Visible in calendar invite"
+                      style="width:100%;resize:vertical;"></textarea>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Client Email</label>
+            <input type="email" id="appt-email" value="${escapeHtml(clientEmail)}"
+                   placeholder="auto-filled from client record" style="width:100%;" readonly />
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+              Invite sent automatically when appointment is created.
+            </div>
+          </div>
+          ${smsConsent ? `
+          <div style="grid-column:1/-1;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="appt-sms" checked />
+              Send SMS reminder to client now (opted in)
+            </label>
+          </div>` : `
+          <div style="grid-column:1/-1;">
+            <div style="font-size:12px;color:var(--muted);">
+              <i class="bi bi-chat-dots"></i> SMS reminder not available — client has not opted in.
+            </div>
+          </div>`}
+        </div>
+        <div id="appt-create-status" style="margin:12px 0;"></div>
+        <button onclick="apptCreate()" style="margin-top:4px;">
+          <i class="bi bi-calendar-plus-fill"></i> Create Appointment
+        </button>
+      </div>
+      <div id="appt-status"></div>
+      <div class="card" id="cal-card">
+        <div id="cal-widget"><p style="color:var(--muted);font-size:14px;">Loading calendar…</p></div>
+      </div>
+      <div class="card">
+        <h2><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
+        <div id="appt-list"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
+      </div>`;
+  } else {
+    // Client view: booking iframe with email pre-filled
+    let iframeSrc = GCAL_BOOKING_IFRAME;
+    try {
+      const res = await apiCall("getClientEmail", {});
+      if (res.email) iframeSrc += "&email=" + encodeURIComponent(res.email);
+    } catch(_) {}
+
+    root.innerHTML = `
+      <div class="card no-print">
+        <h1><i class="bi bi-calendar-check-fill"></i>Book an Appointment</h1>
+        <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
+          Select a 30-minute session below. A confirmation will be sent to your email automatically.
+        </p>
+        <iframe src="${iframeSrc}"
+          style="border:0;border-radius:12px;display:block;max-width:100%;"
+          width="100%" height="600" frameborder="0" loading="lazy"></iframe>
+      </div>
+      <div id="appt-status"></div>
+      <div class="card" id="cal-card">
+        <div id="cal-widget"><p style="color:var(--muted);font-size:14px;">Loading calendar…</p></div>
+      </div>
+      <div class="card">
+        <h2><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
+        <div id="appt-list"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
+      </div>`;
+  }
+
   loadAppointmentsData();
+}
+
+async function apptCreate() {
+  const title = document.getElementById("appt-title")?.value?.trim();
+  const start = document.getElementById("appt-start")?.value;
+  const end   = document.getElementById("appt-end")?.value;
+  const notes = document.getElementById("appt-notes")?.value?.trim() || "";
+  const smsEl = document.getElementById("appt-sms");
+  const sendSms = smsEl ? smsEl.checked : false;
+
+  if (!title) { setStatus("appt-create-status", "Title is required.", "error"); return; }
+  if (!start) { setStatus("appt-create-status", "Start time is required.", "error"); return; }
+  if (!end)   { setStatus("appt-create-status", "End time is required.", "error"); return; }
+  if (new Date(end) <= new Date(start)) {
+    setStatus("appt-create-status", "End time must be after start time.", "error"); return;
+  }
+
+  setStatus("appt-create-status", "Creating appointment…", "loading");
+  try {
+    const res = await apiCall("createAppointment", {
+      title,
+      startTime: new Date(start).toISOString(),
+      endTime:   new Date(end).toISOString(),
+      notes, sendSms
+    });
+
+    let msg = "Appointment created.";
+    if (res.clientEmail) msg += ` Invite sent to ${res.clientEmail}.`;
+    if (res.smsSent)     msg += " SMS reminder sent.";
+    if (res.smsSkipped)  msg += " (SMS skipped — client not opted in.)";
+    if (res.smsError)    msg += ` SMS failed: ${res.smsError}`;
+
+    setStatus("appt-create-status", msg, "success");
+    loadAppointmentsData(); // refresh the list
+  } catch(e) {
+    setStatus("appt-create-status", "Error: " + e.message, "error");
+  }
 }
 
 
