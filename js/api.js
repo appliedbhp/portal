@@ -37,7 +37,25 @@ function getCreds() {
   if (c.asProvider) {
     return { asProvider: true, providerId: c.providerId, providerPassword: c.providerPassword, clientId: c.clientId };
   }
-  return { clientId: c.clientId, password: c.password, assessorName: c.assessorName };
+  // Always authenticate with the account that logged in (authClientId).
+  // The backend resolves the effective child clientId server-side.
+  return { clientId: c.authClientId || c.clientId, password: c.password, assessorName: c.assessorName };
+}
+
+// Returns the child's client ID when logged in as a linked adult, otherwise own ID.
+function getEffectiveClientId() {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return "";
+  const c = JSON.parse(raw);
+  return c.effectiveClientId || c.clientId || "";
+}
+
+// Returns true if this login is an adult linked to a child account.
+function isLinkedAdult() {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return false;
+  const c = JSON.parse(raw);
+  return !!(c.linkedClientId && c.linkedClientId !== c.clientId);
 }
 
 function isProvider() {
