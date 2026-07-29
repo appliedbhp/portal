@@ -238,7 +238,12 @@ async function login() {
   setStatus("status", "Logging in...", "loading");
   try {
     const res = await apiCallNoCreds("login", { clientId, password });
-    setCreds({ clientId, password, assessorName, role: res.role });
+    setCreds({
+      clientId, authClientId: clientId,
+      linkedClientId: res.linkedClientId || null,
+      effectiveClientId: res.linkedClientId || clientId,
+      password, assessorName, role: res.role
+    });
     window.location.href = "portal.html";
   } catch (e) {
     setStatus("status", e.message, "error");
@@ -265,7 +270,12 @@ async function setupPassword() {
   setStatus("status", "Setting up your password...", "loading");
   try {
     const res = await apiCallNoCreds("setupPassword", { clientId, licenseKey, pin, newPassword });
-    setCreds({ clientId, password: newPassword, assessorName, role: res.role });
+    setCreds({
+      clientId, authClientId: clientId,
+      linkedClientId: res.linkedClientId || null,
+      effectiveClientId: res.linkedClientId || clientId,
+      password: newPassword, assessorName, role: res.role
+    });
     window.location.href = "portal.html";
   } catch (e) {
     setStatus("status", e.message, "error");
@@ -407,6 +417,12 @@ async function loadClientList() {
                 </button>
                 <button class="secondary" style="font-size:12px;" onclick="viewClientResponses('${escapeHtml(c.clientId)}')">
                   <i class="bi bi-chat-square-text-fill"></i> View Responses
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="showLinkedAdults('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-people-fill"></i> Linked Adults
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="showScheduleSession('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-calendar-plus-fill"></i> Schedule Session
                 </button>
                 <button class="secondary" style="font-size:12px;${!c.active ? 'color:#16a34a;' : 'color:#dc2626;'}"
                   onclick="doArchiveClient('${escapeHtml(c.clientId)}', ${c.active})">
@@ -573,6 +589,195 @@ async function doArchiveClient(clientId, isCurrentlyActive) {
   }
 }
 
+async function showLinkedAdults(childId) {
+  const el = document.getElementById("inline-form-" + childId);
+  if (!el) return;
+  el.style.display = "block";
+  el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:6px 0;">Loading linked adults…</div>`;
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  try {
+    const res = await apiCallNoCreds("getLinkedAccounts", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      childClientId: childId
+    });
+    const adults = res.adults || [];
+    el.innerHTML = `
+      <div style="font-weight:700;font-size:12px;margin-bottom:8px;color:var(--muted);">LINKED ADULT ACCOUNTS — viewing ${escapeHtml(childId)}'s data</div>
+      ${adults.length ? adults.map(a => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;
+                    background:var(--bg-alt,#f8fafc);border-radius:8px;margin-bottom:6px;font-size:13px;">
+          <div>
+            <strong>${escapeHtml(a.clientId)}</strong>
+            ${a.email ? `<span style="color:var(--muted);margin-left:6px;">${escapeHtml(a.email)}</span>` : ""}
+            ${!a.hasPassword ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;margin-left:6px;">No password</span>` : ""}
+          </div>
+          <button class="secondary" style="font-size:11px;padding:3px 8px;color:#dc2626;"
+            onclick="doUnlinkAdult('${escapeHtml(a.clientId)}','${escapeHtml(childId)}')">
+            <i class="bi bi-x-lg"></i> Unlink
+          </button>
+        </div>`).join("") : `<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">No adults linked yet.</div>`}
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+        <input id="link-adult-input-${escapeHtml(childId)}" type="text" placeholder="Adult Client ID (e.g. C-1042-P1)"
+               style="flex:1;font-size:12px;padding:5px 10px;">
+        <button style="font-size:12px;padding:5px 12px;" onclick="doLinkAdult('${escapeHtml(childId)}')">
+          <i class="bi bi-link-45deg"></i> Link
+        </button>
+      </div>
+      <div id="link-status-${escapeHtml(childId)}" style="font-size:12px;margin-top:4px;"></div>`;
+  } catch (e) {
+    el.innerHTML = `<div style="color:#dc2626;font-size:12px;">Error: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function doLinkAdult(childId) {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const adultId = (document.getElementById("link-adult-input-" + childId) || {}).value?.trim();
+  const statusEl = document.getElementById("link-status-" + childId);
+  if (!adultId) { if (statusEl) statusEl.textContent = "Enter an Adult Client ID."; return; }
+  if (statusEl) statusEl.textContent = "Linking…";
+  try {
+    await apiCallNoCreds("linkAccount", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      adultClientId: adultId, childClientId: childId
+    });
+    if (statusEl) { statusEl.style.color = "#16a34a"; statusEl.textContent = `${adultId} linked.`; }
+    showLinkedAdults(childId);
+  } catch (e) {
+    if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "Error: " + e.message; }
+  }
+}
+
+async function doUnlinkAdult(adultId, childId) {
+  if (!confirm(`Unlink ${adultId} from ${childId}?`)) return;
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  try {
+    await apiCallNoCreds("unlinkAccount", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      adultClientId: adultId
+    });
+    showLinkedAdults(childId);
+  } catch (e) {
+    setActionStatus(childId, "Error: " + e.message, "error");
+  }
+}
+
+async function showScheduleSession(clientId) {
+  const el = document.getElementById("inline-form-" + clientId);
+  if (!el) return;
+  if (el.dataset.open === "schedule") { el.style.display = "none"; el.dataset.open = ""; return; }
+  el.dataset.open = "schedule";
+  el.style.display = "block";
+  el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:6px 0;">Loading next appointment…</div>`;
+
+  const creds  = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+
+  // Fetch next appointment and client email in parallel
+  let nextAppt = null;
+  let clientEmail = "";
+  let smsConsent  = false;
+  try {
+    const [apptRes, emailRes] = await Promise.all([
+      apiCallNoCreds("getAppointments", {
+        providerId: creds.providerId, providerPassword: creds.providerPassword, clientId
+      }),
+      apiCallNoCreds("getClientEmail", {
+        providerId: creds.providerId, providerPassword: creds.providerPassword, clientId
+      })
+    ]);
+    const events = (apptRes.events || []).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    nextAppt    = events[0] || null;
+    clientEmail = emailRes.email || "";
+    smsConsent  = emailRes.smsConsent || false;
+  } catch(_) {}
+
+  const now   = new Date(); now.setMinutes(0, 0, 0); now.setHours(now.getHours() + 1);
+  const end   = new Date(now.getTime() + 60 * 60 * 1000);
+  const toLocal = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+  const nextApptHtml = nextAppt
+    ? `<div style="background:var(--bg-alt,#f8f9fa);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Next Appointment</div>
+        <div style="font-size:13px;font-weight:600;">${escapeHtml(nextAppt.name || "Appointment")}</div>
+        <div style="font-size:12px;color:var(--muted);">
+          ${new Date(nextAppt.start_time).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
+          at ${new Date(nextAppt.start_time).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}
+        </div>
+      </div>`
+    : `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">No upcoming appointments on file.</div>`;
+
+  el.innerHTML = `
+    <div style="padding:10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);margin-top:6px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:10px;">Schedule Session</div>
+      ${nextApptHtml}
+      <div style="display:grid;gap:8px;">
+        <input type="text" id="ls-title-${clientId}" value="Session — ${escapeHtml(clientId)}"
+               placeholder="Title" style="font-size:13px;" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Start</div>
+            <input type="datetime-local" id="ls-start-${clientId}" value="${toLocal(now)}" style="font-size:12px;width:100%;" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">End</div>
+            <input type="datetime-local" id="ls-end-${clientId}"   value="${toLocal(end)}"  style="font-size:12px;width:100%;" />
+          </div>
+        </div>
+        ${smsConsent ? `
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" id="ls-sms-${clientId}" checked />
+          Send SMS reminder to client
+        </label>` : `
+        <div style="font-size:11px;color:var(--muted);">SMS reminder unavailable — client not opted in.</div>`}
+        <div style="font-size:11px;color:var(--muted);">
+          Invite will be sent to: <strong>${escapeHtml(clientEmail || "no email on file")}</strong>
+        </div>
+        <div id="ls-status-${clientId}" style="font-size:12px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button style="font-size:12px;" onclick="doScheduleSession('${escapeHtml(clientId)}')">
+            <i class="bi bi-calendar-plus-fill"></i> Schedule
+          </button>
+          <button class="secondary" style="font-size:12px;"
+                  onclick="document.getElementById('inline-form-${escapeHtml(clientId)}').style.display='none'">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function doScheduleSession(clientId) {
+  const title = document.getElementById("ls-title-" + clientId)?.value?.trim();
+  const start = document.getElementById("ls-start-" + clientId)?.value;
+  const end   = document.getElementById("ls-end-"   + clientId)?.value;
+  const smsEl = document.getElementById("ls-sms-"   + clientId);
+  const sendSms = smsEl ? smsEl.checked : false;
+  const statusEl = document.getElementById("ls-status-" + clientId);
+
+  const setS = (msg, color) => {
+    if (!statusEl) return;
+    statusEl.style.color = color;
+    statusEl.textContent = msg;
+  };
+
+  if (!title || !start || !end) { setS("All fields required.", "#dc2626"); return; }
+  if (new Date(end) <= new Date(start)) { setS("End must be after start.", "#dc2626"); return; }
+
+  setS("Scheduling…", "var(--muted)");
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  try {
+    const res = await apiCallNoCreds("createAppointment", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword, clientId,
+      title, startTime: new Date(start).toISOString(), endTime: new Date(end).toISOString(), sendSms
+    });
+    let msg = "Scheduled.";
+    if (res.clientEmail) msg += ` Invite → ${res.clientEmail}.`;
+    if (res.smsSent)     msg += " SMS sent.";
+    setS(msg, "#059669");
+  } catch(e) {
+    setS("Error: " + e.message, "#dc2626");
+  }
+}
+
 async function viewClientResponses(clientId) {
   const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
   setActionStatus(clientId, "Loading responses…", "loading");
@@ -726,6 +931,21 @@ if (isProvider()) {
 } else {
   setMode("client");
 }
+
+// Pre-fill clientId from ?clientId= URL param (e.g. from session note notification email)
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const cid = params.get("clientId");
+  if (cid) {
+    const el = document.getElementById("clientId");
+    if (el) {
+      el.value = cid;
+      setMode("client");
+      // Trigger the look-up automatically so the password field appears
+      checkStatus();
+    }
+  }
+})();
 
 // Show session-expired banner if redirected from portal after timeout
 if (new URLSearchParams(window.location.search).get("reason") === "timeout") {
