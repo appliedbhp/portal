@@ -315,8 +315,147 @@ async function addSession() {
     document.getElementById("sess-dateTime").value = sessNowForInput_();
     document.getElementById("sess-endTime").value = sessNowPlusMinutes_(30);
     loadSessions();
+    sessShowPostSaveModal();
   } catch (e) {
     setStatus("sess-status", "Error: " + e.message, "error");
+  }
+}
+
+async function sessShowPostSaveModal() {
+  // Build modal skeleton immediately
+  const modal = document.createElement("div");
+  modal.id = "sess-post-save-modal";
+  modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
+    display:flex;align-items:center;justify-content:center;padding:16px;`;
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:16px;padding:28px;max-width:480px;width:100%;
+                box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;">
+      <button onclick="document.getElementById('sess-post-save-modal').remove()"
+              style="position:absolute;top:12px;right:12px;background:none;border:none;
+                     font-size:20px;cursor:pointer;color:var(--muted);line-height:1;">×</button>
+      <h2 style="margin:0 0 18px;font-size:17px;">
+        <i class="bi bi-check-circle-fill" style="color:#059669;margin-right:8px;"></i>Note Saved
+      </h2>
+
+      <!-- Notify section -->
+      <div style="border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;">
+          <i class="bi bi-envelope-fill" style="color:var(--primary);margin-right:6px;"></i>Notify Client
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">
+          Send an email with a link to their portal (client ID pre-filled).
+        </p>
+        <div id="sess-notify-status" style="margin-bottom:8px;font-size:12px;"></div>
+        <button id="sess-notify-btn" onclick="sessNotifyClient()" style="font-size:13px;">
+          <i class="bi bi-send-fill"></i> Send Note Notification
+        </button>
+      </div>
+
+      <!-- Next appointment section -->
+      <div style="border:1.5px solid var(--border);border-radius:10px;padding:14px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:10px;">
+          <i class="bi bi-calendar-check-fill" style="color:var(--primary);margin-right:6px;"></i>Next Appointment
+        </div>
+        <div id="sess-next-appt">
+          <p style="font-size:12px;color:var(--muted);margin:0;">Loading…</p>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+
+  // Load next appointment
+  try {
+    const res    = await apiCall("getAppointments", {});
+    const events = (res.events || []).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    const next   = events[0];
+    const el     = document.getElementById("sess-next-appt");
+    if (!el) return;
+    if (next) {
+      const start = new Date(next.start_time);
+      const dateStr = start.toLocaleDateString(undefined, { weekday:"long", month:"long", day:"numeric" });
+      const timeStr = start.toLocaleTimeString(undefined, { hour:"numeric", minute:"2-digit" });
+      el.innerHTML = `
+        <div style="font-size:14px;font-weight:600;margin-bottom:2px;">${escapeHtml(next.name || "Appointment")}</div>
+        <div style="font-size:12px;color:var(--muted);">${escapeHtml(dateStr)} at ${escapeHtml(timeStr)}</div>`;
+    } else {
+      el.innerHTML = sessQuickScheduleForm();
+    }
+  } catch(_) {
+    const el = document.getElementById("sess-next-appt");
+    if (el) el.innerHTML = sessQuickScheduleForm();
+  }
+}
+
+function sessQuickScheduleForm() {
+  // Default start = next hour, end = +1h
+  const now   = new Date();
+  now.setMinutes(0, 0, 0);
+  now.setHours(now.getHours() + 1);
+  const end   = new Date(now.getTime() + 60 * 60 * 1000);
+  const toLocal = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const clientId = typeof getClientId === "function" ? getClientId() : "";
+  return `
+    <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">No upcoming appointments. Schedule one now:</p>
+    <div style="display:grid;gap:8px;">
+      <input type="text" id="qsched-title" value="Session — ${escapeHtml(clientId)}"
+             placeholder="Title" style="font-size:13px;" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <input type="datetime-local" id="qsched-start" value="${toLocal(now)}" style="font-size:12px;" />
+        <input type="datetime-local" id="qsched-end"   value="${toLocal(end)}"  style="font-size:12px;" />
+      </div>
+      <div id="qsched-status" style="font-size:12px;"></div>
+      <button onclick="sessQuickSchedule()" style="font-size:13px;">
+        <i class="bi bi-calendar-plus-fill"></i> Schedule
+      </button>
+    </div>`;
+}
+
+async function sessNotifyClient() {
+  const btn = document.getElementById("sess-notify-btn");
+  if (btn) btn.disabled = true;
+  const statusEl = document.getElementById("sess-notify-status");
+  if (statusEl) { statusEl.style.color = "var(--muted)"; statusEl.textContent = "Sending…"; }
+  try {
+    const res = await apiCall("notifyClientNewNote", {});
+    if (statusEl) { statusEl.style.color = "#059669"; statusEl.textContent = `✓ Sent to ${res.sentTo}`; }
+  } catch(e) {
+    if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "Error: " + e.message; }
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function sessQuickSchedule() {
+  const title = document.getElementById("qsched-title")?.value?.trim();
+  const start = document.getElementById("qsched-start")?.value;
+  const end   = document.getElementById("qsched-end")?.value;
+  const statusEl = document.getElementById("qsched-status");
+  if (!title || !start || !end) {
+    if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "All fields required."; }
+    return;
+  }
+  if (statusEl) { statusEl.style.color = "var(--muted)"; statusEl.textContent = "Scheduling…"; }
+  try {
+    const res = await apiCall("createAppointment", {
+      title,
+      startTime: new Date(start).toISOString(),
+      endTime:   new Date(end).toISOString(),
+      sendSms: false
+    });
+    const apptEl = document.getElementById("sess-next-appt");
+    if (apptEl) {
+      const s = new Date(start);
+      apptEl.innerHTML = `
+        <div style="font-size:14px;font-weight:600;margin-bottom:2px;">${escapeHtml(title)}</div>
+        <div style="font-size:12px;color:#059669;">
+          <i class="bi bi-check-circle-fill"></i>
+          Scheduled for ${s.toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
+          at ${s.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}.
+          ${res.clientEmail ? "Invite sent to " + escapeHtml(res.clientEmail) + "." : ""}
+        </div>`;
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "Error: " + e.message; }
   }
 }
 
