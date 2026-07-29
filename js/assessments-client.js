@@ -7,19 +7,46 @@ let _acActiveTab  = "due";
 async function initAssessmentsClientSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
-    const [pendingRes, scoresRes] = await Promise.all([
+    const [pendingRes, scoresRes, vdRes] = await Promise.all([
       apiCall("getPendingAssessments", {}),
-      apiCall("getAssessmentScores",   {}).catch(() => ({ scores: [] }))
+      apiCall("getAssessmentScores",   {}).catch(() => ({ scores: [] })),
+      apiCall("getPendingVanderbilts",  {}).catch(() => ({ assignments: [] }))
     ]);
-    _acPending   = pendingRes.pending || [];
+    // Merge Vanderbilt assignments into pending list with a special type marker
+    const vdItems = (vdRes.assignments || []).map(a => ({
+      _type:     "vanderbilt",
+      assignId:  a.assignId,
+      formType:  a.formType,
+      dueDate:   a.dueDate,
+      name:      a.formType === "teacher_initial" ? "Teacher Rating Scale" : "Parent Rating Scale",
+      shortName: "Vanderbilt"
+    }));
+    _acPending   = [...(pendingRes.pending || []), ...vdItems];
     _acActiveTab = "due";
     renderAssessmentsShell(root, _acPending.length, scoresRes.scores || []);
     acShowTab("due");
+    acUpdateNavBadge(_acPending.length);
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
       <span>Could not load: ${escapeHtml(e.message)}</span>
     </div></div>`;
+  }
+}
+
+function acUpdateNavBadge(count) {
+  const btn = document.getElementById("assessmentsNavBtn");
+  if (!btn) return;
+  let badge = btn.querySelector(".ac-nav-badge");
+  if (count > 0) {
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "ac-nav-badge";
+      btn.appendChild(badge);
+    }
+    badge.textContent = count;
+  } else if (badge) {
+    badge.remove();
   }
 }
 
@@ -92,6 +119,25 @@ function renderDueNow(container, pending) {
   }
 
   container.innerHTML = pending.map((a, i) => {
+    if (a._type === "vanderbilt") {
+      const due = a.dueDate ? `Due ${new Date(a.dueDate).toLocaleDateString([], { month:"short", day:"numeric" })}` : "Assigned by care team";
+      return `
+        <div class="card" id="ac-queue-${i}">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+            <div>
+              <div style="font-weight:700;font-size:15px;">
+                <span class="vd-pulse-dot"></span>${escapeHtml(a.name)}
+              </div>
+              <div style="font-size:12px;color:var(--muted);margin-top:3px;">
+                Rating form · ${escapeHtml(due)}
+              </div>
+            </div>
+            <button onclick="acStartVanderbilt(${i})">
+              <i class="bi bi-play-fill"></i> Start
+            </button>
+          </div>
+        </div>`;
+    }
     const def    = a.definition || {};
     const parts  = def.parts || [];
     const qCount = parts.reduce((n, p) => n + (p.questions || []).length, 0);
@@ -256,6 +302,21 @@ function acQuestionRow(q, scale) {
           </label>`).join("")}
       </div>
     </div>`;
+}
+
+function acStartVanderbilt(queueIndex) {
+  const a = _acPending[queueIndex];
+  if (!a || a._type !== "vanderbilt") return;
+  const formArea = document.getElementById("ac-form-area");
+  if (!formArea) return;
+  formArea.innerHTML = `<div id="vd-inline-mount"></div>`;
+  const mount = document.getElementById("vd-inline-mount");
+  if (typeof vdRenderInlineForm === "function") {
+    vdRenderInlineForm(mount, { assignId: a.assignId, formType: a.formType });
+  } else {
+    mount.innerHTML = `<div class="alert alert-error">Vanderbilt module not loaded.</div>`;
+  }
+  formArea.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function acCancelForm() {

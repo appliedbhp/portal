@@ -1,437 +1,364 @@
-// Vanderbilt ADHD Diagnostic Rating Scales
-// Supports: online administration and AI extraction from uploaded PDFs.
-// Provider: can extract from PDF, view all records, assign forms to clients.
-// Parent/Client: fills out online form, views own results.
+// Vanderbilt ADHD Rating Scales — progress monitoring tool.
+// Provider view: assign forms to clients, extract from PDF, view history.
+// Client view: none (clients access via assessments Due Now tab).
 
-// ── Section entry point ───────────────────────────────────────────────────────
+// ── Section entry point (provider-only sidebar nav) ───────────────────────────
 
 async function initVanderbiltSection(root) {
-  const isProvider = getRole() === "provider";
   root.innerHTML = `
     <div class="card">
-      <h1><i class="bi bi-clipboard2-pulse-fill"></i> Vanderbilt Assessment Scales</h1>
+      <h1><i class="bi bi-clipboard2-check-fill"></i> Vanderbilt Rating Scales</h1>
       <p style="color:var(--muted);font-size:13px;margin:0 0 18px;">
-        NICHQ Vanderbilt ADHD Diagnostic Rating Scales — standardized parent and teacher ratings.
+        Assign rating forms to parents for progress monitoring, or upload completed paper forms.
       </p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
-        ${isProvider ? `
-          <button onclick="vdShowTab('extract')" id="vd-tab-extract" class="secondary">
-            <i class="bi bi-upload"></i> Extract from PDF
-          </button>` : ""}
-        <button onclick="vdShowTab('online')" id="vd-tab-online" class="secondary">
-          <i class="bi bi-pencil-square"></i> Complete Online
+        <button onclick="vdShowTab('assign')" id="vd-tab-assign">
+          <i class="bi bi-person-plus-fill"></i> Assign to Parent
         </button>
-        <button onclick="vdShowTab('history')" id="vd-tab-history">
-          <i class="bi bi-clock-history"></i> Rating History
+        <button onclick="vdShowTab('extract')" id="vd-tab-extract" class="secondary">
+          <i class="bi bi-upload"></i> Extract from PDF
+        </button>
+        <button onclick="vdShowTab('history')" id="vd-tab-history" class="secondary">
+          <i class="bi bi-graph-up"></i> Rating History
         </button>
       </div>
       <div id="vd-panel"></div>
     </div>`;
 
-  vdShowTab("history");
+  vdShowTab("assign");
 }
+
+let _vdActiveTab = "assign";
 
 function vdShowTab(tab) {
-  ["extract","online","history"].forEach(t => {
+  _vdActiveTab = tab;
+  ["assign","extract","history"].forEach(t => {
     const btn = document.getElementById("vd-tab-" + t);
-    if (btn) {
-      btn.className = t === tab ? "" : "secondary";
-    }
+    if (!btn) return;
+    btn.className = t === tab ? "" : "secondary";
   });
-  if (tab === "history") vdRenderHistory();
-  else if (tab === "online") vdRenderOnlineSelector();
-  else if (tab === "extract") vdRenderExtractUI();
+  const panel = document.getElementById("vd-panel");
+  if (!panel) return;
+  if (tab === "assign")  vdRenderAssign(panel);
+  if (tab === "extract") vdRenderExtract(panel);
+  if (tab === "history") vdRenderHistory(panel);
 }
 
-// ── History ───────────────────────────────────────────────────────────────────
+// ── Assign tab ────────────────────────────────────────────────────────────────
 
-async function vdRenderHistory() {
-  const panel = document.getElementById("vd-panel");
-  panel.innerHTML = `<p style="color:var(--muted);font-size:13px;">Loading records…</p>`;
+function vdRenderAssign(panel) {
+  const clientId = typeof getProviderClient === "function" ? getProviderClient() : "";
+  panel.innerHTML = `
+    <div style="max-width:480px;">
+      <h3 style="margin:0 0 14px;font-size:15px;">Assign a Rating Form</h3>
+      ${clientId ? `<p style="font-size:13px;color:var(--muted);margin:0 0 14px;">
+        Client: <strong>${escapeHtml(clientId)}</strong>
+      </p>` : `<div class="alert alert-warning" style="margin-bottom:14px;">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>Select a client first from the client list.</span>
+      </div>`}
+      <div style="margin-bottom:12px;">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Form Type</label>
+        <select id="vd-assign-formtype" style="width:100%;">
+          <option value="parent_initial">Parent Rating Scale</option>
+          <option value="teacher_initial">Teacher Rating Scale</option>
+        </select>
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Due Date (optional)</label>
+        <input type="date" id="vd-assign-due" style="width:100%;" />
+      </div>
+      <div id="vd-assign-status" style="margin-bottom:10px;"></div>
+      <button onclick="vdDoAssign()" ${!clientId ? "disabled" : ""}>
+        <i class="bi bi-send-fill"></i> Assign Form
+      </button>
+    </div>`;
+}
+
+async function vdDoAssign() {
+  const clientId  = typeof getProviderClient === "function" ? getProviderClient() : "";
+  const formType  = document.getElementById("vd-assign-formtype")?.value || "parent_initial";
+  const dueDate   = document.getElementById("vd-assign-due")?.value || "";
+  if (!clientId) return;
+  setStatus("vd-assign-status", "Assigning…", "loading");
+  try {
+    await apiCall("assignVanderbilt", { clientId, formType, dueDate });
+    setStatus("vd-assign-status", "Form assigned — it will appear in the parent's Due Now tab.", "success");
+  } catch(e) {
+    setStatus("vd-assign-status", "Error: " + e.message, "error");
+  }
+}
+
+// ── Extract from PDF tab ──────────────────────────────────────────────────────
+
+function vdRenderExtract(panel) {
+  panel.innerHTML = `
+    <div style="max-width:520px;">
+      <h3 style="margin:0 0 14px;font-size:15px;">Upload Completed Paper Form</h3>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">
+        AI will read the scanned form and extract all item scores automatically.
+      </p>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Form Type</label>
+        <select id="vd-pdf-formtype" style="width:100%;">
+          <option value="parent_initial">Parent Rating Scale</option>
+          <option value="teacher_initial">Teacher Rating Scale</option>
+        </select>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Rater Name</label>
+        <input type="text" id="vd-pdf-rater" placeholder="e.g. Jane Smith" style="width:100%;" />
+      </div>
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">PDF File</label>
+        <input type="file" id="vd-pdf-file" accept="application/pdf" />
+      </div>
+      <div id="vd-pdf-status" style="margin-bottom:10px;"></div>
+      <button onclick="vdDoExtract()">
+        <i class="bi bi-cpu-fill"></i> Extract Scores
+      </button>
+    </div>
+    <div id="vd-extract-result"></div>`;
+}
+
+async function vdDoExtract() {
+  const file     = document.getElementById("vd-pdf-file")?.files?.[0];
+  const formType = document.getElementById("vd-pdf-formtype")?.value || "parent_initial";
+  const rater    = document.getElementById("vd-pdf-rater")?.value?.trim() || "";
+  if (!file) { setStatus("vd-pdf-status", "Please select a PDF file.", "error"); return; }
+  setStatus("vd-pdf-status", "Reading file…", "loading");
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64 = e.target.result.split(",")[1];
+    setStatus("vd-pdf-status", "Extracting scores with AI (this may take 15–30 seconds)…", "loading");
+    try {
+      const res = await apiCall("extractVanderbiltPDF", {
+        formType, pdfBase64: base64, raterName: rater, raterType: "parent"
+      });
+      setStatus("vd-pdf-status", "Scores extracted successfully.", "success");
+      document.getElementById("vd-extract-result").innerHTML =
+        vdRatingCard(res.subscaleScores, rater, formType, "just now");
+    } catch(err) {
+      setStatus("vd-pdf-status", "Error: " + err.message, "error");
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Rating History tab ────────────────────────────────────────────────────────
+
+async function vdRenderHistory(panel) {
+  panel.innerHTML = `<p style="color:var(--muted);font-size:13px;">Loading…</p>`;
   try {
     const res = await apiCall("getVanderbiltRecords", {});
     const records = res.records || [];
     if (!records.length) {
-      panel.innerHTML = `<p style="color:var(--muted);font-size:14px;">No Vanderbilt ratings on file yet.</p>`;
+      panel.innerHTML = `<div style="text-align:center;padding:24px 0;color:var(--muted);font-size:13px;">
+        No completed ratings yet.</div>`;
       return;
     }
-    panel.innerHTML = records.map(r => vdRecordCard(r)).join("");
+    panel.innerHTML = records.slice().reverse().map(r =>
+      vdRatingCard(r.subscaleScores, r.raterName, r.formType, r.dateCompleted)
+    ).join("");
   } catch(e) {
-    panel.innerHTML = `<p style="color:#dc2626;font-size:13px;">Error: ${escapeHtml(e.message)}</p>`;
+    panel.innerHTML = `<div class="alert alert-error">
+      <i class="bi bi-exclamation-triangle-fill"></i><span>${escapeHtml(e.message)}</span></div>`;
   }
 }
 
-function vdRecordCard(r) {
-  const dsm = r.dsmCriteria || {};
-  const sub = r.subscaleScores || {};
-  const formLabel = r.formType === "parent_initial" ? "Parent Initial" : "Teacher Initial";
-  const sourceIcon = r.source === "pdf_upload" ? "bi-file-earmark-arrow-up-fill" : "bi-pencil-square";
+// ── Shared card renderer ──────────────────────────────────────────────────────
 
-  const adhdColor = dsm.meetsADHD ? "#dc2626" : "#16a34a";
-  const adhdText  = dsm.adhdSubtype || "—";
+function vdRatingCard(subscaleScores, raterName, formType, dateLabel) {
+  if (!subscaleScores) return "";
+  const formLabel = formType === "teacher_initial" ? "Teacher Rating Scale" : "Parent Rating Scale";
+  const entries   = Object.entries(subscaleScores);
 
-  const bars = Object.entries(sub).map(([key, s]) => {
-    if (!s || s.max === 0) return "";
-    const pct = Math.round((s.sum / s.max) * 100);
-    const color = key === "inattention" || key === "hyperactivity"
-      ? (pct >= 55 ? "#dc2626" : pct >= 35 ? "#f59e0b" : "#10b981")
-      : "#6366f1";
+  const bars = entries.map(([key, s]) => {
+    if (!s || s.max == null) return "";
+    const pct   = s.max > 0 ? Math.round((s.sum / s.max) * 100) : 0;
+    const color = pct >= 67 ? "#ef4444" : pct >= 40 ? "#f59e0b" : "#059669";
     return `
-      <div style="margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">
-          <span style="font-weight:600;">${escapeHtml(s.label)}</span>
-          <span style="color:var(--muted);">${s.sum}/${s.max}</span>
+      <div style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;">
+          <span style="font-size:12px;font-weight:600;">${escapeHtml(s.label || key)}</span>
+          <span style="font-size:12px;color:var(--muted);">${s.sum} / ${s.max}</span>
         </div>
-        <div style="background:#f0f1f5;border-radius:4px;height:14px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;min-width:${pct>0?'4px':'0'};"></div>
+        <div style="background:var(--border);border-radius:4px;height:8px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;
+                      transition:width .4s;"></div>
         </div>
       </div>`;
   }).join("");
 
   return `
-    <div class="card" style="margin-bottom:12px;border-left:4px solid ${adhdColor};">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
         <div>
-          <div style="font-weight:700;font-size:15px;margin-bottom:4px;">
-            <i class="bi ${sourceIcon}" style="color:var(--primary);margin-right:6px;"></i>
-            ${escapeHtml(formLabel)} — ${escapeHtml(r.raterName)}
-          </div>
+          <div style="font-weight:700;font-size:14px;">${escapeHtml(formLabel)}</div>
           <div style="font-size:12px;color:var(--muted);">
-            ${escapeHtml(r.dateCompleted)}
-            · ${r.source === "pdf_upload" ? "Extracted from PDF" : "Completed online"}
+            Rated by ${escapeHtml(raterName || "Unknown")} · ${escapeHtml(dateLabel || "")}
           </div>
         </div>
-        <div style="text-align:right;">
-          <div style="font-size:13px;font-weight:700;color:${adhdColor};">${escapeHtml(adhdText)}</div>
-          ${dsm.meetsODD ? `<div style="font-size:11px;color:#f59e0b;margin-top:2px;">⚠ ODD criteria met (${dsm.oddSymptomCount} symptoms)</div>` : ""}
-          ${dsm.meetsCD  ? `<div style="font-size:11px;color:#dc2626;margin-top:2px;">⚠ CD criteria met (${dsm.cdSymptomCount} symptoms)</div>` : ""}
-          ${dsm.meetsAnxiety ? `<div style="font-size:11px;color:#8b5cf6;margin-top:2px;">⚠ Anxiety/Dep criteria met</div>` : ""}
-        </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px 24px;">
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">Symptom Subscales</div>
-          ${bars}
-        </div>
-        <div>
-          <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;">DSM-5 Criteria Counts</div>
-          <div style="font-size:13px;margin-bottom:5px;">Inattention: <strong>${dsm.inattentionCount || 0}/9</strong> rated Often/Very Often</div>
-          <div style="font-size:13px;margin-bottom:5px;">Hyperactivity: <strong>${dsm.hyperactivityCount || 0}/9</strong> rated Often/Very Often</div>
-          <div style="font-size:13px;margin-bottom:5px;">ODD symptoms: <strong>${dsm.oddSymptomCount || 0}/8</strong></div>
-          ${dsm.cdSymptomCount !== undefined ? `<div style="font-size:13px;margin-bottom:5px;">CD symptoms: <strong>${dsm.cdSymptomCount}</strong></div>` : ""}
-          ${dsm.anxietySymptomCount !== null && dsm.anxietySymptomCount !== undefined
-            ? `<div style="font-size:13px;">Anxiety/Dep: <strong>${dsm.anxietySymptomCount}/7</strong></div>` : ""}
-        </div>
+      <div>${bars}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;">
+        Bars show symptom frequency as a percentage of the maximum possible score.
+        Higher = more frequent symptoms. Use trend across ratings, not single scores.
       </div>
-      ${r.notes ? `<div style="font-size:12px;color:var(--muted);margin-top:12px;border-top:1px solid var(--border);padding-top:8px;font-style:italic;">${escapeHtml(r.notes)}</div>` : ""}
     </div>`;
 }
 
-// ── Online form selector ──────────────────────────────────────────────────────
+// ── Client-side: inline form renderer (called from assessments-client.js) ─────
 
-function vdRenderOnlineSelector() {
-  const panel = document.getElementById("vd-panel");
-  panel.innerHTML = `
-    <div style="max-width:480px;">
-      <div style="font-weight:700;font-size:13px;margin-bottom:12px;color:var(--muted);">SELECT FORM TYPE</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
-        ${[
-          { key:"parent_initial", label:"Parent Initial", desc:"55 items · completed by parent or caregiver", icon:"bi-house-heart-fill" },
-          { key:"teacher_initial", label:"Teacher Initial", desc:"43 items · completed by classroom teacher", icon:"bi-mortarboard-fill" }
-        ].map(f => `
-          <button class="secondary" onclick="vdStartOnlineForm('${f.key}')"
-                  style="text-align:left;padding:14px 16px;border-radius:12px;line-height:1.5;">
-            <div style="font-size:18px;margin-bottom:6px;color:var(--primary);"><i class="bi ${f.icon}"></i></div>
-            <div style="font-weight:700;font-size:14px;">${f.label}</div>
-            <div style="font-size:11px;color:var(--muted);">${f.desc}</div>
-          </button>`).join("")}
-      </div>
-      <div class="row"><label>Your Name (Rater)</label>
-        <input id="vd-rater-name" type="text" placeholder="e.g. Jane Smith" style="max-width:320px;">
-      </div>
-      <div id="vd-selector-status"></div>
-    </div>`;
-}
-
-let _vdFormType = null;
-let _vdForm     = null;
-let _vdAnswers  = {};
-
-async function vdStartOnlineForm(formType) {
-  const raterName = (document.getElementById("vd-rater-name") || {}).value?.trim();
-  if (!raterName) {
-    setStatus("vd-selector-status", "Please enter your name before starting.", "error");
-    return;
-  }
-  _vdFormType = formType;
-  _vdAnswers  = {};
-
-  const panel = document.getElementById("vd-panel");
-  panel.innerHTML = `<p style="color:var(--muted);font-size:13px;">Loading form…</p>`;
+async function vdRenderInlineForm(container, assignment) {
+  container.innerHTML = `<p style="color:var(--muted);font-size:13px;">Loading form…</p>`;
   try {
-    const res = await apiCall("getVanderbiltForm", { formType });
-    _vdForm = res.form;
-    vdRenderForm(raterName);
+    const res  = await apiCall("getVanderbiltForm", { formType: assignment.formType });
+    const form = res.form;
+    vdBuildInlineForm(container, form, assignment);
   } catch(e) {
-    panel.innerHTML = `<p style="color:#dc2626;font-size:13px;">Error: ${escapeHtml(e.message)}</p>`;
+    container.innerHTML = `<div class="alert alert-error">
+      <i class="bi bi-exclamation-triangle-fill"></i><span>${escapeHtml(e.message)}</span></div>`;
   }
 }
 
-function vdRenderForm(raterName) {
-  const panel = document.getElementById("vd-panel");
-  const form  = _vdForm;
-  const SYMPTOM_OPTS = [
-    { val:0, label:"Never" },
-    { val:1, label:"Occasionally" },
-    { val:2, label:"Often" },
-    { val:3, label:"Very Often" }
-  ];
-  const PERF_OPTS = [
-    { val:1, label:"Excellent" },
-    { val:2, label:"Above Average" },
-    { val:3, label:"Average" },
-    { val:4, label:"Below Average" },
-    { val:5, label:"Problematic" }
-  ];
+function vdBuildInlineForm(container, form, assignment) {
+  const symScale  = ["Never (0)","Occasionally (1)","Often (2)","Very Often (3)"];
+  const perfScale = ["Excellent (1)","Above Average (2)","Average (3)","Below Average (4)","Problematic (5)"];
 
-  let html = `
-    <div style="max-width:720px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px;">
-        <div>
-          <div style="font-weight:700;font-size:16px;">${escapeHtml(form.label)}</div>
-          <div style="font-size:12px;color:var(--muted);">Rater: ${escapeHtml(raterName)}</div>
+  const sections = form.sections.map(section => {
+    const scale = section.scaleType === "performance" ? perfScale : symScale;
+    const rows  = section.items.map(item => `
+      <div style="padding:10px 0;border-bottom:1px solid var(--border);" id="vdrow-${item.n}">
+        <div style="font-size:13px;margin-bottom:8px;">
+          <span style="color:var(--muted);font-weight:600;margin-right:6px;">${item.n}.</span>
+          ${escapeHtml(item.q)}
         </div>
-        <button class="secondary" onclick="vdRenderOnlineSelector()" style="font-size:12px;">
-          <i class="bi bi-arrow-left"></i> Back
-        </button>
-      </div>`;
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          ${scale.map((s, i) => `
+            <label style="cursor:pointer;display:flex;align-items:center;gap:5px;
+                          font-size:12px;padding:4px 8px;border-radius:6px;
+                          border:1px solid var(--border);background:var(--bg-alt,#f8f9fa);">
+              <input type="radio" name="vdq${item.n}" value="${i}"
+                     style="cursor:pointer;"
+                     onchange="document.getElementById('vdrow-${item.n}').style.background=''">
+              ${escapeHtml(s)}
+            </label>`).join("")}
+        </div>
+      </div>`).join("");
 
-  form.sections.forEach(section => {
-    const opts = section.scaleType === "performance" ? PERF_OPTS : SYMPTOM_OPTS;
-    html += `
-      <div style="margin-bottom:28px;">
-        <div style="font-weight:700;font-size:14px;color:var(--primary);margin-bottom:12px;padding-bottom:6px;border-bottom:2px solid var(--primary);">
+    return `
+      <div style="margin-bottom:20px;">
+        <div style="font-weight:700;color:var(--primary);font-size:13px;
+                    padding-bottom:6px;border-bottom:2px solid var(--primary);margin-bottom:4px;">
           ${escapeHtml(section.label)}
         </div>
-        <div style="overflow-x:auto;">
-          <table style="width:100%;border-collapse:collapse;font-size:13px;">
-            <thead>
-              <tr>
-                <th style="text-align:left;padding:8px 4px;font-weight:600;color:var(--muted);font-size:11px;border-bottom:1px solid var(--border);min-width:300px;">BEHAVIOR</th>
-                ${opts.map(o => `<th style="text-align:center;padding:8px 6px;font-weight:600;color:var(--muted);font-size:11px;border-bottom:1px solid var(--border);white-space:nowrap;">${o.label}<br><span style="font-size:10px;opacity:.7;">${o.val}</span></th>`).join("")}
-              </tr>
-            </thead>
-            <tbody>
-              ${section.items.map((item, idx) => `
-                <tr style="background:${idx%2===0?'transparent':'var(--bg-alt,#f8fafc)'};">
-                  <td style="padding:10px 4px;vertical-align:top;line-height:1.5;">${item.n}. ${escapeHtml(item.q)}</td>
-                  ${opts.map(o => `
-                    <td style="text-align:center;padding:10px 6px;vertical-align:middle;">
-                      <label style="cursor:pointer;display:block;">
-                        <input type="radio" name="vd-item-${item.n}" value="${o.val}"
-                               onchange="vdSetAnswer(${item.n}, ${o.val})"
-                               style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary);">
-                      </label>
-                    </td>`).join("")}
-                </tr>`).join("")}
-            </tbody>
-          </table>
-        </div>
+        ${rows}
       </div>`;
-  });
+  }).join("");
 
-  html += `
-      <div class="row"><label>Notes (optional)</label>
-        <textarea id="vd-notes" rows="3" style="max-width:520px;"
-                  placeholder="Clinical observations, context, or caveats…"></textarea>
+  const formLabel = form.label || "Vanderbilt Rating Scale";
+  container.innerHTML = `
+    <div class="card" id="vd-inline-card">
+      <h2 style="margin:0 0 6px;">${escapeHtml(formLabel)}</h2>
+      <p style="font-size:13px;color:var(--muted);margin:0 0 16px;">
+        Rate how often each behavior has occurred over the past 6 months.
+      </p>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Your name</label>
+        <input type="text" id="vd-inline-rater" placeholder="First and last name"
+               style="max-width:320px;width:100%;" />
       </div>
-      <div id="vd-submit-status" style="margin-bottom:8px;"></div>
-      <button onclick="vdSubmitOnline('${escapeHtml(raterName)}')">
-        <i class="bi bi-check2-circle"></i> Submit Rating
-      </button>
+      <form id="vd-inline-form" onsubmit="vdSubmitInline(event, '${escapeAttr(assignment.assignId)}',
+            '${escapeAttr(assignment.formType)}')">
+        ${sections}
+        <div id="vd-inline-status" style="margin:10px 0;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+          <button type="submit"><i class="bi bi-check-circle-fill"></i> Submit Rating</button>
+        </div>
+      </form>
     </div>`;
-
-  panel.innerHTML = html;
 }
 
-function vdSetAnswer(itemNum, val) {
-  _vdAnswers[String(itemNum)] = val;
-}
-
-async function vdSubmitOnline(raterName) {
-  const form = _vdForm;
-  // Validate all items answered
-  const allItems = [];
-  form.sections.forEach(s => s.items.forEach(i => allItems.push(i.n)));
-  const missing = allItems.filter(n => _vdAnswers[String(n)] === undefined);
-  if (missing.length > 0) {
-    setStatus("vd-submit-status", `Please answer all items. ${missing.length} remaining (items: ${missing.slice(0,5).join(", ")}${missing.length>5?"…":""}).`, "error");
+async function vdSubmitInline(e, assignId, formType) {
+  e.preventDefault();
+  const form = document.getElementById("vd-inline-form");
+  if (!form) return;
+  const raterName = document.getElementById("vd-inline-rater")?.value?.trim() || "";
+  if (!raterName) {
+    setStatus("vd-inline-status", "Please enter your name.", "error");
     return;
   }
-  setStatus("vd-submit-status", "Saving…", "loading");
-  try {
-    const notes = (document.getElementById("vd-notes") || {}).value || "";
-    const res = await apiCall("submitVanderbiltOnline", {
-      formType:   _vdFormType,
-      raterName,
-      raterType:  _vdForm.raterType,
-      rawScores:  _vdAnswers,
-      notes
+
+  // Collect answers
+  const formDef = VANDERBILT_FORMS_CACHE_[formType];
+  if (!formDef) { setStatus("vd-inline-status", "Form definition missing.", "error"); return; }
+
+  const rawScores = {};
+  let missing = [];
+  formDef.sections.forEach(section => {
+    section.items.forEach(item => {
+      const checked = form.querySelector(`input[name="vdq${item.n}"]:checked`);
+      if (checked) {
+        rawScores[String(item.n)] = Number(checked.value);
+      } else {
+        missing.push(item.n);
+        const row = document.getElementById("vdrow-" + item.n);
+        if (row) row.style.background = "color-mix(in srgb,#ef4444 8%,transparent)";
+      }
     });
-    setStatus("vd-submit-status", "", "");
-    vdShowResults(res, raterName);
-  } catch(e) {
-    setStatus("vd-submit-status", "Error: " + e.message, "error");
-  }
-}
-
-function vdShowResults(res, raterName) {
-  const panel = document.getElementById("vd-panel");
-  const dsm = res.dsmCriteria || {};
-  const adhdColor = dsm.meetsADHD ? "#dc2626" : "#16a34a";
-
-  panel.innerHTML = `
-    <div style="max-width:600px;">
-      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:18px 20px;margin-bottom:20px;">
-        <div style="font-weight:700;color:#15803d;margin-bottom:4px;font-size:15px;">
-          <i class="bi bi-check-circle-fill"></i> Rating submitted successfully
-        </div>
-        <div style="font-size:13px;color:#166534;">Rater: ${escapeHtml(raterName)}</div>
-      </div>
-      <div style="background:var(--bg);border:1.5px solid ${adhdColor};border-radius:12px;padding:18px 20px;margin-bottom:16px;">
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:8px;">DSM-5 ADHD INDICATION</div>
-        <div style="font-size:18px;font-weight:700;color:${adhdColor};margin-bottom:10px;">${escapeHtml(dsm.adhdSubtype || "Does not meet criteria")}</div>
-        <div style="font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-          <div>Inattention: <strong>${dsm.inattentionCount || 0}/9</strong></div>
-          <div>Hyperactivity: <strong>${dsm.hyperactivityCount || 0}/9</strong></div>
-          <div>ODD symptoms: <strong>${dsm.oddSymptomCount || 0}/8${dsm.meetsODD?" ⚠":""}</strong></div>
-          <div>CD symptoms: <strong>${dsm.cdSymptomCount || 0}${dsm.meetsCD?" ⚠":""}</strong></div>
-          ${dsm.anxietySymptomCount !== null && dsm.anxietySymptomCount !== undefined
-            ? `<div>Anxiety/Dep: <strong>${dsm.anxietySymptomCount}/7${dsm.meetsAnxiety?" ⚠":""}</strong></div>` : ""}
-        </div>
-      </div>
-      <button onclick="vdShowTab('history')">
-        <i class="bi bi-clock-history"></i> View All Records
-      </button>
-    </div>`;
-}
-
-// ── PDF Extraction (provider only) ────────────────────────────────────────────
-
-function vdRenderExtractUI() {
-  const panel = document.getElementById("vd-panel");
-  panel.innerHTML = `
-    <div style="max-width:520px;">
-      <div style="font-weight:700;font-size:13px;color:var(--muted);margin-bottom:12px;">
-        EXTRACT SCORES FROM COMPLETED PAPER FORM
-      </div>
-      <p style="font-size:13px;color:var(--muted);margin:0 0 18px;line-height:1.6;">
-        Upload a scanned or photographed completed Vanderbilt form.
-        Claude AI will read each item and extract the scores automatically.
-      </p>
-      <div class="row"><label>Form Type</label>
-        <select id="vd-extract-type" style="max-width:280px;">
-          <option value="parent_initial">Parent Initial (55 items)</option>
-          <option value="teacher_initial">Teacher Initial (43 items)</option>
-        </select>
-      </div>
-      <div class="row"><label>Rater Name</label>
-        <input id="vd-extract-rater" type="text" placeholder="e.g. Jane Smith" style="max-width:280px;">
-      </div>
-      <div class="row"><label>Upload PDF or Image</label>
-        <input id="vd-extract-file" type="file" accept=".pdf,image/*" style="max-width:360px;">
-      </div>
-      <div class="row"><label>Notes (optional)</label>
-        <input id="vd-extract-notes" type="text" placeholder="Any context or caveats" style="max-width:360px;">
-      </div>
-      <div id="vd-extract-status" style="margin-bottom:8px;"></div>
-      <button onclick="vdDoExtract()">
-        <i class="bi bi-cpu-fill"></i> Extract with AI
-      </button>
-      <p style="font-size:11px;color:var(--muted);margin-top:12px;line-height:1.5;">
-        Extraction typically takes 10–20 seconds. Always verify AI-extracted scores against the original form before clinical use.
-      </p>
-    </div>`;
-}
-
-async function vdDoExtract() {
-  const formType  = document.getElementById("vd-extract-type").value;
-  const raterName = document.getElementById("vd-extract-rater").value.trim();
-  const fileInput = document.getElementById("vd-extract-file");
-  const notes     = document.getElementById("vd-extract-notes").value.trim();
-  const file      = fileInput.files[0];
-
-  if (!raterName) { setStatus("vd-extract-status", "Enter the rater name.", "error"); return; }
-  if (!file)      { setStatus("vd-extract-status", "Select a PDF or image file.", "error"); return; }
-
-  setStatus("vd-extract-status", "Reading file…", "loading");
-
-  const pdfBase64 = await new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload  = e => resolve(e.target.result.split(",")[1]); // strip data:...;base64,
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
   });
 
-  setStatus("vd-extract-status", "Sending to AI for extraction — this takes ~15 seconds…", "loading");
+  if (missing.length) {
+    setStatus("vd-inline-status", `Please answer all items (${missing.length} remaining).`, "error");
+    document.getElementById("vdrow-" + missing[0])?.scrollIntoView({ behavior:"smooth", block:"center" });
+    return;
+  }
+
+  setStatus("vd-inline-status", "Submitting…", "loading");
   try {
-    const raterType = formType.startsWith("teacher") ? "teacher" : "parent";
-    const res = await apiCall("extractVanderbiltPDF", {
-      formType, raterName, raterType, pdfBase64, notes
+    const res = await apiCall("submitVanderbiltOnline", {
+      formType, raterName, raterType: "parent", rawScores, assignmentId: assignId
     });
-    setStatus("vd-extract-status", "", "");
-    vdShowExtractResults(res, raterName);
-  } catch(e) {
-    setStatus("vd-extract-status", "Error: " + e.message, "error");
+    // Show thank-you + subscale summary
+    const card = document.getElementById("vd-inline-card");
+    if (card) {
+      card.innerHTML = `
+        <div style="text-align:center;padding:16px 0 8px;">
+          <i class="bi bi-check-circle-fill" style="font-size:36px;color:#059669;"></i>
+          <h2 style="margin:12px 0 4px;">Thank you!</h2>
+          <p style="color:var(--muted);font-size:13px;margin:0 0 20px;">
+            Your rating has been submitted to your care team.
+          </p>
+        </div>
+        ${vdRatingCard(res.subscaleScores, raterName, formType, "just now")}`;
+    }
+    // Re-init assessments section to clear the pending badge
+    setTimeout(() => {
+      const sec = document.getElementById("section-assessments");
+      if (sec && typeof initAssessmentsClientSection === "function") {
+        delete (window._acInitialized || {})["assessments"];
+        initAssessmentsClientSection(sec);
+      }
+    }, 1500);
+  } catch(err) {
+    setStatus("vd-inline-status", "Error: " + err.message, "error");
   }
 }
 
-function vdShowExtractResults(res, raterName) {
-  const panel = document.getElementById("vd-panel");
-  const dsm = res.dsmCriteria || {};
-  const raw = res.rawScores || {};
-  const adhdColor = dsm.meetsADHD ? "#dc2626" : "#16a34a";
+// Cache for form definitions fetched during inline rendering
+const VANDERBILT_FORMS_CACHE_ = {};
 
-  // Count blank items
-  const totalItems = Object.keys(raw).length;
-  const blankItems = Object.values(raw).filter(v => v === null || v === undefined).length;
-
-  panel.innerHTML = `
-    <div style="max-width:640px;">
-      <div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:12px;padding:16px 18px;margin-bottom:18px;">
-        <div style="font-weight:700;color:#1e40af;margin-bottom:4px;">
-          <i class="bi bi-cpu-fill"></i> AI Extraction Complete — ${escapeHtml(raterName)}
-        </div>
-        <div style="font-size:12px;color:#1e3a8a;">
-          ${totalItems - blankItems} of ${totalItems} items extracted.
-          ${blankItems > 0 ? `<strong style="color:#dc2626;"> ${blankItems} item(s) were blank or illegible.</strong>` : ""}
-        </div>
-        <div style="font-size:12px;color:#1e3a8a;margin-top:4px;">
-          <i class="bi bi-exclamation-triangle-fill"></i>
-          Always verify extracted scores against the original paper form before clinical use.
-        </div>
-      </div>
-
-      <div style="background:var(--bg);border:1.5px solid ${adhdColor};border-radius:12px;padding:16px 18px;margin-bottom:16px;">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px;">DSM-5 INDICATION</div>
-        <div style="font-size:17px;font-weight:700;color:${adhdColor};margin-bottom:8px;">${escapeHtml(dsm.adhdSubtype || "Does not meet criteria")}</div>
-        <div style="font-size:13px;display:grid;grid-template-columns:1fr 1fr;gap:5px;">
-          <div>Inattention: <strong>${dsm.inattentionCount || 0}/9</strong></div>
-          <div>Hyperactivity: <strong>${dsm.hyperactivityCount || 0}/9</strong></div>
-          <div>ODD: <strong>${dsm.oddSymptomCount || 0}/8${dsm.meetsODD?" ⚠":""}</strong></div>
-          <div>CD: <strong>${dsm.cdSymptomCount || 0}${dsm.meetsCD?" ⚠":""}</strong></div>
-          ${dsm.anxietySymptomCount !== null && dsm.anxietySymptomCount !== undefined
-            ? `<div>Anxiety/Dep: <strong>${dsm.anxietySymptomCount}/7${dsm.meetsAnxiety?" ⚠":""}</strong></div>` : ""}
-        </div>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button onclick="vdShowTab('history')">
-          <i class="bi bi-clock-history"></i> View All Records
-        </button>
-        <button class="secondary" onclick="vdRenderExtractUI()">
-          <i class="bi bi-upload"></i> Extract Another
-        </button>
-      </div>
-    </div>`;
-}
+const _origVdRenderInlineForm = vdRenderInlineForm;
+window.vdRenderInlineForm = async function(container, assignment) {
+  container.innerHTML = `<p style="color:var(--muted);font-size:13px;">Loading form…</p>`;
+  try {
+    const res  = await apiCall("getVanderbiltForm", { formType: assignment.formType });
+    VANDERBILT_FORMS_CACHE_[assignment.formType] = res.form;
+    vdBuildInlineForm(container, res.form, assignment);
+  } catch(e) {
+    container.innerHTML = `<div class="alert alert-error">
+      <i class="bi bi-exclamation-triangle-fill"></i><span>${escapeHtml(e.message)}</span></div>`;
+  }
+};
