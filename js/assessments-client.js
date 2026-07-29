@@ -189,9 +189,8 @@ function renderScoreHistory(container, scores) {
       const parts  = Object.entries(s.scores).filter(([k]) => !k.startsWith("_"));
       const badges = parts.map(([partId, sc]) => {
         if (sc.method === "threshold_count") {
-          const color = sc.flag ? "#dc2626" : "#059669";
-          return `<span style="font-size:12px;font-weight:700;color:${color};">
-            ${sc.flagLabel} (${sc.count}/${sc.cutoff}+)</span>`;
+          return `<span style="font-size:12px;font-weight:700;color:var(--primary);">
+            ${sc.count} rated Often+</span>`;
         }
         return `<span style="font-size:12px;color:var(--primary);font-weight:700;">
           ${sc.method === "mean" ? sc.mean : sc.total}</span>`;
@@ -270,7 +269,7 @@ function acStartForm(queueIndex) {
         ${parts.map(part => `
           ${parts.length > 1 ? `<div style="font-weight:700;color:var(--primary);font-size:13px;
             margin:18px 0 10px;padding-bottom:4px;border-bottom:2px solid var(--primary);">
-            ${escapeHtml(part.name || part.id)}</div>` : ""}
+            ${escapeHtml(acCleanPartName(part.name || part.id))}</div>` : ""}
           ${(part.questions || []).map(q => acQuestionRow(q, scale)).join("")}
         `).join("")}
         <div id="ac-form-status" style="margin:12px 0;"></div>
@@ -367,30 +366,39 @@ async function acSubmitForm(e) {
   }
 }
 
+// Strip diagnostic/clinical language from part names for client-facing display
+function acCleanPartName(name) {
+  return name
+    .replace(/\s*\(ADHD Criteria[^)]*\)/gi, "")
+    .replace(/\s*\(ADHD Predominantly[^)]*\)/gi, "")
+    .replace(/\s*Criteria$/i, " Behaviors")
+    .replace(/\bDSM\b/gi, "")
+    .replace(/\bClinically significant\b/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function acShowResults(a, scores, def) {
   const area = document.getElementById("ac-form-area");
   if (!area) return;
 
   const resultHtml = Object.entries(scores).filter(([k]) => !k.startsWith("_")).map(([partId, s]) => {
     const partDef  = (def.parts || []).find(p => p.id === partId) || {};
-    const partName = partDef.name || partId;
+    const partName = acCleanPartName(partDef.name || partId);
     if (s.method === "threshold_count") {
-      const color = s.flag ? "#dc2626" : "#059669";
+      const total = (partDef.questions || []).length;
       return `
-        <div style="padding:14px;border:2px solid ${color};border-radius:10px;margin-bottom:10px;">
+        <div style="padding:14px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:10px;">
           <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--muted);">${escapeHtml(partName)}</div>
-          <div style="font-size:30px;font-weight:800;color:${color};">${s.count} / ${(partDef.questions || []).length}</div>
-          <div style="font-size:13px;margin-top:4px;">
-            <span style="font-weight:700;color:${color};">${escapeHtml(s.flagLabel)}</span>
-            <span style="color:var(--muted);"> · cutoff ${s.cutoff}+</span>
-          </div>
+          <div style="font-size:30px;font-weight:800;color:var(--primary);">${s.count} <span style="font-size:16px;font-weight:400;color:var(--muted);">/ ${total}</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">items rated Often or Very Often</div>
         </div>`;
     }
     return `
       <div style="padding:14px;border:1.5px solid var(--border);border-radius:10px;margin-bottom:10px;">
         <div style="font-weight:700;font-size:13px;margin-bottom:6px;color:var(--muted);">${escapeHtml(partName)}</div>
         <div style="font-size:30px;font-weight:800;color:var(--primary);">${s.method === "mean" ? s.mean : s.total}</div>
-        <div style="font-size:12px;color:var(--muted);">${s.method === "mean" ? "Mean" : "Total"} · ${s.n} items</div>
+        <div style="font-size:12px;color:var(--muted);">${s.method === "mean" ? "Average score" : "Total score"} · ${s.n} items</div>
       </div>`;
   }).join("");
 
