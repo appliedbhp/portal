@@ -109,6 +109,23 @@
         @media (prefers-color-scheme:dark) {
           .bcast-banner-item { background:linear-gradient(135deg,#3d2e00,#4a3800);border-color:#92400e;color:#fcd34d; } }
         :root[data-theme="dark"] .bcast-banner-item { background:linear-gradient(135deg,#3d2e00,#4a3800);border-color:#92400e;color:#fcd34d; }
+
+        /* Vanderbilt / assessments pending badge */
+        .ac-nav-badge {
+          display:inline-block;background:#ef4444;color:#fff;
+          font-size:10px;font-weight:700;padding:1px 6px;
+          border-radius:8px;margin-left:5px;
+          animation: ac-badge-pulse 1.4s ease-in-out infinite;
+        }
+        @keyframes ac-badge-pulse {
+          0%,100% { opacity:1; transform:scale(1); }
+          50%      { opacity:.6; transform:scale(1.15); }
+        }
+        .vd-pulse-dot {
+          display:inline-block;width:8px;height:8px;border-radius:50%;
+          background:#ef4444;margin-right:6px;vertical-align:middle;
+          animation: ac-badge-pulse 1.4s ease-in-out infinite;
+        }
       </style>
     </div>
     <div id="section-dashboard" class="section"></div>
@@ -214,7 +231,7 @@ if (_role === "provider") document.getElementById("broadcastsNavBtn").style.disp
 if (_role === "provider") document.getElementById("assessmentsLibraryNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("assessmentsAssignNavBtn").style.display = "block";
 if (_role !== "provider") document.getElementById("assessmentsNavBtn").style.display = "block";
-document.getElementById("vanderbiltNavBtn").style.display = "block";
+if (_role === "provider") document.getElementById("vanderbiltNavBtn").style.display = "block";
 if (_role === "adult") {
   document.getElementById("roadmapNavBtn").style.display = "none";
   document.getElementById("winNavBtn").style.display = "none";
