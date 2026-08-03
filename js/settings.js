@@ -1,13 +1,19 @@
-// Client/parent Settings section — SMS consent & contact preferences
+// Client/parent Settings section — SMS consent, contact preferences, avatar
 
 async function initSettingsSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
-    const res = await apiCall("getClientPhone", {}).catch(() => ({ phone: "", smsConsent: false }));
+    const [phoneRes, avatarRes] = await Promise.all([
+      apiCall("getClientPhone", {}).catch(() => ({ phone: "", smsConsent: false })),
+      apiCall("getAvatar", {}).catch(() => ({ avatarJson: null }))
+    ]);
+    const avatarJson = avatarRes.avatarJson || null;
     renderSettingsSection(root, {
-      phone:      res.phone      || "",
-      smsConsent: res.smsConsent || false
+      phone:      phoneRes.phone      || "",
+      smsConsent: phoneRes.smsConsent || false,
+      avatarJson
     });
+    if (avatarJson) restoreAvatarCreator(avatarJson);
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
@@ -16,13 +22,26 @@ async function initSettingsSection(root) {
   }
 }
 
-function renderSettingsSection(root, { phone, smsConsent }) {
+function renderSettingsSection(root, { phone, smsConsent, avatarJson }) {
   root.innerHTML = `
     <div class="card">
       <h1><i class="bi bi-gear-fill"></i> Settings</h1>
       <p style="color:var(--muted);font-size:14px;margin:0;">
-        Manage your contact preferences and communication settings.
+        Manage your avatar, contact preferences, and communication settings.
       </p>
+    </div>
+
+    <!-- Avatar -->
+    <div class="card">
+      <h2><i class="bi bi-person-bounding-box"></i> My Avatar</h2>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
+        Design your character — it appears next to your name in the portal.
+      </p>
+      <open-peeps-creator id="settings-avatar-creator" seed="${escapeHtml(getClientId() || 'peep')}"></open-peeps-creator>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <button onclick="saveAvatarSettings()"><i class="bi bi-check-circle-fill"></i> Save Avatar</button>
+        <div id="st-avatar-status"></div>
+      </div>
     </div>
 
     <!-- SMS Consent -->
@@ -132,6 +151,84 @@ async function saveSettingsSmsConsent() {
   } catch (e) {
     setStatus("st-consent-status", "Error: " + e.message, "error");
   }
+}
+
+async function saveAvatarSettings() {
+  const creator = document.getElementById("settings-avatar-creator");
+  if (!creator) { setStatus("st-avatar-status", "Avatar creator not found.", "error"); return; }
+  const state = creator._state;
+  if (!state) { setStatus("st-avatar-status", "No avatar data yet — design your character first.", "error"); return; }
+  setStatus("st-avatar-status", "Saving…", "loading");
+  try {
+    await apiCall("saveAvatar", { avatarJson: JSON.stringify(state) });
+    setStatus("st-avatar-status", "Avatar saved!", "success");
+    if (typeof showToast === "function") showToast("Avatar saved!", "success");
+    loadHeaderAvatar();
+  } catch (e) {
+    setStatus("st-avatar-status", "Error: " + e.message, "error");
+  }
+}
+
+// Restore saved avatar into the creator after it connects
+function restoreAvatarCreator(savedJson) {
+  if (!savedJson) return;
+  let state;
+  try { state = JSON.parse(savedJson); } catch (_) { return; }
+  const tryRestore = (attempts = 0) => {
+    const el = document.getElementById("settings-avatar-creator");
+    if (el && el._state) {
+      el.options = state;
+    } else if (attempts < 20) {
+      setTimeout(() => tryRestore(attempts + 1), 150);
+    }
+  };
+  tryRestore();
+}
+
+// Load and display avatar in the portal header
+async function loadHeaderAvatar() {
+  try {
+    const res = await apiCall("getAvatar", {});
+    if (!res.avatarJson) return;
+    let state;
+    try { state = JSON.parse(res.avatarJson); } catch (_) { return; }
+    // Render a small SVG via DiceBear (same path the creator uses)
+    const [{ createAvatar }, { openPeeps }] = await Promise.all([
+      import("https://esm.sh/@dicebear/core@9"),
+      import("https://esm.sh/@dicebear/collection@9")
+    ]);
+    const opts = {
+      seed: state.seed || "peep",
+      randomizeIds: true,
+      head: [state.head], headContrastColor: [state.headContrastColor],
+      face: [state.face],
+      facialHair: [state.facialHair || "chin"],
+      facialHairProbability: state.facialHair ? 100 : 0,
+      accessories: [state.accessories || "glasses"],
+      accessoriesProbability: state.accessories ? 100 : 0,
+      mask: [state.mask || "medicalMask"],
+      maskProbability: state.mask ? 100 : 0,
+      skinColor: [state.skinColor],
+      clothingColor: [state.clothingColor],
+      backgroundType: ["solid"],
+      backgroundColor: ["transparent"]
+    };
+    const svg = createAvatar(openPeeps, opts).toString();
+    const whoami = document.getElementById("whoami");
+    if (!whoami) return;
+    let avatarEl = document.getElementById("header-avatar");
+    if (!avatarEl) {
+      avatarEl = document.createElement("div");
+      avatarEl.id = "header-avatar";
+      avatarEl.style.cssText = "width:36px;height:36px;flex-shrink:0;border-radius:50%;overflow:hidden;" +
+        "background:rgba(255,255,255,.15);border:2px solid rgba(255,255,255,.4);cursor:pointer;";
+      avatarEl.title = "My Avatar — click Settings to change";
+      avatarEl.onclick = () => showSection("settings");
+      whoami.insertAdjacentElement("beforebegin", avatarEl);
+    }
+    avatarEl.innerHTML = svg;
+    avatarEl.querySelector("svg").style.cssText = "width:100%;height:100%;display:block;";
+  } catch (_) {}
 }
 
 async function revokeSettingsSmsConsent() {
