@@ -6,15 +6,20 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwtKb9UqSeBy4FKiI-VZK2E
 // Posting with text/plain avoids a CORS preflight request, which Apps
 // Script Web Apps cannot answer (no OPTIONS handler available).
 async function apiCall(action, params) {
-  const body = Object.assign({ action }, getCreds(), params || {});
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.error || "Request failed");
-  return data;
+  if (typeof portalProgress !== "undefined") portalProgress.start();
+  try {
+    const body = Object.assign({ action }, getCreds(), params || {});
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Request failed");
+    return data;
+  } finally {
+    if (typeof portalProgress !== "undefined") portalProgress.done();
+  }
 }
 
 // ---- Session credentials (License Key + Client ID + PIN + Assessor Name).

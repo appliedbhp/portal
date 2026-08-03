@@ -6,7 +6,65 @@ function setStatus(id, msg, type) {
   const el = document.getElementById(id);
   if (!el) return;
   if (!msg) { el.innerHTML = ""; return; }
-  el.innerHTML = `<div class="alert alert-${type === "loading" ? "info" : type}"><i class="bi bi-${STATUS_ICONS[type] || "info-circle-fill"}"></i><span>${msg}</span></div>`;
+  if (type === "loading") {
+    el.innerHTML = `<div class="portal-loading-status">
+      <div class="pls-spinner"></div>
+      <span style="flex:0 0 auto">${msg}</span>
+      <div class="pls-bar-wrap"><div class="pls-bar" style="width:60%"></div></div>
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="alert alert-${type}"><i class="bi bi-${STATUS_ICONS[type] || "info-circle-fill"}"></i><span>${msg}</span></div>`;
+  }
+}
+
+// ── Top loading bar ───────────────────────────────────────────────────────────
+// Call portalProgress.start() before an API call, portalProgress.done() after.
+// Counts concurrent calls so the bar stays up until all finish.
+const portalProgress = (function() {
+  let count = 0, bar = null;
+  function getBar() {
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "portal-topbar";
+      document.body.appendChild(bar);
+    }
+    return bar;
+  }
+  return {
+    start() {
+      count++;
+      const b = getBar();
+      b.classList.remove("running");
+      void b.offsetWidth; // force reflow to restart animation
+      b.style.opacity = "1";
+      b.classList.add("running");
+    },
+    done() {
+      count = Math.max(0, count - 1);
+      if (count === 0) {
+        const b = getBar();
+        // Let the animation finish, then hide
+        setTimeout(() => { b.classList.remove("running"); b.style.opacity = "0"; }, 400);
+      }
+    }
+  };
+})();
+
+// ── Skeleton helpers ──────────────────────────────────────────────────────────
+function skeletonCards(n = 3) {
+  return Array.from({ length: n }, () => `
+    <div class="skeleton skeleton-card">
+      <div class="skeleton skeleton-title" style="width:55%"></div>
+      <div class="skeleton skeleton-text" style="width:80%"></div>
+      <div class="skeleton skeleton-text" style="width:45%"></div>
+    </div>`).join("");
+}
+function skeletonRows(n = 4) {
+  return `<div style="padding:8px 0">${Array.from({ length: n }, (_, i) => `
+    <div class="skeleton-row">
+      <div class="skeleton skeleton-text" style="width:${28 + (i % 3) * 12}%"></div>
+      <div class="skeleton skeleton-text" style="width:${18 + (i % 2) * 10}%"></div>
+    </div>`).join("")}</div>`;
 }
 
 const DOMAIN_PALETTE = ["#3185fc", "#06b6d4", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#14b8a6", "#ec4899"];
