@@ -51,17 +51,16 @@
 }
 
 /* ── Top loading bar ──────────────────────────────────────────────────────── */
+/* Bar lives inside .portal-header — no z-index battle needed */
 #portal-topbar {
-  position: fixed;
-  top: 0; left: 0;
+  position: absolute;
+  bottom: 0; left: 0;
   width: 100%;
   height: 3px;
-  z-index: 9999;
   pointer-events: none;
   background: linear-gradient(90deg,
-    #6366f1 0%, #3b82f6 30%, #06b6d4 60%, #6366f1 100%);
+    #a5b4fc 0%, #60a5fa 30%, #67e8f9 60%, #a5b4fc 100%);
   background-size: 400px 100%;
-  box-shadow: 0 0 8px rgba(99,102,241,.5);
   opacity: 0;
   transition: opacity 200ms ease;
 }
@@ -71,7 +70,11 @@
 }
 #portal-topbar.finishing {
   opacity: 0;
-  transition: opacity 350ms ease;
+  transition: opacity 400ms ease;
+}
+/* Keep header positioned so absolute child works */
+.portal-header {
+  position: relative;
 }
 
 /* ── Section transition ───────────────────────────────────────────────────── */
