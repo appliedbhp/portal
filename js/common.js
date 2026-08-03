@@ -21,19 +21,29 @@ function setStatus(id, msg, type) {
 // Stays visible (indeterminate shimmer) for the full duration of any API call.
 // Counts concurrent calls so it stays up until every one finishes.
 const portalProgress = (function() {
-  let count = 0, bar = null, finishTimer = null;
+  let count = 0, bar = null, finishTimer = null, startedAt = 0;
+  const MIN_MS = 600; // always visible for at least this long
   function getBar() {
     if (!bar) {
       bar = document.createElement("div");
       bar.id = "portal-topbar";
-      document.body.appendChild(bar);
+      // Live inside the header so z-index never fights with it
+      const header = document.querySelector(".portal-header") || document.body;
+      header.appendChild(bar);
     }
     return bar;
+  }
+  function hide() {
+    const b = getBar();
+    b.classList.remove("running");
+    b.classList.add("finishing");
+    finishTimer = setTimeout(() => { b.classList.remove("finishing"); }, 450);
   }
   return {
     start() {
       count++;
       if (finishTimer) { clearTimeout(finishTimer); finishTimer = null; }
+      if (count === 1) startedAt = Date.now();
       const b = getBar();
       b.classList.remove("finishing");
       b.classList.add("running");
@@ -41,10 +51,9 @@ const portalProgress = (function() {
     done() {
       count = Math.max(0, count - 1);
       if (count === 0) {
-        const b = getBar();
-        b.classList.remove("running");
-        b.classList.add("finishing");
-        finishTimer = setTimeout(() => { b.classList.remove("finishing"); }, 400);
+        const elapsed = Date.now() - startedAt;
+        const delay = Math.max(0, MIN_MS - elapsed);
+        finishTimer = setTimeout(hide, delay);
       }
     }
   };
