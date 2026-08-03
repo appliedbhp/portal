@@ -109,8 +109,16 @@ function renderDashboard(root, data) {
     return `
       <tr>
         <td style="font-weight:700;">
-          ${escapeHtml(c.clientId)}
-          ${c.noRecentActivity ? `<i class="bi bi-exclamation-circle-fill" style="color:#6d28d9;font-size:11px;margin-left:4px;" title="No activity in 30+ days"></i>` : ""}
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="client-avatar-cell" data-avatar='${escapeAttr(c.avatarJson || "")}' data-label="${escapeAttr(c.clientId)}"
+                 style="width:30px;height:30px;border-radius:50%;overflow:hidden;flex-shrink:0;
+                        display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;
+                        background:var(--primary,#6366f1);color:#fff;">
+              ${escapeHtml((c.clientId || "?").substring(0, 2).toUpperCase())}
+            </div>
+            <span>${escapeHtml(c.clientId)}</span>
+            ${c.noRecentActivity ? `<i class="bi bi-exclamation-circle-fill" style="color:#6d28d9;font-size:11px;" title="No activity in 30+ days"></i>` : ""}
+          </div>
         </td>
         <td style="font-size:12px;color:var(--muted);">${escapeHtml(c.email)}</td>
         <td>${programBadge}${expBadge}</td>
@@ -186,6 +194,17 @@ function renderDashboard(root, data) {
     <style>
       @media (max-width: 700px) { .dash-grid { grid-template-columns: 1fr !important; } }
     </style>`;
+
+  // Hydrate avatar cells asynchronously so the table appears instantly
+  if (typeof buildAvatarEl === "function") {
+    root.querySelectorAll(".client-avatar-cell").forEach(async (cell) => {
+      const avatarJson = cell.dataset.avatar || null;
+      const label      = cell.dataset.label  || "?";
+      if (!avatarJson) return;
+      const el = await buildAvatarEl(avatarJson, label, 30);
+      cell.replaceWith(el);
+    });
+  }
 }
 
 async function dashJumpToClient(clientId) {

@@ -250,6 +250,66 @@ function animateCountUp(el, targetText) {
   requestAnimationFrame(step);
 }
 
+// ── Avatar rendering ──────────────────────────────────────────────────────────
+// Renders a client avatar from saved avatarJson. Returns an SVG string via a
+// promise, or resolves to null if the json is empty / DiceBear fails to load.
+let _dicebearPromise = null;
+function _loadDicebear() {
+  if (!_dicebearPromise) {
+    _dicebearPromise = Promise.all([
+      import("https://esm.sh/@dicebear/core@9"),
+      import("https://esm.sh/@dicebear/collection@9")
+    ]);
+  }
+  return _dicebearPromise;
+}
+
+async function renderAvatarSvg(avatarJson) {
+  if (!avatarJson) return null;
+  let state;
+  try { state = typeof avatarJson === "string" ? JSON.parse(avatarJson) : avatarJson; } catch (_) { return null; }
+  try {
+    const [{ createAvatar }, { openPeeps }] = await _loadDicebear();
+    return createAvatar(openPeeps, {
+      seed: state.seed || "peep",
+      randomizeIds: true,
+      head: [state.head], headContrastColor: [state.headContrastColor],
+      face: [state.face],
+      facialHair: [state.facialHair || "chin"],
+      facialHairProbability: state.facialHair ? 100 : 0,
+      accessories: [state.accessories || "glasses"],
+      accessoriesProbability: state.accessories ? 100 : 0,
+      mask: [state.mask || "medicalMask"],
+      maskProbability: state.mask ? 100 : 0,
+      skinColor: [state.skinColor],
+      clothingColor: [state.clothingColor],
+      backgroundType: ["solid"],
+      backgroundColor: ["transparent"]
+    }).toString();
+  } catch (_) { return null; }
+}
+
+// Builds a circular avatar <div> element. Pass size in px (default 36).
+// If avatarJson is falsy, falls back to initials from the label string.
+async function buildAvatarEl(avatarJson, label, size = 36) {
+  const el = document.createElement("div");
+  const initials = (label || "?").split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2);
+  el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;flex-shrink:0;` +
+    `display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(size * 0.38)}px;` +
+    `background:var(--primary,#6366f1);color:#fff;`;
+  el.textContent = initials;
+  if (avatarJson) {
+    const svg = await renderAvatarSvg(avatarJson);
+    if (svg) {
+      el.textContent = "";
+      el.style.background = "var(--surface,#f3f4f8)";
+      el.innerHTML = svg;
+      el.querySelector("svg").style.cssText = "width:100%;height:100%;display:block;";
+    }
+  }
+  return el;
+}
+
 // ── Auto-init on DOM ready ────────────────────────────────────────────────────
 (function() {
   function boot() {

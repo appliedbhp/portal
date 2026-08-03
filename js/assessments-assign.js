@@ -78,20 +78,36 @@ function renderAssessmentsAssign(root) {
       <h2 style="margin-bottom:14px;"><i class="bi bi-list-check"></i> Current Assignments</h2>
       <div id="aa-current-list"></div>
     </div>`;
+
+  // Hydrate avatar bubbles asynchronously
+  if (typeof buildAvatarEl === "function") {
+    root.querySelectorAll(".aa-avatar-cell").forEach(async (cell) => {
+      const avatarJson = cell.dataset.avatar || null;
+      const label      = cell.dataset.label  || "?";
+      if (!avatarJson) return;
+      const el = await buildAvatarEl(avatarJson, label, 40);
+      el.id    = cell.id;
+      cell.replaceWith(el);
+    });
+  }
 }
 
 function clientPickerBtn(c) {
-  const initials = (c.name || c.clientId || "?").split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2);
+  const label = c.name || c.clientId || "?";
+  const initials = label.split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2);
   return `
     <button class="secondary" id="aa-client-btn-${escapeAttr(c.clientId)}"
-            onclick="aaSelectClient('${escapeAttr(c.clientId)}', '${escapeAttr(c.name || c.clientId)}')"
+            onclick="aaSelectClient('${escapeAttr(c.clientId)}', '${escapeAttr(label)}')"
             style="display:flex;flex-direction:column;align-items:center;gap:6px;
                    padding:12px 16px;min-width:80px;border-radius:10px;">
-      <div style="width:36px;height:36px;border-radius:50%;background:var(--primary);color:#fff;
-                  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;">
+      <div class="aa-avatar-cell" id="aa-avatar-${escapeAttr(c.clientId)}"
+           data-avatar="${escapeAttr(c.avatarJson || "")}" data-label="${escapeAttr(label)}"
+           style="width:40px;height:40px;border-radius:50%;background:var(--primary);color:#fff;
+                  display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;
+                  overflow:hidden;flex-shrink:0;">
         ${escapeHtml(initials)}
       </div>
-      <span style="font-size:12px;font-weight:600;">${escapeHtml(c.name || c.clientId)}</span>
+      <span style="font-size:12px;font-weight:600;">${escapeHtml(label)}</span>
     </button>`;
 }
 
