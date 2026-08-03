@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/effects.css">
+<script type="module" src="js/open-peeps-creator.js"></script>
 </head>
 <body>
 
@@ -319,6 +320,7 @@ function showSection(name) {
 }
 
 showSection("home");
+if (_role !== "provider" && typeof loadHeaderAvatar === "function") loadHeaderAvatar();
 if (_role === "provider") checkProgressReportDue();
 checkGradesAlert();
 startTimeoutWatcher();
