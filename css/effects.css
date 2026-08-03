@@ -1,0 +1,193 @@
+/* ── Portal Modern Effects ────────────────────────────────────────────────────
+   Layered on top of style.css. Adds:
+   · Global top-of-page loading bar (nprogress-style)
+   · Skeleton / shimmer placeholders
+   · Section fade+slide-in transitions
+   · Improved setStatus loading state
+   · Smooth bar-chart fill animation
+   · Button press feedback
+   · Card hover lift
+   · Sidebar link active indicator
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/* ── Keyframes ────────────────────────────────────────────────────────────── */
+@keyframes portal-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position:  400px 0; }
+}
+@keyframes portal-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes portal-fadein {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes portal-bar-grow {
+  from { width: 0 !important; }
+}
+@keyframes portal-topbar-slide {
+  0%   { width: 0%;   opacity: 1; }
+  70%  { width: 85%;  opacity: 1; }
+  100% { width: 100%; opacity: 0; }
+}
+@keyframes portal-pulse-ring {
+  0%   { transform: scale(1);   opacity: .6; }
+  100% { transform: scale(1.6); opacity: 0;  }
+}
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ── Top loading bar ──────────────────────────────────────────────────────── */
+#portal-topbar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  z-index: 9999;
+  pointer-events: none;
+  border-radius: 0 2px 2px 0;
+  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  box-shadow: 0 0 8px rgba(99,102,241,.6);
+  opacity: 0;
+  width: 0;
+}
+#portal-topbar.running {
+  animation: portal-topbar-slide 2.4s cubic-bezier(.4,0,.2,1) forwards;
+}
+
+/* ── Section transition ───────────────────────────────────────────────────── */
+.section {
+  display: none;
+}
+.section.active {
+  display: block;
+  animation: portal-fadein 220ms ease-out both;
+}
+
+/* ── Skeleton / shimmer ───────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--border, #e7e9f0) 25%, var(--surface, #f3f4f8) 50%, var(--border, #e7e9f0) 75%);
+  background-size: 800px 100%;
+  animation: portal-shimmer 1.4s infinite linear;
+  border-radius: 6px;
+}
+.skeleton-text  { height: 14px; margin-bottom: 8px; border-radius: 4px; }
+.skeleton-title { height: 22px; margin-bottom: 14px; border-radius: 4px; }
+.skeleton-card  {
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 14px;
+  min-height: 90px;
+  border: 1px solid var(--border, #e7e9f0);
+}
+.skeleton-row   { display: flex; gap: 12px; margin-bottom: 12px; }
+.skeleton-row .skeleton { flex: 1; }
+
+/* ── Loading status (replaces plain alert-info) ───────────────────────────── */
+.portal-loading-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--surface, #f5f6fa);
+  border: 1px solid var(--border, #e7e9f0);
+  color: var(--muted, #6b7280);
+  font-size: 14px;
+}
+.portal-loading-status .pls-spinner {
+  width: 18px; height: 18px; flex-shrink: 0;
+  border: 2px solid var(--border, #e7e9f0);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: portal-spin 700ms linear infinite;
+}
+.portal-loading-status .pls-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: var(--border, #e7e9f0);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.portal-loading-status .pls-bar {
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #6366f1, #3b82f6);
+  background-size: 200% 100%;
+  animation: portal-shimmer 1.4s infinite linear;
+}
+
+/* ── Animated score / stat bars ───────────────────────────────────────────── */
+/* Apply .animate-bars to any container; bars inside get a grow animation */
+.animate-bars [style*="width:"],
+.animate-bars [style*="width: "] {
+  animation: portal-bar-grow 600ms cubic-bezier(.4,0,.2,1) both;
+}
+
+/* ── Card hover lift ──────────────────────────────────────────────────────── */
+.card,
+.stat-card,
+.activity-card,
+.step-card {
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.card:hover,
+.stat-card:hover,
+.activity-card:hover,
+.step-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,.10);
+}
+
+/* ── Button press feedback ────────────────────────────────────────────────── */
+button {
+  transition: filter 150ms ease, transform 120ms ease, box-shadow 150ms ease;
+}
+button:active:not(:disabled) {
+  transform: scale(.97);
+  filter: brightness(.94);
+}
+
+/* ── Sidebar active indicator ─────────────────────────────────────────────── */
+.sidebar-link {
+  position: relative;
+  transition: background 160ms ease, color 160ms ease, padding-left 160ms ease;
+}
+.sidebar-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 20%; bottom: 20%;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: #6366f1;
+}
+.sidebar-link:not(.active):hover {
+  background: rgba(99,102,241,.07);
+}
+
+/* ── Focus ring ───────────────────────────────────────────────────────────── */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* ── Dark mode shimmer tint ───────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  .skeleton {
+    background: linear-gradient(90deg, #2a2d3e 25%, #343750 50%, #2a2d3e 75%);
+    background-size: 800px 100%;
+  }
+}
+:root[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #2a2d3e 25%, #343750 50%, #2a2d3e 75%);
+  background-size: 800px 100%;
+}
