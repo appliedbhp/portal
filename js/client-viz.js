@@ -260,17 +260,19 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
     trendGoals.forEach(([goal, pts], gi) => {
       const el = document.getElementById("viz-trend-" + gi);
       if (!el) return;
-      const labels   = pts.map(p => "Sess " + p.sessionNum);
+      const cfg      = inferChartConfig(goal, pts);
+      const labels   = cfg.xAxis === "weeks"
+        ? pts.map(p => _vizWeekLabel(new Date((p.recordedAt || "").slice(0, 10) + "T00:00:00")))
+        : pts.map(p => "Sess " + p.sessionNum);
       const datasets = [];
       const COLORS = { frequency: "#6366f1", duration: "#0ea5e9", intensity: "#f59e0b" };
-      const LABELS = { frequency: "Frequency (#)", duration: "Duration (min)", intensity: "Intensity (1–10)" };
-      ["frequency", "duration", "intensity"].forEach(metric => {
-        if (pts.some(p => p[metric] !== undefined)) {
+      cfg.metrics.forEach(metric => {
+        if (pts.some(p => p[metric] !== undefined && p[metric] !== null)) {
           datasets.push({
-            label:           LABELS[metric],
+            label:           cfg.metricLabels[metric] || metric,
             data:            pts.map(p => p[metric] ?? null),
-            borderColor:     COLORS[metric],
-            backgroundColor: COLORS[metric] + "20",
+            borderColor:     COLORS[metric] || "#6366f1",
+            backgroundColor: (COLORS[metric] || "#6366f1") + "20",
             borderWidth:     2,
             pointRadius:     4,
             tension:         0.3,
@@ -279,14 +281,21 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
         }
       });
       if (!datasets.length) return;
+      const yScale = {
+        beginAtZero: true,
+        ticks: { font: { size: 11 }, stepSize: cfg.yStepSize || undefined, precision: 0 }
+      };
+      if (cfg.yMax !== null) yScale.max = cfg.yMax;
+      if (cfg.yMin !== null) yScale.min = cfg.yMin;
+      if (cfg.yLabel) yScale.title = { display: true, text: cfg.yLabel, font: { size: 11 } };
       const chart = new Chart(el, {
-        type: "line",
+        type: cfg.chartType || "line",
         data: { labels, datasets },
         options: {
           plugins: { legend: { position: "top", labels: { font: { size: 11 }, boxWidth: 10, padding: 10 } } },
           scales: {
             x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-            y: { beginAtZero: true, ticks: { font: { size: 11 } } }
+            y: yScale
           },
           animation: { duration: 400 }
         }
@@ -330,5 +339,104 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
 }
 
 function _vizWeekLabel(date) {
+  if (!date || isNaN(date)) return "—";
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// ── Chart config inference ─────────────────────────────────────────────────────
+// Reads a goal's text and its data points to decide how the chart should look.
+// Returns a config object consumed by the trend chart renderer above.
+//
+// To add a new pattern: add a rule to RULES with a `test` regex and the
+// overrides you want applied. Rules are checked in order; first match wins.
+// Unmatched goals fall back to AUTO defaults.
+
+const _CHART_METRIC_DEFAULTS = {
+  metrics:      ["frequency", "duration", "intensity"],
+  metricLabels: {
+    frequency: "Frequency (#)",
+    duration:  "Duration (min)",
+    intensity: "Intensity (1–10)"
+  },
+  chartType: "line",
+  xAxis:     "sessions",  // "sessions" | "weeks"
+  yMin:      null,
+  yMax:      null,
+  yStepSize: null,
+  yLabel:    null
+};
+
+const _CHART_RULES = [
+  // ── Days per week ──────────────────────────────────────────────────────────
+  {
+    test: /\b(\d+\s*)?days?\s*(per|a|each|\/)\s*week\b|days?\s*per\s*week/i,
+    patch: { yMax: 7, yMin: 0, yStepSize: 1, yLabel: "Days / Week", xAxis: "weeks",
+             metrics: ["frequency"], metricLabels: { frequency: "Days per week" } }
+  },
+  // ── Times / occurrences per week ──────────────────────────────────────────
+  {
+    test: /\b(times?|occurrences?|episodes?)\s*(per|a|each|\/)\s*week\b/i,
+    patch: { yMin: 0, yStepSize: 1, yLabel: "Times / Week", xAxis: "weeks",
+             metrics: ["frequency"], metricLabels: { frequency: "Times per week" } }
+  },
+  // ── Times / occurrences per day ───────────────────────────────────────────
+  {
+    test: /\b(times?|occurrences?|episodes?)\s*(per|a|each|\/)\s*day\b/i,
+    patch: { yMin: 0, yStepSize: 1, yLabel: "Times / Day",
+             metrics: ["frequency"], metricLabels: { frequency: "Times per day" } }
+  },
+  // ── Duration / minutes ────────────────────────────────────────────────────
+  {
+    test: /\b(minutes?|mins?|hours?|hrs?|duration)\b/i,
+    patch: { yMin: 0, yLabel: "Minutes",
+             metrics: ["duration"], metricLabels: { duration: "Duration (min)" } }
+  },
+  // ── Percentage / rate ─────────────────────────────────────────────────────
+  {
+    test: /\b(percent|%|rate|ratio)\b/i,
+    patch: { yMax: 100, yMin: 0, yStepSize: 10, yLabel: "Percent (%)",
+             metrics: ["frequency"], metricLabels: { frequency: "%" } }
+  },
+  // ── 1–10 scale / intensity / rating ──────────────────────────────────────
+  {
+    test: /\b(intensity|severity|rating|scale|1[\s–-]+10|out\s+of\s+10)\b/i,
+    patch: { yMax: 10, yMin: 0, yStepSize: 2, yLabel: "Rating (1–10)",
+             metrics: ["intensity"], metricLabels: { intensity: "Intensity (1–10)" } }
+  },
+  // ── Count / number of behaviors ───────────────────────────────────────────
+  {
+    test: /\b(number\s+of|count|#\s+of|reduce|increase)\b.*\b(behavior|incident|outburst|tantrum|refusal|interruption|episode)\b/i,
+    patch: { yMin: 0, yStepSize: 1, yLabel: "Count",
+             metrics: ["frequency"], metricLabels: { frequency: "Count" } }
+  },
+  // ── Steps / tasks completed ───────────────────────────────────────────────
+  {
+    test: /\b(steps?|tasks?|items?|chores?)\s+(completed|done|finished)\b/i,
+    patch: { yMin: 0, yStepSize: 1, yLabel: "Steps completed",
+             metrics: ["frequency"], metricLabels: { frequency: "Steps" } }
+  }
+];
+
+function inferChartConfig(goalText, dataPoints) {
+  const cfg = Object.assign({}, _CHART_METRIC_DEFAULTS, {
+    metricLabels: Object.assign({}, _CHART_METRIC_DEFAULTS.metricLabels)
+  });
+  const text = String(goalText || "");
+
+  // Find first matching rule
+  const rule = _CHART_RULES.find(r => r.test.test(text));
+  if (rule) Object.assign(cfg, rule.patch);
+
+  // If xAxis is "weeks" but points lack recordedAt dates, fall back to sessions
+  if (cfg.xAxis === "weeks" && dataPoints.every(p => !p.recordedAt)) {
+    cfg.xAxis = "sessions";
+  }
+
+  // Auto-cap yMax from data when not set by rule (adds 20% headroom)
+  if (cfg.yMax === null && dataPoints.length) {
+    const allVals = cfg.metrics.flatMap(m => dataPoints.map(p => p[m])).filter(v => v != null && !isNaN(v));
+    if (allVals.length) cfg.yMax = Math.ceil(Math.max(...allVals) * 1.2) || null;
+  }
+
+  return cfg;
 }
