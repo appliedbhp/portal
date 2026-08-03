@@ -18,10 +18,10 @@ function setStatus(id, msg, type) {
 }
 
 // ── Top loading bar ───────────────────────────────────────────────────────────
-// Call portalProgress.start() before an API call, portalProgress.done() after.
-// Counts concurrent calls so the bar stays up until all finish.
+// Stays visible (indeterminate shimmer) for the full duration of any API call.
+// Counts concurrent calls so it stays up until every one finishes.
 const portalProgress = (function() {
-  let count = 0, bar = null;
+  let count = 0, bar = null, finishTimer = null;
   function getBar() {
     if (!bar) {
       bar = document.createElement("div");
@@ -33,18 +33,18 @@ const portalProgress = (function() {
   return {
     start() {
       count++;
+      if (finishTimer) { clearTimeout(finishTimer); finishTimer = null; }
       const b = getBar();
-      b.classList.remove("running");
-      void b.offsetWidth; // force reflow to restart animation
-      b.style.opacity = "1";
+      b.classList.remove("finishing");
       b.classList.add("running");
     },
     done() {
       count = Math.max(0, count - 1);
       if (count === 0) {
         const b = getBar();
-        // Let the animation finish, then hide
-        setTimeout(() => { b.classList.remove("running"); b.style.opacity = "0"; }, 400);
+        b.classList.remove("running");
+        b.classList.add("finishing");
+        finishTimer = setTimeout(() => { b.classList.remove("finishing"); }, 400);
       }
     }
   };
