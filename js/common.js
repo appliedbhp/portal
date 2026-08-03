@@ -150,6 +150,119 @@ function updateCarouselCharts(prefix) {
   state.renderFns.bar(prefix + "Bar", snap.summary);
 }
 
+// ── Toast notifications ───────────────────────────────────────────────────────
+function showToast(msg, type = "success", durationMs = 3000) {
+  let container = document.getElementById("portal-toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "portal-toast-container";
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement("div");
+  const icons = { success: "check-circle-fill", error: "exclamation-triangle-fill", info: "info-circle-fill", warning: "exclamation-circle-fill" };
+  toast.className = `portal-toast toast-${type}`;
+  toast.innerHTML = `<i class="bi bi-${icons[type] || "info-circle-fill"}"></i><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("hiding");
+    setTimeout(() => toast.remove(), 230);
+  }, durationMs);
+}
+
+// ── Ripple effect on buttons ──────────────────────────────────────────────────
+function initRippleEffect() {
+  document.addEventListener("click", function(e) {
+    const btn = e.target.closest("button:not(:disabled)");
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement("span");
+    ripple.className = "portal-ripple";
+    ripple.style.left = (e.clientX - rect.left) + "px";
+    ripple.style.top  = (e.clientY - rect.top)  + "px";
+    btn.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove());
+  }, true);
+}
+
+// ── Scroll-reveal (stretch cards into view) ───────────────────────────────────
+function initScrollReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const delay = parseFloat(el.dataset.revealDelay || 0);
+        setTimeout(() => el.classList.add("revealed"), delay);
+        observer.unobserve(el);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -20px 0px" });
+
+  function observeCards(root) {
+    const sel = ".card, .stat-card, .activity-card, .step-card";
+    root.querySelectorAll(sel).forEach((el, i) => {
+      if (el.classList.contains("scroll-reveal")) return;
+      el.classList.add("scroll-reveal");
+      el.dataset.revealDelay = Math.min(i * 55, 300);
+      observer.observe(el);
+    });
+  }
+
+  // Observe existing cards
+  observeCards(document);
+
+  // Re-observe when new sections load (MutationObserver on body)
+  const mo = new MutationObserver(mutations => {
+    mutations.forEach(m => m.addedNodes.forEach(node => {
+      if (node.nodeType === 1) observeCards(node);
+    }));
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+}
+
+// ── Gradient headings ─────────────────────────────────────────────────────────
+// Call after a section's HTML is rendered to apply gradient to its h2 elements.
+function applyGradientHeadings(container) {
+  const root = container || document;
+  root.querySelectorAll("h2, h3, .page-title, .section-title").forEach(el => {
+    // Skip if it already has inline color or is inside a button/badge
+    if (el.closest("button, .badge, .alert, .stat-value, [style*='color']")) return;
+    if (!el.classList.contains("auto-gradient")) {
+      el.classList.add("auto-gradient");
+    }
+  });
+}
+
+// ── Count-up animation for stat values ───────────────────────────────────────
+function animateCountUp(el, targetText) {
+  const num = parseFloat(targetText.replace(/[^0-9.]/g, ""));
+  if (isNaN(num) || num === 0) { el.textContent = targetText; return; }
+  const suffix = targetText.replace(/[0-9.]/g, "");
+  const start = performance.now();
+  const dur = 600;
+  function step(now) {
+    const t = Math.min((now - start) / dur, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = (Math.round(eased * num * 10) / 10) + suffix;
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = targetText;
+  }
+  el.classList.add("counting");
+  requestAnimationFrame(step);
+}
+
+// ── Auto-init on DOM ready ────────────────────────────────────────────────────
+(function() {
+  function boot() {
+    initRippleEffect();
+    initScrollReveal();
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+
 // ── Shared tooltip ────────────────────────────────────────────────────────────
 // Use data-tooltip="text" on any element. The tooltip follows the cursor
 // and works inside grid/flex containers where CSS ::after fails.
