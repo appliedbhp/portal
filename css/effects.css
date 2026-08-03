@@ -1,13 +1,15 @@
-/* ── Portal Modern Effects ────────────────────────────────────────────────────
+/* ── Portal Modern Effects v2 ──────────────────────────────────────────────────
    Layered on top of style.css. Adds:
-   · Global top-of-page loading bar (nprogress-style)
+   · Global top-of-page loading bar (indeterminate shimmer)
+   · Creative preloader (bouncing dots)
+   · Smooth section transitions (fade + slide)
+   · Gradient headings with animated color shift
+   · Kinetic text (shimmer sweep on h2/h3)
+   · Scroll-reveal card stretch (IntersectionObserver-driven)
    · Skeleton / shimmer placeholders
-   · Section fade+slide-in transitions
-   · Improved setStatus loading state
-   · Smooth bar-chart fill animation
-   · Button press feedback
-   · Card hover lift
-   · Sidebar link active indicator
+   · Animated stat/score bars
+   · Microinteractions: ripple, form glow, toast, button feedback
+   · Sidebar active indicator
    ──────────────────────────────────────────────────────────────────────────── */
 
 /* ── Keyframes ────────────────────────────────────────────────────────────── */
@@ -18,9 +20,9 @@
 @keyframes portal-spin {
   to { transform: rotate(360deg); }
 }
-@keyframes portal-fadein {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+@keyframes portal-section-enter {
+  from { opacity: 0; transform: translateX(12px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
 }
 @keyframes portal-bar-grow {
   from { width: 0 !important; }
@@ -29,20 +31,45 @@
   0%   { background-position: -400px 0; }
   100% { background-position:  400px 0; }
 }
-@keyframes portal-topbar-fadein {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-@keyframes portal-topbar-fadeout {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
 @keyframes portal-pulse-ring {
   0%   { transform: scale(1);   opacity: .6; }
   100% { transform: scale(1.6); opacity: 0;  }
 }
+@keyframes portal-gradient-shift {
+  0%   { background-position: 0%   50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0%   50%; }
+}
+@keyframes portal-kinetic-sweep {
+  0%   { background-position: -300% center; }
+  100% { background-position:  300% center; }
+}
+@keyframes portal-dot-bounce {
+  0%, 80%, 100% { transform: translateY(0);    opacity: .4; }
+  40%            { transform: translateY(-8px); opacity: 1;  }
+}
+@keyframes portal-ripple-out {
+  from { transform: scale(0); opacity: .45; }
+  to   { transform: scale(4); opacity: 0;   }
+}
+@keyframes portal-toast-in {
+  from { opacity: 0; transform: translateY(16px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes portal-toast-out {
+  from { opacity: 1; transform: none; }
+  to   { opacity: 0; transform: translateY(8px) scale(.96); }
+}
+@keyframes portal-scroll-reveal {
+  from { opacity: 0; transform: translateY(22px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes portal-count-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
 
-/* Respect reduced-motion preference */
+/* Respect reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
@@ -51,7 +78,6 @@
 }
 
 /* ── Top loading bar ──────────────────────────────────────────────────────── */
-/* Bar lives inside .portal-header — no z-index battle needed */
 #portal-topbar {
   position: absolute;
   bottom: 0; left: 0;
@@ -72,18 +98,83 @@
   opacity: 0;
   transition: opacity 400ms ease;
 }
-/* Keep header positioned so absolute child works */
 .portal-header {
   position: relative;
 }
 
-/* ── Section transition ───────────────────────────────────────────────────── */
+/* ── Creative Preloader ───────────────────────────────────────────────────── */
+/* Usage: <div class="portal-preloader"><span></span><span></span><span></span></div> */
+.portal-preloader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 40px 0;
+}
+.portal-preloader span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6366f1;
+  display: inline-block;
+  animation: portal-dot-bounce 1.2s ease-in-out infinite both;
+}
+.portal-preloader span:nth-child(1) { animation-delay: 0s;    background: #6366f1; }
+.portal-preloader span:nth-child(2) { animation-delay: 0.16s; background: #3b82f6; }
+.portal-preloader span:nth-child(3) { animation-delay: 0.32s; background: #06b6d4; }
+
+/* ── Section transitions ──────────────────────────────────────────────────── */
 .section {
   display: none;
 }
 .section.active {
   display: block;
-  animation: portal-fadein 220ms ease-out both;
+  animation: portal-section-enter 260ms cubic-bezier(0.34, 1.2, 0.64, 1) both;
+}
+
+/* ── Gradient headings ────────────────────────────────────────────────────── */
+/* Add class .gradient-heading to any element, or via JS with applyGradientHeadings() */
+.gradient-heading {
+  background: linear-gradient(135deg, #6366f1 0%, #3b82f6 40%, #06b6d4 70%, #6366f1 100%);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: portal-gradient-shift 6s ease infinite;
+}
+
+/* ── Kinetic text headings ────────────────────────────────────────────────── */
+/* Add class .kinetic-heading — a shimmer light sweeps across on hover/load */
+.kinetic-heading {
+  display: inline-block;
+  background: linear-gradient(
+    105deg,
+    currentColor 0%,
+    currentColor 35%,
+    rgba(255,255,255,.75) 50%,
+    currentColor 65%,
+    currentColor 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: portal-kinetic-sweep 3.5s ease-in-out infinite;
+  animation-play-state: paused;
+}
+.kinetic-heading:hover,
+.section.active .kinetic-heading {
+  animation-play-state: running;
+}
+
+/* ── Scroll-reveal / stretch cards ───────────────────────────────────────── */
+/* JS adds .scroll-reveal to cards; .revealed triggers on IntersectionObserver */
+.scroll-reveal {
+  opacity: 0;
+  transform: translateY(22px) scale(0.96);
+}
+.scroll-reveal.revealed {
+  animation: portal-scroll-reveal 380ms cubic-bezier(0.34, 1.1, 0.64, 1) forwards;
 }
 
 /* ── Skeleton / shimmer ───────────────────────────────────────────────────── */
@@ -105,7 +196,7 @@
 .skeleton-row   { display: flex; gap: 12px; margin-bottom: 12px; }
 .skeleton-row .skeleton { flex: 1; }
 
-/* ── Loading status (replaces plain alert-info) ───────────────────────────── */
+/* ── Loading status ───────────────────────────────────────────────────────── */
 .portal-loading-status {
   display: flex;
   align-items: center;
@@ -139,11 +230,14 @@
   animation: portal-shimmer 1.4s infinite linear;
 }
 
-/* ── Animated score / stat bars ───────────────────────────────────────────── */
-/* Apply .animate-bars to any container; bars inside get a grow animation */
+/* ── Animated stat/score bars ─────────────────────────────────────────────── */
 .animate-bars [style*="width:"],
 .animate-bars [style*="width: "] {
-  animation: portal-bar-grow 600ms cubic-bezier(.4,0,.2,1) both;
+  animation: portal-bar-grow 700ms cubic-bezier(.4,0,.2,1) both;
+}
+/* Stat value count-up animation */
+.stat-value.counting {
+  animation: portal-count-up 350ms ease-out both;
 }
 
 /* ── Card hover lift ──────────────────────────────────────────────────────── */
@@ -151,24 +245,95 @@
 .stat-card,
 .activity-card,
 .step-card {
-  transition: box-shadow 200ms ease, transform 200ms ease;
+  transition: box-shadow 220ms ease, transform 220ms ease;
 }
 .card:hover,
 .stat-card:hover,
 .activity-card:hover,
 .step-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,.10);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(99,102,241,.12);
 }
 
-/* ── Button press feedback ────────────────────────────────────────────────── */
+/* ── Button press feedback + ripple ──────────────────────────────────────── */
 button {
   transition: filter 150ms ease, transform 120ms ease, box-shadow 150ms ease;
+  position: relative;
+  overflow: hidden;
 }
 button:active:not(:disabled) {
   transform: scale(.97);
-  filter: brightness(.94);
+  filter: brightness(.93);
 }
+/* Ripple element injected by JS */
+.portal-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,.4);
+  width: 80px; height: 80px;
+  margin-top: -40px; margin-left: -40px;
+  pointer-events: none;
+  animation: portal-ripple-out 500ms ease-out forwards;
+}
+button.primary .portal-ripple  { background: rgba(255,255,255,.35); }
+button.secondary .portal-ripple { background: rgba(99,102,241,.18); }
+button.danger .portal-ripple   { background: rgba(255,255,255,.30); }
+
+/* ── Form field focus glow ────────────────────────────────────────────────── */
+input, textarea, select {
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+input:focus:not(:read-only),
+textarea:focus:not(:read-only),
+select:focus {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 3px rgba(99,102,241,.18) !important;
+  outline: none;
+}
+
+/* ── Gradient headings on section h2 elements ─────────────────────────────── */
+/* Auto-applied by JS; only text-fill, doesn't break layouts */
+.section h2.auto-gradient {
+  background: linear-gradient(120deg, #4f46e5 0%, #2563eb 50%, #0891b2 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: portal-gradient-shift 8s ease infinite;
+  display: inline-block;
+}
+
+/* ── Toast notifications ──────────────────────────────────────────────────── */
+#portal-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+.portal-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  background: #1e293b;
+  box-shadow: 0 8px 32px rgba(0,0,0,.22);
+  pointer-events: auto;
+  max-width: 360px;
+  animation: portal-toast-in 240ms cubic-bezier(0.34,1.2,0.64,1) both;
+}
+.portal-toast.toast-success { background: linear-gradient(135deg, #059669, #047857); }
+.portal-toast.toast-error   { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+.portal-toast.toast-info    { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.portal-toast.toast-warning { background: linear-gradient(135deg, #d97706, #b45309); color: #fff; }
+.portal-toast.hiding        { animation: portal-toast-out 220ms ease forwards; }
 
 /* ── Sidebar active indicator ─────────────────────────────────────────────── */
 .sidebar-link {
@@ -181,7 +346,7 @@ button:active:not(:disabled) {
   left: 0; top: 20%; bottom: 20%;
   width: 3px;
   border-radius: 0 2px 2px 0;
-  background: #6366f1;
+  background: linear-gradient(180deg, #6366f1, #3b82f6);
 }
 .sidebar-link:not(.active):hover {
   background: rgba(99,102,241,.07);
@@ -189,10 +354,7 @@ button:active:not(:disabled) {
 
 /* ── Focus ring ───────────────────────────────────────────────────────────── */
 button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
+a:focus-visible {
   outline: 2px solid #6366f1;
   outline-offset: 2px;
 }
@@ -203,6 +365,7 @@ textarea:focus-visible {
     background: linear-gradient(90deg, #2a2d3e 25%, #343750 50%, #2a2d3e 75%);
     background-size: 800px 100%;
   }
+  .portal-toast { background: #1e293b; }
 }
 :root[data-theme="dark"] .skeleton {
   background: linear-gradient(90deg, #2a2d3e 25%, #343750 50%, #2a2d3e 75%);
