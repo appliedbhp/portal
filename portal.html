@@ -305,10 +305,16 @@ const initialized = {};
 function showSection(name) {
   document.querySelectorAll(".section").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".sidebar-link").forEach(b => b.classList.toggle("active", b.dataset.section === name));
-  document.getElementById("section-" + name).classList.add("active");
+  const section = document.getElementById("section-" + name);
+  section.classList.add("active");
   if (!initialized[name]) {
     initialized[name] = true;
-    SECTION_INIT[name](document.getElementById("section-" + name));
+    SECTION_INIT[name](section);
+  }
+  // Apply gradient headings after init and on every visit (sections re-render headings)
+  if (typeof applyGradientHeadings === "function") {
+    // Delay slightly so async-rendered headings are in the DOM
+    setTimeout(() => applyGradientHeadings(section), 150);
   }
 }
 
