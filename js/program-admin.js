@@ -12,20 +12,37 @@ function initProgramAdminSection(root) {
 async function loadProgramAdmin() {
   setStatus("padmin-status", "Loading…", "loading");
   try {
-    const [libData, progressData] = await Promise.all([
+    const [libData, progressData, clientsData, planData] = await Promise.all([
       apiCall("getProgramLibrary", {}),
-      apiCall("getClientProgramProgress", {})
+      apiCall("getClientProgramProgress", {}),
+      apiCall("getProviderClients", {}).catch(() => ({ clients: [] })),
+      apiCall("getPlan", {}).catch(() => ({ goals: [] }))
     ]);
-    renderProgramAdmin(libData, progressData);
+    // Find this client's role from the clients list
+    const sess = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+    const selectedClientId = sess.selectedClientId || sess.clientId || "";
+    const thisClient = (clientsData.clients || []).find(c => c.clientId === selectedClientId) || {};
+    const clientMeta = { role: thisClient.role || "parent", goals: planData.goals || [] };
+    renderProgramAdmin(libData, progressData, clientMeta);
     setStatus("padmin-status", "", "");
   } catch (e) {
     setStatus("padmin-status", "Error: " + e.message, "error");
   }
 }
 
-function renderProgramAdmin(libData, progressData) {
+function _roleToAudience(role) {
+  if (role === "adult") return "adult";
+  if (role === "teen")  return "teen";
+  if (role === "child") return "child";
+  return "parent"; // default: "parent" role = parent managing child's account
+}
+
+function renderProgramAdmin(libData, progressData, clientMeta) {
   const hasAssignment = !!progressData.assignment;
-  const programs = libData.programs || [];
+  const programs      = libData.programs || [];
+  const clientRole    = (clientMeta && clientMeta.role) || "parent"; // "parent"|"adult"|"teen"|"child"
+  const defaultAud    = _roleToAudience(clientRole);
+  const clientGoals   = (clientMeta && clientMeta.goals) || [];
 
   let progressHtml = "";
   if (hasAssignment) {
@@ -94,7 +111,7 @@ function renderProgramAdmin(libData, progressData) {
       <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
         Generate personalized session topic suggestions based on this client's session notes, progress reports, and assessments.
       </p>
-      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
         <div class="row" style="margin:0;gap:10px;align-items:center;">
           <label style="margin:0;min-width:0;">Sessions to plan</label>
           <select id="ai-num-sessions" style="width:80px;">
@@ -105,11 +122,36 @@ function renderProgramAdmin(libData, progressData) {
             <option value="8">8</option>
           </select>
         </div>
-        <button onclick="runAiSessionPlanner()">
-          <i class="bi bi-magic"></i> Generate Suggestions
-        </button>
+        <div class="row" style="margin:0;gap:10px;align-items:center;">
+          <label style="margin:0;min-width:0;">Audience</label>
+          <select id="ai-audience" style="width:130px;">
+            <option value="child"  ${defaultAud === "child"  ? "selected" : ""}>Child</option>
+            <option value="teen"   ${defaultAud === "teen"   ? "selected" : ""}>Teen</option>
+            <option value="parent" ${defaultAud === "parent" ? "selected" : ""}>Parent</option>
+            <option value="adult"  ${defaultAud === "adult"  ? "selected" : ""}>Adult</option>
+          </select>
+        </div>
       </div>
-      <div id="ai-planner-status"></div>
+      ${clientGoals.length ? `
+      <div style="margin-bottom:14px;">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text);">
+          <i class="bi bi-bullseye"></i> Include goals in planning
+          <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px;">(select any to focus the AI)</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;" id="ai-goal-picker">
+          ${clientGoals.map((g, i) => `
+            <label style="display:flex;align-items:flex-start;gap:6px;padding:7px 10px;border:1.5px solid var(--border);
+                           border-radius:8px;cursor:pointer;font-size:12px;max-width:320px;
+                           background:var(--surface,#f9fafb);transition:border-color .15s;">
+              <input type="checkbox" value="${i}" class="ai-goal-check" style="margin-top:2px;flex-shrink:0;">
+              <span>${escapeHtml((g.objText || g.objective || "Goal " + (i+1)).slice(0, 80))}${(g.objText || g.objective || "").length > 80 ? "…" : ""}</span>
+            </label>`).join("")}
+        </div>
+      </div>` : ""}
+      <button onclick="runAiSessionPlanner()">
+        <i class="bi bi-magic"></i> Generate Suggestions
+      </button>
+      <div id="ai-planner-status" style="margin-top:10px;"></div>
       <div id="ai-planner-results"></div>
     </div>
 
@@ -142,11 +184,18 @@ function toggleStepReview(headerEl) {
 // ── AI Session Planner ────────────────────────────────────────────────────────
 
 async function runAiSessionPlanner() {
-  const numSessions = parseInt(document.getElementById("ai-num-sessions")?.value || 6, 10);
+  const numSessions  = parseInt(document.getElementById("ai-num-sessions")?.value || 6, 10);
+  const audience     = document.getElementById("ai-audience")?.value || "parent";
+  const selectedGoals = Array.from(document.querySelectorAll(".ai-goal-check:checked"))
+    .map(cb => {
+      const label = cb.closest("label");
+      return label ? label.querySelector("span")?.textContent?.trim() : null;
+    }).filter(Boolean);
+
   setStatus("ai-planner-status", `Analyzing session history and generating ${numSessions} suggestions… this may take 10–20 seconds.`, "loading");
   document.getElementById("ai-planner-results").innerHTML = "";
   try {
-    const res = await apiCall("suggestSessionTopics", { numSessions });
+    const res = await apiCall("suggestSessionTopics", { numSessions, audience, selectedGoals });
     setStatus("ai-planner-status", "", "");
     renderAiSuggestions(res.suggestions || []);
   } catch (e) {

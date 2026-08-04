@@ -198,6 +198,7 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
         <div style="margin-bottom:28px;">
           <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">${escapeHtml(goal)}</div>
           <canvas id="viz-trend-${gi}" height="70"></canvas>
+          <div id="viz-trend-controls-${gi}" style="display:flex;gap:18px;margin-top:8px;flex-wrap:wrap;"></div>
         </div>`).join("")}
     </div>` : ""}
   `;
@@ -301,6 +302,7 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
         }
       });
       _vizCharts.push(chart);
+      _attachAxisControls(el, chart, gi, cfg);
     });
 
     // Goals horizontal bar
@@ -341,6 +343,74 @@ function renderClientViz(root, { program, notes, sessions, goals }) {
 function _vizWeekLabel(date) {
   if (!date || isNaN(date)) return "—";
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// ── Axis adjustment controls ───────────────────────────────────────────────────
+// Renders +/- buttons beneath a chart so the provider/client can nudge axes live.
+
+function _attachAxisControls(canvasEl, chart, gi, cfg) {
+  const container = document.getElementById("viz-trend-controls-" + gi);
+  if (!container) return;
+
+  // Determine initial y range from chart options
+  const yOpts   = chart.options.scales.y;
+  const dataMax = Math.max(...(chart.data.datasets.flatMap(ds => ds.data.filter(v => v != null))), 0);
+  const step    = cfg.yStepSize || Math.max(1, Math.round(dataMax / 5));
+
+  function btnStyle(color) {
+    return `style="width:26px;height:26px;border-radius:6px;border:1.5px solid var(--border);
+                   background:var(--surface,#f9fafb);cursor:pointer;font-size:14px;font-weight:700;
+                   color:${color};display:flex;align-items:center;justify-content:center;
+                   padding:0;line-height:1;transition:background .12s;"`;
+  }
+
+  function axisGroup(label, getVal, setVal, stepAmt, minAllowed) {
+    const wrap = document.createElement("div");
+    wrap.style.cssText = "display:flex;align-items:center;gap:6px;font-size:12px;";
+    wrap.innerHTML = `
+      <span style="color:var(--muted);min-width:52px;">${label}</span>
+      <button ${btnStyle("#dc2626")} title="Decrease">−</button>
+      <span style="min-width:28px;text-align:center;font-weight:700;font-variant-numeric:tabular-nums;"
+            id="viz-ctrl-val-${gi}-${label.replace(/\s/g,"")}">
+        ${getVal() ?? "auto"}
+      </span>
+      <button ${btnStyle("#059669")} title="Increase">+</button>`;
+    const [minusBtn, display, plusBtn] = [wrap.children[1], wrap.children[2], wrap.children[3]];
+    function refresh() {
+      display.textContent = getVal() ?? "auto";
+      chart.update("none");
+    }
+    minusBtn.addEventListener("click", () => {
+      const cur = getVal();
+      const next = (cur !== undefined && cur !== null) ? cur - stepAmt : dataMax - stepAmt;
+      if (minAllowed !== undefined && next < minAllowed) return;
+      setVal(next);
+      refresh();
+    });
+    plusBtn.addEventListener("click", () => {
+      const cur = getVal();
+      const next = (cur !== undefined && cur !== null) ? cur + stepAmt : dataMax + stepAmt;
+      setVal(next);
+      refresh();
+    });
+    return wrap;
+  }
+
+  // Y-max control
+  container.appendChild(axisGroup(
+    "Y max",
+    () => yOpts.max,
+    v  => { yOpts.max = v; },
+    step, (yOpts.min || 0) + step
+  ));
+
+  // Y-min control (only show if current min > 0 or cfg has one)
+  container.appendChild(axisGroup(
+    "Y min",
+    () => yOpts.min || 0,
+    v  => { yOpts.min = Math.max(0, v); yOpts.beginAtZero = yOpts.min === 0; },
+    step, 0
+  ));
 }
 
 // ── Chart config inference ─────────────────────────────────────────────────────
