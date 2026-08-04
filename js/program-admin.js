@@ -133,19 +133,22 @@ function renderProgramAdmin(libData, progressData, clientMeta) {
         </div>
       </div>
       ${clientGoals.length ? `
-      <div style="margin-bottom:14px;">
+      <div style="margin-bottom:16px;">
         <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text);">
           <i class="bi bi-bullseye"></i> Include goals in planning
           <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:6px;">(select any to focus the AI)</span>
         </div>
-        <div style="display:flex;flex-wrap:wrap;gap:6px;" id="ai-goal-picker">
-          ${clientGoals.map((g, i) => `
-            <label style="display:flex;align-items:flex-start;gap:6px;padding:7px 10px;border:1.5px solid var(--border);
-                           border-radius:8px;cursor:pointer;font-size:12px;max-width:320px;
-                           background:var(--surface,#f9fafb);transition:border-color .15s;">
-              <input type="checkbox" value="${i}" class="ai-goal-check" style="margin-top:2px;flex-shrink:0;">
-              <span>${escapeHtml((g.objText || g.objective || "Goal " + (i+1)).slice(0, 80))}${(g.objText || g.objective || "").length > 80 ? "…" : ""}</span>
-            </label>`).join("")}
+        <div style="display:flex;flex-direction:column;gap:4px;" id="ai-goal-picker">
+          ${clientGoals.map((g, i) => {
+            const text = g.objText || g.objective || "Goal " + (i + 1);
+            return `<label style="display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:start;
+                                  padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;
+                                  cursor:pointer;font-size:13px;line-height:1.45;
+                                  background:var(--surface,#f9fafb);transition:border-color .15s;">
+              <input type="checkbox" value="${i}" class="ai-goal-check" style="margin-top:3px;">
+              <span>${escapeHtml(text)}</span>
+            </label>`;
+          }).join("")}
         </div>
       </div>` : ""}
       <button onclick="runAiSessionPlanner()">
