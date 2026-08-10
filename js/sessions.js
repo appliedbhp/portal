@@ -328,8 +328,13 @@ async function sessShowPostSaveModal() {
   modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;
     display:flex;align-items:center;justify-content:center;padding:16px;`;
   modal.innerHTML = `
-    <div style="background:var(--surface);border-radius:16px;padding:28px;max-width:480px;width:100%;
-                box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative;">
+    <div style="background:#fff;border-radius:16px;padding:28px;max-width:480px;width:100%;
+                box-shadow:0 20px 60px rgba(0,0,0,.35);position:relative;color:#111;">
+    <style>
+      @media (prefers-color-scheme:dark) { #sess-post-save-modal > div { background:#1e1e2e !important; color:#e5e7eb !important; } }
+      :root[data-theme="dark"] #sess-post-save-modal > div { background:#1e1e2e !important; color:#e5e7eb !important; }
+      :root[data-theme="light"] #sess-post-save-modal > div { background:#fff !important; color:#111 !important; }
+    </style>
       <button onclick="document.getElementById('sess-post-save-modal').remove()"
               style="position:absolute;top:12px;right:12px;background:none;border:none;
                      font-size:20px;cursor:pointer;color:var(--muted);line-height:1;">×</button>
