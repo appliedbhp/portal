@@ -87,8 +87,9 @@
     <div class="sidebar-group">
       <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Billing<i class="bi bi-chevron-down sg-chevron"></i></div>
       <div class="sidebar-group-links">
+        <button class="sidebar-link" data-section="provider-billing" onclick="showSection('provider-billing')" id="providerBillingNavBtn" style="display:none;"><i class="bi bi-credit-card-2-front-fill"></i> Client Billing</button>
         <button class="sidebar-link" data-section="superbill" onclick="showSection('superbill')" id="superbillNavBtn" style="display:none;"><i class="bi bi-receipt-cutoff"></i> Superbill</button>
-        <button class="sidebar-link" data-section="client-billing" onclick="showSection('client-billing')" id="clientBillingNavBtn" style="display:none;"><i class="bi bi-receipt-cutoff"></i> My Superbills</button>
+        <button class="sidebar-link" data-section="client-billing" onclick="showSection('client-billing')" id="clientBillingNavBtn" style="display:none;"><i class="bi bi-credit-card-2-front-fill"></i> My Billing</button>
       </div>
     </div>
 
@@ -148,6 +149,7 @@
       <div id="section-client-program" class="section"></div>
       <div id="section-grades" class="section"></div>
       <div id="section-intake" class="section"></div>
+      <div id="section-provider-billing" class="section"></div>
       <div id="section-superbill" class="section"></div>
       <div id="section-client-billing" class="section"></div>
       <div id="section-consent-forms" class="section"></div>
@@ -184,6 +186,7 @@
 <script src="js/grades.js"></script>
 <script src="js/intake.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/provider-billing.js"></script>
 <script src="js/superbill.js"></script>
 <script src="js/notifications.js"></script>
 <script src="js/consent-forms.js"></script>
@@ -222,6 +225,7 @@ if (_role !== "provider") document.getElementById("clientProgramNavBtn").style.d
 if (_role !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("programsNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
+if (_role === "provider") document.getElementById("providerBillingNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
 if (_role !== "provider") document.getElementById("clientBillingNavBtn").style.display = "block";
 if (_role !== "provider") document.getElementById("consentFormsNavBtn").style.display = "none";
@@ -242,6 +246,7 @@ if (_role === "adult") {
 
 loadBroadcastBanner();
 if (typeof updateBellBadge === "function" && typeof getRole === "function" && getRole() !== "provider") updateBellBadge();
+if (typeof applyClientAccessRestrictions === "function" && getRole() !== "provider") applyClientAccessRestrictions();
 
 function switchClient() {
   setProviderClient("");
@@ -271,6 +276,7 @@ document.querySelectorAll(".sidebar-group-title").forEach(titleEl => {
 
 const SECTION_INIT = {
   dashboard: initDashboardSection,
+  "provider-billing": initProviderBillingSection,
   superbill: initSuperbillSection,
   home: initHomeSection,
   roadmap: initRoadmapSection,
