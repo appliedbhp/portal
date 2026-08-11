@@ -19,6 +19,19 @@ function initHomeSection(root) {
       <div class="card" id="home-next-week"><p style="color:var(--muted);font-size:13px;">Loading upcoming sessions…</p></div>
     </div>` : ""}
 
+    ${!isClient ? `
+    <div class="card">
+      <h2><i class="bi bi-toggles"></i> Client Tab Access</h2>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">
+        Control which sections this client can see in their portal. Unchecked tabs are hidden from their sidebar.
+      </p>
+      <div id="home-access-list" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:14px;">
+        <p style="color:var(--muted);font-size:13px;">Loading…</p>
+      </div>
+      <div id="home-access-status" style="margin-bottom:8px;"></div>
+      <button onclick="saveClientAccess()"><i class="bi bi-floppy-fill"></i> Save Access Settings</button>
+    </div>` : ""}
+
     <div class="card">
       <h2><i class="bi bi-grid-fill"></i> Jump To</h2>
       <div class="home-tile-grid">
@@ -38,6 +51,7 @@ function initHomeSection(root) {
 
   loadHomeStats();
   if (isClient) loadHomeProgramPanels();
+  if (!isClient) loadClientAccessToggles();
 }
 
 async function loadHomeStats() {
@@ -212,4 +226,126 @@ function renderHomeNextWeek(program, noteMap) {
 function latestByDate_(rows, dateField) {
   if (!rows || rows.length === 0) return null;
   return rows.reduce((latest, r) => (!latest || r[dateField] > latest[dateField] ? r : latest), null);
+}
+
+// ── Client tab access controls (provider-only) ────────────────────────────────
+
+// All sections a client can potentially see, grouped for readability.
+// section: the data-section value on the sidebar button
+// label:   display name in the toggle list
+// group:   category header
+const CLIENT_SECTIONS = [
+  { section: "home",          label: "Home",                  group: "Core" },
+  { section: "programs",      label: "My Program",            group: "Core" },
+  { section: "client-viz",    label: "My Progress (Charts)",  group: "Core" },
+  { section: "appointments",  label: "Appointments",          group: "Core" },
+  { section: "sessions",      label: "Session Notes",         group: "Records" },
+  { section: "plan",          label: "Goals & Plan",          group: "Records" },
+  { section: "progress",      label: "Progress",              group: "Records" },
+  { section: "scores",        label: "Standardized Scores",   group: "Records" },
+  { section: "roadmap",       label: "Roadmap Assessment",    group: "Assessments" },
+  { section: "win",           label: "What I Need (WIN)",     group: "Assessments" },
+  { section: "bfa",           label: "Behavior Assessment",   group: "Assessments" },
+  { section: "assessments",   label: "Progress & Assessments",group: "Assessments" },
+  { section: "vanderbilt",    label: "Vanderbilt Scales",     group: "Assessments" },
+  { section: "grades",        label: "Grades",                group: "Assessments" },
+  { section: "intake",        label: "Intake & Validity",     group: "Assessments" },
+  { section: "client-billing",label: "My Billing",            group: "Billing" },
+  { section: "consent-forms", label: "Consent Forms",         group: "Admin" },
+  { section: "settings",      label: "Settings",              group: "Admin" },
+  { section: "notifications", label: "Notifications",         group: "Admin" },
+];
+
+async function loadClientAccessToggles() {
+  const el = document.getElementById("home-access-list");
+  if (!el) return;
+  try {
+    const res = await apiCall("getClientAccess", {});
+    const allowed = res.allowedSections; // null = all allowed
+    renderAccessToggles(el, allowed);
+  } catch (_) {
+    renderAccessToggles(el, null);
+  }
+}
+
+function renderAccessToggles(el, allowedSections) {
+  const allAllowed = !allowedSections; // null/undefined = all on
+  const allowed    = new Set(allAllowed ? CLIENT_SECTIONS.map(s => s.section) : allowedSections);
+
+  // Group sections
+  const groups = {};
+  CLIENT_SECTIONS.forEach(s => {
+    if (!groups[s.group]) groups[s.group] = [];
+    groups[s.group].push(s);
+  });
+
+  const groupColors = { Core: "#6366f1", Records: "#0ea5e9", Assessments: "#8b5cf6", Billing: "#059669", Admin: "#6b7280" };
+
+  el.innerHTML = Object.entries(groups).map(([group, sections]) => `
+    <div style="grid-column:1/-1;margin:6px 0 2px;">
+      <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+                   color:${groupColors[group] || "#6b7280"};">${group}</span>
+    </div>
+    ${sections.map(s => `
+      <label style="display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:center;
+                    padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;
+                    cursor:pointer;font-size:13px;background:var(--surface,#f9fafb);">
+        <input type="checkbox" class="ca-toggle" data-section="${escapeAttr(s.section)}"
+               ${allowed.has(s.section) ? "checked" : ""}>
+        <span>${escapeHtml(s.label)}</span>
+      </label>`).join("")}
+  `).join("");
+
+  // "Select all" / "Deselect all" convenience buttons
+  el.insertAdjacentHTML("beforeend", `
+    <div style="grid-column:1/-1;display:flex;gap:8px;margin-top:6px;">
+      <button class="secondary" style="font-size:12px;padding:4px 12px;"
+              onclick="caSelectAll(true)">Select all</button>
+      <button class="secondary" style="font-size:12px;padding:4px 12px;"
+              onclick="caSelectAll(false)">Deselect all</button>
+    </div>`);
+}
+
+function caSelectAll(checked) {
+  document.querySelectorAll(".ca-toggle").forEach(cb => cb.checked = checked);
+}
+
+async function saveClientAccess() {
+  const checked = Array.from(document.querySelectorAll(".ca-toggle:checked"))
+    .map(cb => cb.dataset.section);
+  const total = document.querySelectorAll(".ca-toggle").length;
+  // If everything is checked, store null (= all allowed) to keep it simple
+  const allowedSections = checked.length === total ? null : checked;
+
+  setStatus("home-access-status", "Saving…", "loading");
+  try {
+    await apiCall("saveClientAccess", { allowedSections });
+    setStatus("home-access-status", "Access settings saved.", "success");
+    if (typeof showToast === "function") showToast("Client access settings saved.", "success");
+  } catch (e) {
+    setStatus("home-access-status", "Error: " + e.message, "error");
+  }
+}
+
+// Called once at portal load for client sessions — hides tabs not in their allowedSections list.
+async function applyClientAccessRestrictions() {
+  if (getRole() === "provider") return;
+  try {
+    const res = await apiCall("getClientAccess", {});
+    if (!res.allowedSections) return; // null = all allowed
+    const allowed = new Set(res.allowedSections);
+    CLIENT_SECTIONS.forEach(({ section }) => {
+      if (allowed.has(section)) return;
+      // Hide the sidebar button for this section
+      const btn = document.querySelector(`.sidebar-link[data-section="${section}"]`);
+      if (btn) btn.style.display = "none";
+      // If currently on a hidden section, redirect to home
+      if (typeof showSection === "function") {
+        const activeSection = document.querySelector(".section.active");
+        if (activeSection && activeSection.id === "section-" + section) {
+          showSection("home");
+        }
+      }
+    });
+  } catch (_) {}
 }
