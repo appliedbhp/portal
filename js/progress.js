@@ -230,18 +230,20 @@ function progWeekStart(dateStr) {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 
-function progChartPoints(numeric, weekly) {
-  if (!weekly) return numeric.map(p => ({ label: p.date, value: Number(p.score), count: 1 }));
-  const weeks = {};
+function progChartPoints(numeric, grouping) {
+  if (grouping === "daily") return numeric.map(p => ({ label: p.date, value: Number(p.score), count: 1 }));
+  const groups = {};
   numeric.forEach(p => {
-    const key = progWeekStart(p.date);
-    (weeks[key] ||= []).push(Number(p.score));
+    const key = grouping === "monthly" ? p.date.slice(0, 7) : progWeekStart(p.date);
+    (groups[key] ||= []).push(Number(p.score));
   });
-  return Object.keys(weeks).sort().map(key => {
-    const vals = weeks[key];
-    const d = new Date(key + "T00:00:00");
+  return Object.keys(groups).sort().map(key => {
+    const vals = groups[key];
+    const d = new Date((grouping === "monthly" ? key + "-01" : key) + "T00:00:00");
     return {
-      label: `Week of ${d.toLocaleDateString(undefined, { month:"short", day:"numeric" })}`,
+      label: grouping === "monthly"
+        ? d.toLocaleDateString(undefined, { month:"short", year:"numeric" })
+        : `Week of ${d.toLocaleDateString(undefined, { month:"short", day:"numeric" })}`,
       value: Math.round((vals.reduce((a,b) => a+b, 0) / vals.length) * 100) / 100,
       count: vals.length
     };
@@ -260,9 +262,10 @@ function renderProgressChart(goal, entries) {
     return;
   }
 
-  const cfg = progInferChart(goal, numeric);
-  const points = progChartPoints(numeric, cfg.weekly);
   const state = progAxisState[progSelected] ||= {};
+  const cfg = progInferChart(goal, numeric);
+  const grouping = state.xGrouping || (cfg.weekly ? "weekly" : "daily");
+  const points = progChartPoints(numeric, grouping);
   const lastIdx = Math.max(0, points.length - 1);
   const xMin = Math.min(state.xMin ?? 0, lastIdx);
   const xMax = Math.max(xMin, Math.min(state.xMax ?? lastIdx, lastIdx));
@@ -276,9 +279,13 @@ function renderProgressChart(goal, entries) {
   const ySliderStep = cfg.yMax <= 10 ? 1 : cfg.yMax <= 100 ? 5 : Math.max(1, Math.round(sliderCeiling / 20));
 
   section.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;">
+      <span style="font-size:12px;font-weight:700;margin-right:2px;">X-axis:</span>
+      ${["daily","weekly","monthly"].map(mode => `<button class="${grouping === mode ? "" : "secondary"}" style="font-size:12px;padding:6px 11px;" onclick="progSetGrouping('${mode}')">${mode[0].toUpperCase() + mode.slice(1)}</button>`).join("")}
+    </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;">
       ${cfg.detected.map(label => `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#eaf2ff;color:var(--primary-dark);">${escapeHtml(label)}</span>`).join("")}
-      ${cfg.weekly ? `<span style="font-size:11px;color:var(--muted);align-self:center;">Multiple entries in a week are averaged.</span>` : ""}
+      ${grouping !== "daily" ? `<span style="font-size:11px;color:var(--muted);align-self:center;">Multiple entries in each ${grouping === "weekly" ? "week" : "month"} are averaged.</span>` : ""}
     </div>
     <div class="chart-wrap wide"><canvas id="prog-chart"></canvas></div>
     <div class="prog-axis-controls" style="display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:14px;margin:12px 0 22px;">
@@ -327,7 +334,7 @@ function renderProgressChart(goal, entries) {
             ticks: { stepSize: cfg.yStep || undefined },
             title: { display: true, text: cfg.yLabel }
           },
-          x: { grid: { display: false }, title: { display: true, text: cfg.weekly ? "Week" : "Date" } }
+          x: { grid: { display: false }, title: { display: true, text: grouping === "weekly" ? "Week" : grouping === "monthly" ? "Month" : "Date" } }
         },
         plugins: {
           legend: { display: false },
@@ -336,6 +343,16 @@ function renderProgressChart(goal, entries) {
       }
     }
   );
+}
+
+function progSetGrouping(grouping) {
+  if (!progSelected || !["daily", "weekly", "monthly"].includes(grouping)) return;
+  const state = progAxisState[progSelected] ||= {};
+  state.xGrouping = grouping;
+  delete state.xMin;
+  delete state.xMax;
+  const goal = progGoals.find(g => g._key === progSelected);
+  renderProgressChart(goal, progAllEntries.filter(p => p.objText === progSelected));
 }
 
 function progSetAxis(axis, rawValue) {

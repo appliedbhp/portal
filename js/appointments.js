@@ -31,7 +31,7 @@ async function initAppointmentsSection(root) {
           </div>
           <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; Start Time</label>
-            <input type="datetime-local" id="appt-start" style="width:100%;" />
+            <input type="datetime-local" id="appt-start" style="width:100%;" onchange="apptSyncEndTime()" />
           </div>
           <div>
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; End Time</label>
@@ -104,7 +104,31 @@ async function initAppointmentsSection(root) {
       </div>`;
   }
 
+  if (isProvider) apptSetDefaultTimes();
   loadAppointmentsData();
+}
+
+function apptToLocalInput(d) {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function apptSetDefaultTimes() {
+  const startEl = document.getElementById("appt-start");
+  const endEl = document.getElementById("appt-end");
+  if (!startEl || !endEl) return;
+  const start = new Date();
+  start.setDate(start.getDate() + 7);
+  start.setSeconds(0, 0);
+  startEl.value = apptToLocalInput(start);
+  endEl.value = apptToLocalInput(new Date(start.getTime() + 30 * 60000));
+}
+
+function apptSyncEndTime() {
+  const startEl = document.getElementById("appt-start");
+  const endEl = document.getElementById("appt-end");
+  if (!startEl?.value || !endEl) return;
+  const start = new Date(startEl.value);
+  if (!isNaN(start)) endEl.value = apptToLocalInput(new Date(start.getTime() + 30 * 60000));
 }
 
 async function apptCreate() {
@@ -131,7 +155,7 @@ async function apptCreate() {
       notes, sendSms
     });
 
-    let msg = "Appointment created.";
+    let msg = "Appointment added to your calendar.";
     if (res.clientEmail) msg += ` Invite sent to ${res.clientEmail}.`;
     if (res.smsSent)     msg += " SMS reminder sent.";
     if (res.smsSkipped)  msg += " (SMS skipped — client not opted in.)";

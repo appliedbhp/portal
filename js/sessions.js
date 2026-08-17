@@ -6,11 +6,14 @@ let sessSessions = [];
 let sessNoteTemplates = [];
 let sessGoals = [];
 let sessProgramNotes = []; // from client program (data_session_notes)
-let sessView = "list"; // "list" | "calendar"
+let sessView = "calendar"; // "list" | "calendar"
 let sessCalDate = new Date(); // current month being viewed in calendar mode
 let sessSelectedDay = null; // "YYYY-MM-DD" of the day expanded in calendar mode
 let sessProgByDay = {}; // "YYYY-MM-DD" -> [{stepNum, title, programName}]
 let _sessQuill = null;
+let _sessPipChart = null;
+let _sessPipGoals = [];
+let _sessPipProgress = [];
 
 // ── Built-in format templates ─────────────────────────────────────────────────
 const SESS_FORMAT_TEMPLATES = [
@@ -45,12 +48,21 @@ const SESS_FORMAT_TEMPLATES = [
 
 function initSessionsSection(root) {
   const isProvider = getRole() === "provider";
+  sessView = "calendar";
+  sessCalDate = new Date();
+  sessSelectedDay = null;
   root.innerHTML = `
     <div class="card">
-      <h1><i class="bi bi-journal-text"></i>Session Notes</h1>
-      <div class="btn-row no-print">
-        <button id="sess-tab-list" onclick="sessSwitchView('list')">List</button>
-        <button id="sess-tab-cal" class="secondary" onclick="sessSwitchView('calendar')">Calendar</button>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h1 style="margin-bottom:6px;"><i class="bi bi-journal-text"></i>Session Notes</h1>
+          <p style="font-size:13px;color:var(--muted);margin:0;">Review sessions and record goal progress without leaving the calendar.</p>
+        </div>
+        <button class="sess-progress-launch no-print" onclick="sessOpenProgressPip()"><i class="bi bi-graph-up-arrow"></i> Progress PIP</button>
+      </div>
+      <div class="btn-row no-print" style="margin-top:16px;">
+        <button id="sess-tab-list" class="secondary" onclick="sessSwitchView('list')">List</button>
+        <button id="sess-tab-cal" onclick="sessSwitchView('calendar')">Calendar</button>
       </div>
       <div id="sess-viewBody" style="margin-top:16px;">Loading...</div>
     </div>
@@ -147,6 +159,172 @@ function initSessionsSection(root) {
         ["blockquote", "clean"]
       ]}
     });
+  }
+}
+
+// ── Floating progress panel ──────────────────────────────────────────────────
+// Keeps goal data entry visible while the provider reviews session notes.
+async function sessOpenProgressPip() {
+  let pip = document.getElementById("sess-progress-pip");
+  if (pip) {
+    pip.classList.remove("minimized");
+    pip.style.display = "flex";
+    return;
+  }
+
+  pip = document.createElement("aside");
+  pip.id = "sess-progress-pip";
+  pip.className = "sess-progress-pip";
+  pip.setAttribute("role", "dialog");
+  pip.setAttribute("aria-label", "Progress picture-in-picture panel");
+  pip.innerHTML = `
+    <div class="sess-pip-header" id="sess-pip-drag-handle">
+      <div><i class="bi bi-graph-up-arrow"></i><strong>Goal Progress</strong><span> PIP</span></div>
+      <div class="sess-pip-actions">
+        <button class="secondary" title="Minimize" aria-label="Minimize progress panel" onclick="sessToggleProgressPip()"><i class="bi bi-dash-lg"></i></button>
+        <button class="secondary" title="Close" aria-label="Close progress panel" onclick="sessCloseProgressPip()"><i class="bi bi-x-lg"></i></button>
+      </div>
+    </div>
+    <div class="sess-pip-body">
+      <div id="sess-pip-content"><div class="portal-preloader"><span></span><span></span><span></span></div></div>
+    </div>`;
+  document.body.appendChild(pip);
+  sessEnablePipDrag(pip, pip.querySelector("#sess-pip-drag-handle"));
+
+  try {
+    const [planRes, progressRes] = await Promise.all([
+      apiCall("getPlan", {}),
+      apiCall("getProgress", {})
+    ]);
+    _sessPipGoals = (planRes.goals || []).map(g => Object.assign({}, g, { _key: typeof progGoalKey === "function" ? progGoalKey(g) : (g.objText || g.objective || "") }));
+    _sessPipProgress = progressRes.progress || [];
+    sessRenderProgressPip();
+  } catch (e) {
+    document.getElementById("sess-pip-content").innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>${escapeHtml(e.message)}</span></div>`;
+  }
+}
+
+function sessToggleProgressPip() {
+  document.getElementById("sess-progress-pip")?.classList.toggle("minimized");
+}
+
+function sessCloseProgressPip() {
+  if (_sessPipChart) { _sessPipChart.destroy(); _sessPipChart = null; }
+  document.getElementById("sess-progress-pip")?.remove();
+}
+
+function sessEnablePipDrag(panel, handle) {
+  if (!panel || !handle) return;
+  handle.addEventListener("pointerdown", event => {
+    if (event.target.closest("button") || window.matchMedia("(max-width:700px)").matches) return;
+    const rect = panel.getBoundingClientRect();
+    const dx = event.clientX - rect.left, dy = event.clientY - rect.top;
+    handle.setPointerCapture(event.pointerId);
+    const move = e => {
+      panel.style.left = Math.max(8, Math.min(window.innerWidth - panel.offsetWidth - 8, e.clientX - dx)) + "px";
+      panel.style.top = Math.max(72, Math.min(window.innerHeight - 80, e.clientY - dy)) + "px";
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
+    };
+    const up = () => { handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", up);
+  });
+}
+
+function sessRenderProgressPip(selectedKey) {
+  const content = document.getElementById("sess-pip-content");
+  if (!content) return;
+  if (!_sessPipGoals.length) {
+    content.innerHTML = `<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>No goals are on file for this client.</span></div>`;
+    return;
+  }
+  const goal = _sessPipGoals.find(g => g._key === selectedKey) || _sessPipGoals[0];
+  const key = goal._key;
+  const today = new Date();
+  const pad = n => String(n).padStart(2,"0");
+  const todayIso = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+  content.innerHTML = `
+    <label>Goal</label>
+    <select id="sess-pip-goal" onchange="sessRenderProgressPip(this.value)">
+      ${_sessPipGoals.map(g => `<option value="${escapeAttr(g._key)}" ${g._key === key ? "selected" : ""}>${escapeHtml(g._key)}</option>`).join("")}
+    </select>
+    <div class="sess-pip-measure"><i class="bi bi-rulers"></i>${escapeHtml(goal.measure || "Score")}</div>
+    <div class="sess-pip-chart"><canvas id="sess-pip-chart"></canvas></div>
+    <div class="sess-pip-entry-head">
+      <strong><i class="bi bi-plus-circle-fill"></i>Add progress data</strong>
+      <input type="date" id="sess-pip-start" value="${todayIso}" onchange="sessRenderPipDays()">
+    </div>
+    <div id="sess-pip-days" class="sess-pip-days"></div>
+    <div class="sess-pip-footer">
+      <div id="sess-pip-status"></div>
+      <button onclick="sessSavePipProgress()"><i class="bi bi-save-fill"></i>Save entries</button>
+    </div>`;
+  sessRenderPipChart(goal);
+  sessRenderPipDays();
+}
+
+function sessRenderPipDays() {
+  const grid = document.getElementById("sess-pip-days");
+  const start = document.getElementById("sess-pip-start")?.value;
+  if (!grid || !start) return;
+  const names = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const pad = n => String(n).padStart(2,"0");
+  grid.innerHTML = Array.from({length:7}, (_, i) => {
+    const d = new Date(start + "T00:00:00"); d.setDate(d.getDate() + i);
+    const iso = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    return `<label><span>${names[d.getDay()]}<small>${d.getMonth()+1}/${d.getDate()}</small></span><input class="sess-pip-score" data-date="${iso}" inputmode="decimal" placeholder="—"></label>`;
+  }).join("");
+}
+
+function sessRenderPipChart(goal) {
+  if (_sessPipChart) { _sessPipChart.destroy(); _sessPipChart = null; }
+  const canvas = document.getElementById("sess-pip-chart");
+  if (!canvas) return;
+  const rows = _sessPipProgress.filter(p => p.objText === goal._key && p.date && p.score !== "" && !isNaN(Number(p.score)))
+                               .sort((a,b) => a.date.localeCompare(b.date)).slice(-12);
+  const text = `${goal._key} ${goal.measure || ""}`;
+  const isPct = /\b(percent(?:age)?|%|accuracy|success rate)\b/i.test(text);
+  const isWeekly = /\bweekly\b|\bper\s+week\b|\beach\s+week\b|\ba\s+week\b|\/\s*week\b/i.test(text);
+  let chartRows = rows.map(r => ({ label:r.date, value:Number(r.score) }));
+  if (isWeekly) {
+    const buckets = {};
+    rows.forEach(r => {
+      const week = typeof progWeekStart === "function" ? progWeekStart(r.date) : r.date;
+      (buckets[week] ||= []).push(Number(r.score));
+    });
+    chartRows = Object.keys(buckets).sort().map(week => {
+      const vals = buckets[week];
+      const d = new Date(week + "T00:00:00");
+      return { label:`Week of ${d.toLocaleDateString(undefined,{month:"short",day:"numeric"})}`, value:Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100)/100 };
+    });
+  }
+  _sessPipChart = new Chart(canvas.getContext("2d"), {
+    type:"line",
+    data:{ labels:chartRows.map(r => r.label), datasets:[{ data:chartRows.map(r => r.value), borderColor:"#3185fc", backgroundColor:"rgba(49,133,252,.14)", fill:true, tension:.35, pointRadius:3, borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{display:false},title:{display:true,text:isWeekly?"Week":"Date"}}, y:{min:isPct?0:undefined,max:isPct?100:undefined,title:{display:true,text:isPct?"Percent (%)":(goal.measure||"Score")}} } }
+  });
+}
+
+async function sessSavePipProgress() {
+  const goal = _sessPipGoals.find(g => g._key === document.getElementById("sess-pip-goal")?.value);
+  if (!goal) return;
+  const entries = Array.from(document.querySelectorAll(".sess-pip-score"))
+    .map(input => ({ objText:goal._key, date:input.dataset.date, measure:goal.measure || "", score:input.value.trim() }))
+    .filter(entry => entry.score !== "");
+  if (!entries.length) { setStatus("sess-pip-status", "Enter at least one score.", "error"); return; }
+  setStatus("sess-pip-status", "Saving…", "loading");
+  try {
+    const result = await apiCall("addProgressBatch", { entries });
+    const refreshed = await apiCall("getProgress", {});
+    _sessPipProgress = refreshed.progress || [];
+    if (typeof progAllEntries !== "undefined") progAllEntries = _sessPipProgress;
+    if (typeof initialized !== "undefined" && initialized.progress && typeof renderGoalView === "function") renderGoalView();
+    setStatus("sess-pip-status", `${result.saved} entr${result.saved === 1 ? "y" : "ies"} saved.`, "success");
+    document.querySelectorAll(".sess-pip-score").forEach(input => input.value = "");
+    sessRenderPipChart(goal);
+  } catch (e) {
+    setStatus("sess-pip-status", "Error: " + e.message, "error");
   }
 }
 
@@ -393,11 +571,11 @@ async function sessShowPostSaveModal() {
 }
 
 function sessQuickScheduleForm() {
-  // Default start = next hour, end = +1h
+  // Default start = same time next week, end = +30 minutes
   const now   = new Date();
-  now.setMinutes(0, 0, 0);
-  now.setHours(now.getHours() + 1);
-  const end   = new Date(now.getTime() + 60 * 60 * 1000);
+  now.setDate(now.getDate() + 7);
+  now.setSeconds(0, 0);
+  const end   = new Date(now.getTime() + 30 * 60 * 1000);
   const toLocal = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   const clientId = typeof getClientId === "function" ? getClientId() : "";
   return `
@@ -406,7 +584,7 @@ function sessQuickScheduleForm() {
       <input type="text" id="qsched-title" value="Session — ${escapeHtml(clientId)}"
              placeholder="Title" style="font-size:13px;" />
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <input type="datetime-local" id="qsched-start" value="${toLocal(now)}" style="font-size:12px;" />
+        <input type="datetime-local" id="qsched-start" value="${toLocal(now)}" onchange="sessSyncQuickEnd()" style="font-size:12px;" />
         <input type="datetime-local" id="qsched-end"   value="${toLocal(end)}"  style="font-size:12px;" />
       </div>
       <div id="qsched-status" style="font-size:12px;"></div>
@@ -414,6 +592,16 @@ function sessQuickScheduleForm() {
         <i class="bi bi-calendar-plus-fill"></i> Schedule
       </button>
     </div>`;
+}
+
+function sessSyncQuickEnd() {
+  const startEl = document.getElementById("qsched-start");
+  const endEl = document.getElementById("qsched-end");
+  if (!startEl?.value || !endEl) return;
+  const start = new Date(startEl.value);
+  if (isNaN(start)) return;
+  const end = new Date(start.getTime() + 30 * 60000);
+  endEl.value = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
 async function sessNotifyClient() {

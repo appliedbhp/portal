@@ -98,15 +98,29 @@ async function winLoadHistory() {
       <div id="win-histWheelLegend" class="domain-legend"></div>
       <div class="section-title"><h3><i class="bi bi-bar-chart-fill"></i> Domain Totals (4-20)</h3></div>
       <div class="chart-wrap wide"><canvas id="win-histBar"></canvas></div>
+      <div id="win-histCompare"></div>
       <div id="win-histTrendSection"></div>
     `;
     setupCarousel("win-hist", snapshots, snapshots.length - 1, { wheel: winRenderWheelChart, bar: winRenderBarChart });
     if (snapshots.length > 1) {
+      winRenderAnimatedComparison(snapshots.at(-2), snapshots.at(-1), "win-histCompare");
       winRenderDomainTrend(snapshots, "win-histTrendSection", "win-histTrend");
     }
   } catch (e) {
     body.innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Could not load history: ${escapeHtml(e.message)}</span></div>`;
   }
+}
+
+function winRenderAnimatedComparison(previous, current, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el || !previous || !current) return;
+  const toMap = snap => Object.fromEntries(snap.summary.map(x => [x.domain, Number(x.total)||0]));
+  const prev=toMap(previous), curr=toMap(current);
+  const domains=[...new Set([...Object.keys(prev),...Object.keys(curr)])];
+  el.innerHTML = `<div class="assessment-compare">
+    <div class="viz-section-title"><i class="bi bi-arrow-left-right gradient-icon"></i><strong>Animated comparison</strong><span style="margin-left:auto;font-size:10px;color:var(--muted);">${escapeHtml(previous.date)} → ${escapeHtml(current.date)}</span></div>
+    <p style="font-size:10px;color:var(--muted);margin:-5px 0 10px;">For WIN, a lower score generally reflects fewer reported support needs.</p>
+    <div class="compare-grid">${domains.map(domain=>{const before=prev[domain]||0,now=curr[domain]||0,delta=now-before;const tone=delta<0?"better":delta>0?"worse":"steady";return `<div class="compare-item"><div class="compare-item-head"><span>${escapeHtml(domain)}</span><span class="compare-delta ${tone}">${delta>0?"+":""}${delta.toFixed(1)}</span></div><div class="compare-track"><div class="compare-fill" style="--width:${Math.max(0,Math.min(100,now/20*100))}%"></div></div><small style="font-size:9px;color:var(--muted);">${before.toFixed(1)} → ${now.toFixed(1)} / 20</small></div>`;}).join("")}</div></div>`;
 }
 
 function winShow(id) {
@@ -246,7 +260,9 @@ async function winShowResults(assessmentKey, date) {
     setupCarousel("win-current", snapshots, snapshots.length - 1, { wheel: winRenderWheelChart, bar: winRenderBarChart });
 
     if (snapshots.length > 1) {
-      winRenderDomainTrend(snapshots, "win-comparisonSection", "win-currentTrend");
+      document.getElementById("win-comparisonSection").innerHTML = `<div id="win-currentCompare"></div><div id="win-currentTrendWrap"></div>`;
+      winRenderAnimatedComparison(snapshots.at(-2), snapshots.at(-1), "win-currentCompare");
+      winRenderDomainTrend(snapshots, "win-currentTrendWrap", "win-currentTrend");
     } else {
       document.getElementById("win-comparisonSection").innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>No previous assessments on file yet.</span></div>';
     }

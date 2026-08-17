@@ -110,15 +110,31 @@ async function rmLoadHistory() {
       <div id="rm-histWheelLegend" class="domain-legend"></div>
       <div class="section-title"><h3><i class="bi bi-bar-chart-fill"></i> Subdomain Totals (0-25)</h3></div>
       <div class="chart-wrap wide"><canvas id="rm-histBar"></canvas></div>
+      <div id="rm-histCompare"></div>
       <div id="rm-histTrendSection"></div>
     `;
     setupCarousel("rm-hist", snapshots, snapshots.length - 1, { wheel: rmRenderWheelChart, bar: rmRenderBarChart });
     if (snapshots.length > 1) {
+      rmRenderAnimatedComparison(snapshots.at(-2), snapshots.at(-1), "rm-histCompare");
       rmRenderDomainTrend(snapshots, "rm-histTrendSection", "rm-histTrend");
     }
   } catch (e) {
     body.innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Could not load history: ${escapeHtml(e.message)}</span></div>`;
   }
+}
+
+function rmRenderAnimatedComparison(previous, current, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el || !previous || !current) return;
+  const prev = rmDomainTotalsFor(previous.summary), curr = rmDomainTotalsFor(current.summary);
+  const domains = [...new Set([...Object.keys(prev), ...Object.keys(curr)])];
+  el.innerHTML = `<div class="assessment-compare">
+    <div class="viz-section-title"><i class="bi bi-arrow-left-right gradient-icon"></i><strong>Animated comparison</strong><span style="margin-left:auto;font-size:10px;color:var(--muted);">${escapeHtml(previous.date)} → ${escapeHtml(current.date)}</span></div>
+    <div class="compare-grid">${domains.map(domain => {
+      const before=prev[domain]||0, now=curr[domain]||0, delta=now-before;
+      const tone=delta>0?"better":delta<0?"worse":"steady";
+      return `<div class="compare-item"><div class="compare-item-head"><span>${escapeHtml(domain)}</span><span class="compare-delta ${tone}">${delta>0?"+":""}${delta.toFixed(1)}</span></div><div class="compare-track"><div class="compare-fill" style="--width:${Math.max(0,Math.min(100,now))}%"></div></div><small style="font-size:9px;color:var(--muted);">${before.toFixed(1)} → ${now.toFixed(1)} / 100</small></div>`;
+    }).join("")}</div></div>`;
 }
 
 function rmShow(id) {
@@ -258,7 +274,9 @@ async function rmShowResults(level, assessmentKey, date) {
     setupCarousel("rm-current", snapshots, snapshots.length - 1, { wheel: rmRenderWheelChart, bar: rmRenderBarChart });
 
     if (snapshots.length > 1) {
-      rmRenderDomainTrend(snapshots, "rm-comparisonSection", "rm-currentTrend");
+      document.getElementById("rm-comparisonSection").innerHTML = `<div id="rm-currentCompare"></div><div id="rm-currentTrendWrap"></div>`;
+      rmRenderAnimatedComparison(snapshots.at(-2), snapshots.at(-1), "rm-currentCompare");
+      rmRenderDomainTrend(snapshots, "rm-currentTrendWrap", "rm-currentTrend");
     } else {
       document.getElementById("rm-comparisonSection").innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle-fill"></i><span>No previous assessments on file yet.</span></div>';
     }

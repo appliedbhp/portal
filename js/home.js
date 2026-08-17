@@ -14,6 +14,14 @@ function initHomeSection(root) {
       </div>
     </div>
 
+    <div class="card home-insights-card">
+      <div class="home-insights-heading">
+        <div><h2><i class="bi bi-stars gradient-icon"></i>Progress Snapshot</h2><p>Recent engagement and milestones—not a clinical score.</p></div>
+        <span class="insight-period">Last 4 weeks</span>
+      </div>
+      <div id="home-visual-dashboard">${skeletonCards(2)}</div>
+    </div>
+
     ${isClient ? `
     <div id="home-program-panels" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;flex-wrap:wrap;">
       <div class="card" id="home-last-week"><p style="color:var(--muted);font-size:13px;">Loading recent sessions…</p></div>
@@ -37,15 +45,15 @@ function initHomeSection(root) {
       <h2><i class="bi bi-grid-fill"></i> All Tools</h2>
       <div class="home-tile-grid">
         ${!isAdult ? `
-        <button class="home-tile" onclick="showSection('roadmap')"><i class="bi bi-signpost-split-fill"></i><div><div class="home-tile-label">Roadmap Assessment</div><div class="home-tile-sub">Score &amp; review history</div></div></button>
-        <button class="home-tile" onclick="showSection('win')"><i class="bi bi-heart-pulse-fill"></i><div><div class="home-tile-label">What I Need</div><div class="home-tile-sub">Score &amp; review history</div></div></button>
+        <button class="home-tile" data-access-section="roadmap" onclick="showSection('roadmap')"><i class="bi bi-signpost-split-fill"></i><div><div class="home-tile-label">Roadmap Assessment</div><div class="home-tile-sub">Score &amp; review history</div></div></button>
+        <button class="home-tile" data-access-section="win" onclick="showSection('win')"><i class="bi bi-heart-pulse-fill"></i><div><div class="home-tile-label">What I Need</div><div class="home-tile-sub">Score &amp; review history</div></div></button>
         ` : ""}
-        <button class="home-tile" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i><div><div class="home-tile-label">Goals &amp; Plan</div><div class="home-tile-sub">View objectives</div></div></button>
-        <button class="home-tile" onclick="showSection('progress')"><i class="bi bi-graph-up"></i><div><div class="home-tile-label">Progress</div><div class="home-tile-sub">Track scores over time</div></div></button>
-        <button class="home-tile" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i><div><div class="home-tile-label">Standardized Scores</div><div class="home-tile-sub">BRIEF-2 &amp; ESQR</div></div></button>
-        <button class="home-tile" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i><div><div class="home-tile-label">Session Notes</div><div class="home-tile-sub">List &amp; calendar view</div></div></button>
-        ${isClient ? `<button class="home-tile" onclick="showSection('programs')"><i class="bi bi-play-circle-fill"></i><div><div class="home-tile-label">My Program</div><div class="home-tile-sub">Sessions &amp; activities</div></div></button>` : ""}
-        ${isClient ? `<button class="home-tile" onclick="showSection('client-viz')"><i class="bi bi-bar-chart-fill"></i><div><div class="home-tile-label">My Progress</div><div class="home-tile-sub">Charts &amp; goal activity</div></div></button>` : ""}
+        <button class="home-tile" data-access-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i><div><div class="home-tile-label">Goals &amp; Plan</div><div class="home-tile-sub">View objectives</div></div></button>
+        <button class="home-tile" data-access-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i><div><div class="home-tile-label">Progress</div><div class="home-tile-sub">Track scores over time</div></div></button>
+        <button class="home-tile" data-access-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i><div><div class="home-tile-label">Standardized Scores</div><div class="home-tile-sub">BRIEF-2 &amp; ESQR</div></div></button>
+        <button class="home-tile" data-access-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i><div><div class="home-tile-label">Session Notes</div><div class="home-tile-sub">List &amp; calendar view</div></div></button>
+        ${isClient ? `<button class="home-tile" data-access-section="programs" onclick="showSection('programs')"><i class="bi bi-play-circle-fill"></i><div><div class="home-tile-label">My Program</div><div class="home-tile-sub">Sessions &amp; activities</div></div></button>` : ""}
+        ${isClient ? `<button class="home-tile" data-access-section="client-viz" onclick="showSection('client-viz')"><i class="bi bi-bar-chart-fill"></i><div><div class="home-tile-label">My Progress</div><div class="home-tile-sub">Charts &amp; goal activity</div></div></button>` : ""}
       </div>
     </div>
   `;
@@ -86,9 +94,83 @@ async function loadHomeStats() {
       statCard("journal-text", "Sessions This Month", thisMonthSessions.length),
       statCard("hourglass-split", "Session Time This Month", monthMinutes > 0 ? sessFormatDuration(monthMinutes) : "—")
     ].filter(Boolean).join("");
+    renderHomeVisualDashboard({ roadmap:roadmapHist.history || [], win:winHist.history || [], goals:plan.goals || [], progress:progress.progress || [], sessions:sessions.sessions || [] });
   } catch (e) {
     el.innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Error loading overview: ${escapeHtml(e.message)}</span></div>`;
   }
+}
+
+function homeDateKey(value) { return String(value || "").slice(0,10); }
+function homeDaysAgo(dateStr) {
+  if (!dateStr) return Infinity;
+  const d = new Date(dateStr + "T00:00:00");
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+
+function renderHomeVisualDashboard(data) {
+  const el = document.getElementById("home-visual-dashboard");
+  if (!el) return;
+  const recentProgress = data.progress.filter(p => homeDaysAgo(homeDateKey(p.date)) < 28);
+  const recentSessions = data.sessions.filter(s => homeDaysAgo(homeDateKey(s.dateTime)) < 28);
+  const activeDates = new Set([...recentProgress.map(p => homeDateKey(p.date)), ...recentSessions.map(s => homeDateKey(s.dateTime))].filter(Boolean));
+  const goalsWithData = new Set(data.progress.map(p => p.objText)).size;
+  const goalCoverage = data.goals.length ? Math.min(1, goalsWithData / data.goals.length) : 0;
+  const consistency = Math.min(1, activeDates.size / 12);
+  const sessionActivity = Math.min(1, recentSessions.length / 4);
+  const momentum = Math.round((consistency * .45 + goalCoverage * .35 + sessionActivity * .20) * 100);
+
+  el.innerHTML = `
+    <div class="home-viz-grid">
+      <section class="momentum-card">
+        <div class="momentum-orbit" style="--momentum:${momentum}%"><span>${momentum}</span></div>
+        <div><div class="viz-eyebrow">Activity momentum</div><h3>${homeMomentumLabel(momentum)}</h3>
+          <p>Based on active days, goals with entries, and recent sessions. This is an engagement summary, not a clinical rating.</p></div>
+      </section>
+      <section><div class="viz-section-title"><i class="bi bi-bullseye gradient-icon"></i><strong>Goal signals</strong></div><div class="goal-ring-grid">${homeGoalRings(data.goals, data.progress)}</div></section>
+      <section><div class="viz-section-title"><i class="bi bi-grid-3x3-gap-fill gradient-icon"></i><strong>Weekly activity</strong></div>${homeHeatmap(data.progress, data.sessions)}</section>
+      <section><div class="viz-section-title"><i class="bi bi-signpost-2-fill gradient-icon"></i><strong>Care milestones</strong></div>${homeMilestones(data)}</section>
+    </div>`;
+}
+
+function homeMomentumLabel(value) {
+  return value >= 75 ? "Strong recent rhythm" : value >= 45 ? "Building consistency" : value > 0 ? "Getting started" : "Ready for the next step";
+}
+
+function homeGoalRings(goals, progress) {
+  if (!goals.length) return `<p class="viz-empty">No goals on file yet.</p>`;
+  return goals.slice(0,4).map(goal => {
+    const key = typeof progGoalKey === "function" ? progGoalKey(goal) : (goal.objText || goal.objective || "");
+    const rows = progress.filter(p => p.objText === key && p.score !== "" && !isNaN(Number(p.score))).sort((a,b) => String(a.date).localeCompare(String(b.date)));
+    const latest = rows.at(-1); const raw = latest ? Number(latest.score) : null;
+    const text = `${key} ${goal.measure || ""}`;
+    const bounded = /percent|%|accuracy/i.test(text) ? 100 : /1\s*(?:to|-|–)\s*10|rating|intensity/i.test(text) ? 10 : null;
+    const pct = bounded && raw != null ? Math.max(0,Math.min(100,raw/bounded*100)) : rows.length ? Math.min(100,rows.length/7*100) : 0;
+    const display = raw == null ? "—" : `${raw}${bounded===100?"%":""}`;
+    return `<div class="goal-ring-item" title="${bounded ? "Latest bounded score" : "Ring shows entry coverage; center shows latest value"}">
+      <div class="goal-health-ring" style="--ring:${pct}%"><span>${display}</span></div>
+      <div><strong>${escapeHtml(goal.objective || key)}</strong><small>${rows.length ? `${rows.length} entr${rows.length===1?"y":"ies"}` : "No data yet"}</small></div>
+    </div>`;
+  }).join("");
+}
+
+function homeHeatmap(progress, sessions) {
+  const counts = {};
+  progress.forEach(p => { const k=homeDateKey(p.date); if(homeDaysAgo(k)<28) counts[k]=(counts[k]||0)+1; });
+  sessions.forEach(s => { const k=homeDateKey(s.dateTime); if(homeDaysAgo(k)<28) counts[k]=(counts[k]||0)+1; });
+  const cells = [];
+  for (let i=27;i>=0;i--) { const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-i); const pad=n=>String(n).padStart(2,"0"); const k=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; const n=counts[k]||0; cells.push(`<span class="heat-cell heat-${Math.min(4,n)}" title="${k}: ${n} activit${n===1?"y":"ies"}"></span>`); }
+  return `<div class="clinical-heatmap">${cells.join("")}</div><div class="heat-legend"><span>Less</span>${[0,1,2,3,4].map(n=>`<i class="heat-cell heat-${n}"></i>`).join("")}<span>More</span></div>`;
+}
+
+function homeMilestones(data) {
+  const items=[];
+  const add=(date,icon,label)=>{ if(date) items.push({date:homeDateKey(date),icon,label}); };
+  add(data.goals.map(g=>g.datePlan).filter(Boolean).sort()[0],"flag-fill","Treatment plan created");
+  add(data.roadmap.map(r=>r.date).filter(Boolean).sort().at(-1),"signpost-split-fill","Latest Roadmap assessment");
+  add(data.win.map(r=>r.date).filter(Boolean).sort().at(-1),"heart-pulse-fill","Latest WIN assessment");
+  add(data.sessions.map(s=>homeDateKey(s.dateTime)).filter(Boolean).sort().at(-1),"journal-check","Latest session note");
+  if(!items.length) return `<p class="viz-empty">Milestones will appear as care activity is recorded.</p>`;
+  return `<div class="milestone-line">${items.sort((a,b)=>a.date.localeCompare(b.date)).map(x=>`<div class="milestone"><i class="bi bi-${x.icon}"></i><span><strong>${escapeHtml(x.label)}</strong><small>${escapeHtml(x.date)}</small></span></div>`).join("")}</div>`;
 }
 
 async function loadHomeProgramPanels() {
@@ -248,11 +330,9 @@ const CLIENT_SECTIONS = [
   { section: "win",           label: "What I Need (WIN)",     group: "Assessments" },
   { section: "bfa",           label: "Functional Behavior Assessment (FBA)", group: "Assessments" },
   { section: "assessments",   label: "Progress & Assessments",group: "Assessments" },
-  { section: "vanderbilt",    label: "Vanderbilt Scales",     group: "Assessments" },
   { section: "grades",        label: "Grades",                group: "Assessments" },
   { section: "intake",        label: "Intake & Validity",     group: "Assessments" },
   { section: "client-billing",label: "My Billing",            group: "Billing" },
-  { section: "consent-forms", label: "Consent Forms",         group: "Admin" },
   { section: "settings",      label: "Settings",              group: "Admin" },
   { section: "notifications", label: "Notifications",         group: "Admin" },
 ];
@@ -264,14 +344,15 @@ async function loadClientAccessToggles() {
     const res = await apiCall("getClientAccess", {});
     const allowed = res.allowedSections; // null = all allowed
     renderAccessToggles(el, allowed);
-  } catch (_) {
-    renderAccessToggles(el, null);
+  } catch (e) {
+    el.innerHTML = `<div class="alert alert-error" style="grid-column:1/-1;"><i class="bi bi-exclamation-triangle-fill"></i><span>Could not load access settings: ${escapeHtml(e.message)}</span></div>`;
   }
 }
 
 function renderAccessToggles(el, allowedSections) {
-  const allAllowed = !allowedSections; // null/undefined = all on
+  const allAllowed = allowedSections == null; // null/undefined = all on
   const allowed    = new Set(allAllowed ? CLIENT_SECTIONS.map(s => s.section) : allowedSections);
+  allowed.add("home"); // Home is the safe landing page and cannot be disabled.
 
   // Group sections
   const groups = {};
@@ -292,7 +373,7 @@ function renderAccessToggles(el, allowedSections) {
                     padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;
                     cursor:pointer;font-size:13px;background:var(--surface,#f9fafb);">
         <input type="checkbox" class="ca-toggle" data-section="${escapeAttr(s.section)}"
-               ${allowed.has(s.section) ? "checked" : ""}>
+               ${allowed.has(s.section) ? "checked" : ""} ${s.section === "home" ? "disabled" : ""}>
         <span>${escapeHtml(s.label)}</span>
       </label>`).join("")}
   `).join("");
@@ -308,7 +389,7 @@ function renderAccessToggles(el, allowedSections) {
 }
 
 function caSelectAll(checked) {
-  document.querySelectorAll(".ca-toggle").forEach(cb => cb.checked = checked);
+  document.querySelectorAll(".ca-toggle").forEach(cb => cb.checked = cb.dataset.section === "home" ? true : checked);
 }
 
 async function saveClientAccess() {
@@ -320,7 +401,13 @@ async function saveClientAccess() {
 
   setStatus("home-access-status", "Saving…", "loading");
   try {
-    await apiCall("saveClientAccess", { allowedSections });
+    const saved = await apiCall("saveClientAccess", { allowedSections });
+    const expected = allowedSections === null ? null : [...allowedSections].sort();
+    const actual = saved.allowedSections === null ? null : [...(saved.allowedSections || [])].sort();
+    if (JSON.stringify(expected) !== JSON.stringify(actual)) {
+      throw new Error("The server did not confirm the saved settings. Please try again.");
+    }
+    renderAccessToggles(document.getElementById("home-access-list"), saved.allowedSections);
     setStatus("home-access-status", "Access settings saved.", "success");
     if (typeof showToast === "function") showToast("Client access settings saved.", "success");
   } catch (e) {
@@ -333,13 +420,15 @@ async function applyClientAccessRestrictions() {
   if (getRole() === "provider") return;
   try {
     const res = await apiCall("getClientAccess", {});
-    if (!res.allowedSections) return; // null = all allowed
+    if (res.allowedSections == null) return; // null = all allowed
     const allowed = new Set(res.allowedSections);
+    allowed.add("home");
     CLIENT_SECTIONS.forEach(({ section }) => {
       if (allowed.has(section)) return;
       // Hide the sidebar button for this section
       const btn = document.querySelector(`.sidebar-link[data-section="${section}"]`);
       if (btn) btn.style.display = "none";
+      document.querySelectorAll(`[data-access-section="${section}"]`).forEach(el => el.style.display = "none");
       // If currently on a hidden section, redirect to home
       if (typeof showSection === "function") {
         const activeSection = document.querySelector(".section.active");
