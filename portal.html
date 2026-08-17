@@ -27,7 +27,7 @@
   <div class="who" id="whoami"></div>
   <div class="btn-row" style="margin:0;">
     <div style="position:relative;display:inline-block;">
-      <button class="secondary" id="bell-btn" onclick="showSection('notifications')"
+      <button class="secondary" id="bell-btn" onclick="toggleNotificationsPopout()"
               style="padding:6px 10px;font-size:16px;line-height:1;" title="Notifications">
         <i class="bi bi-bell-fill"></i>
         <span id="bell-badge" style="display:none;position:absolute;top:-4px;right:-4px;
@@ -35,6 +35,9 @@
           border-radius:9px;align-items:center;justify-content:center;padding:0 4px;">0</span>
       </button>
     </div>
+    <button class="secondary" id="header-progress-btn" onclick="sessOpenProgressPip()" style="padding:6px 10px;font-size:13px;" title="Open progress picture-in-picture">
+      <i class="bi bi-graph-up-arrow"></i> Progress
+    </button>
     <button id="switchClientBtn" class="secondary" onclick="switchClient()" style="display:none;"><i class="bi bi-arrow-left-right"></i> Switch Client</button>
     <button class="secondary" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Log Out</button>
   </div>
@@ -61,6 +64,7 @@
       <div class="sidebar-group-links">
         <button class="sidebar-link" data-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
         <button class="sidebar-link" data-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i> Progress</button>
+        <button class="sidebar-link" data-section="client-viz" onclick="showSection('client-viz')" id="clientVizNavBtn" style="display:none;"><i class="bi bi-bar-chart-fill"></i> My Progress</button>
         <button class="sidebar-link" data-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i> Standardized Scores</button>
         <button class="sidebar-link" data-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i> Session Notes</button>
       </div>
@@ -91,7 +95,7 @@
       <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Administration<i class="bi bi-chevron-down sg-chevron"></i></div>
       <div class="sidebar-group-links">
         <button class="sidebar-link" data-section="settings" onclick="showSection('settings')" id="settingsNavBtn" style="display:none;"><i class="bi bi-gear-fill"></i> Settings</button>
-        <button class="sidebar-link" data-section="notifications" onclick="showSection('notifications')" id="notificationsNavBtn" style="display:none;"><i class="bi bi-bell-fill"></i> Notifications</button>
+        <button class="sidebar-link" data-section="notifications" onclick="toggleNotificationsPopout()" id="notificationsNavBtn" style="display:none;"><i class="bi bi-bell-fill"></i> Notifications</button>
         <button class="sidebar-link" data-section="broadcasts" onclick="showSection('broadcasts')" id="broadcastsNavBtn" style="display:none;"><i class="bi bi-megaphone-fill"></i> Broadcasts</button>
         <button class="sidebar-link" data-section="assessments-library" onclick="showSection('assessments-library')" id="assessmentsLibraryNavBtn" style="display:none;"><i class="bi bi-journal-medical"></i> Assessment Library</button>
         <button class="sidebar-link" data-section="assessments-assign" onclick="showSection('assessments-assign')" id="assessmentsAssignNavBtn" style="display:none;"><i class="bi bi-person-check-fill"></i> Assign Assessments</button>
@@ -153,6 +157,7 @@
       <div id="section-win" class="section"></div>
       <div id="section-plan" class="section"></div>
       <div id="section-progress" class="section"></div>
+      <div id="section-client-viz" class="section"></div>
       <div id="section-scores" class="section"></div>
       <div id="section-sessions" class="section"></div>
       <div id="section-recommendation" class="section"></div>
@@ -181,6 +186,14 @@
     </div>
   </div>
 </div>
+
+<aside id="notifications-popout" class="notifications-popout no-print" role="dialog" aria-label="Notifications" aria-hidden="true">
+  <div class="notifications-popout-head">
+    <div><i class="bi bi-bell-fill"></i><strong>Notifications</strong></div>
+    <button class="secondary icon-btn" onclick="toggleNotificationsPopout(false)" aria-label="Close notifications"><i class="bi bi-x-lg"></i></button>
+  </div>
+  <div id="notifications-popout-body" class="notifications-popout-body"></div>
+</aside>
 
 <script src="js/common.js"></script>
 <script src="js/api.js"></script>
@@ -240,6 +253,7 @@ if (_role !== "provider") document.getElementById("progressReportNavBtn").style.
 if (_role !== "provider") document.getElementById("clientProgramNavBtn").style.display = "none";
 if (_role !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("programsNavBtn").style.display = "none";
+if (_role !== "provider") document.getElementById("clientVizNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("providerBillingNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
@@ -285,6 +299,23 @@ function toggleSidebarGroup(titleEl) {
   try { localStorage.setItem(key, group.classList.contains("collapsed") ? "1" : "0"); } catch (_) {}
 }
 
+function toggleNotificationsPopout(forceOpen) {
+  const panel = document.getElementById("notifications-popout");
+  const body = document.getElementById("notifications-popout-body");
+  const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : !panel.classList.contains("open");
+  panel.classList.toggle("open", shouldOpen);
+  panel.setAttribute("aria-hidden", String(!shouldOpen));
+  if (shouldOpen) initNotificationsSection(body, { compact: true });
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") toggleNotificationsPopout(false);
+});
+
+document.querySelectorAll(".sidebar-link").forEach((link, index) => {
+  link.style.setProperty("--nav-icon-hue", String((index * 47 + 205) % 360));
+});
+
 // Restore collapsed state from localStorage
 document.querySelectorAll(".sidebar-group-title").forEach(titleEl => {
   const key = "sbg_" + titleEl.textContent.trim().replace(/\s+/g, "_");
@@ -304,6 +335,7 @@ const SECTION_INIT = {
   win: initWinSection,
   plan: initPlanSection,
   progress: initProgressSection,
+  "client-viz": initClientVizSection,
   scores: initScoresSection,
   sessions: initSessionsSection,
   recommendation: initRecommendationSection,
@@ -331,6 +363,10 @@ const SECTION_INIT = {
 const initialized = {};
 
 function showSection(name) {
+  if (name === "notifications") {
+    toggleNotificationsPopout(true);
+    return;
+  }
   document.querySelectorAll(".section").forEach(el => el.classList.remove("active"));
   document.querySelectorAll(".sidebar-link").forEach(b => b.classList.toggle("active", b.dataset.section === name));
   const section = document.getElementById("section-" + name);
