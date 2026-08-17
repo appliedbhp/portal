@@ -4,6 +4,7 @@
 let progGoals      = [];
 let progAllEntries = [];
 let progSelected   = ""; // goalKey of the currently viewed goal
+const progAxisState = {}; // per-goal manual axis overrides
 
 // Build the canonical display/key string from goal parts.
 // Format: "GOAL_NUM.OBJ_NUM GOAL_DOMAIN | OBJECTIVE"
@@ -180,9 +181,77 @@ function renderGoalView() {
       ).join("")
     : `<tr><td colspan="3" style="color:var(--muted);">No entries for this goal yet.</td></tr>`;
 
-  // Chart
+  renderProgressChart(goal, entries);
+}
+
+function progInferChart(goal, numeric) {
+  const text = `${progSelected} ${goal?.measure || ""}`.toLowerCase();
+  const values = numeric.map(p => Number(p.score));
+  const dataMax = values.length ? Math.max(...values) : 10;
+  const dataMin = values.length ? Math.min(...values) : 0;
+  const cfg = {
+    weekly: /\bweekly\b|\bper\s+week\b|\beach\s+week\b|\ba\s+week\b|\/\s*week\b/i.test(text),
+    yMin: Math.min(0, Math.floor(dataMin)),
+    yMax: Math.max(10, Math.ceil(dataMax * 1.2)),
+    yStep: null,
+    yLabel: goal?.measure || "Score",
+    detected: []
+  };
+
+  if (/\b(percent(?:age)?|%|success\s+rate|accuracy|rate\s+of)\b/i.test(text)) {
+    Object.assign(cfg, { yMin: 0, yMax: 100, yStep: 10, yLabel: "Percent (%)" });
+    cfg.detected.push("Percent scale");
+  } else if (/\b(days?\s*(per|a|each|\/)\s*week|days?\s+weekly)\b/i.test(text)) {
+    Object.assign(cfg, { weekly: true, yMin: 0, yMax: 7, yStep: 1, yLabel: "Days per week" });
+    cfg.detected.push("Days per week");
+  } else if (/\b(1\s*(?:to|–|-)\s*10|out\s+of\s+10|intensity|severity|rating)\b/i.test(text)) {
+    Object.assign(cfg, { yMin: 0, yMax: 10, yStep: 1, yLabel: "Rating (0–10)" });
+    cfg.detected.push("Rating scale");
+  } else if (/\b(minutes?|mins?|hours?|hrs?|duration)\b/i.test(text)) {
+    cfg.yMin = 0;
+    cfg.yLabel = /hours?|hrs?/.test(text) ? "Hours" : "Minutes";
+    cfg.detected.push("Duration");
+  } else if (/\b(count|number\s+of|times?|occurrences?|episodes?|incidents?)\b/i.test(text)) {
+    cfg.yMin = 0;
+    cfg.yStep = 1;
+    cfg.yLabel = cfg.weekly ? "Count per week" : "Count";
+    cfg.detected.push("Count");
+  }
+  if (cfg.weekly) cfg.detected.push("Weekly timeline");
+  if (!cfg.detected.length) cfg.detected.push("Automatic scale");
+  return cfg;
+}
+
+function progWeekStart(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const offset = (d.getDay() + 6) % 7; // Monday-based week
+  d.setDate(d.getDate() - offset);
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function progChartPoints(numeric, weekly) {
+  if (!weekly) return numeric.map(p => ({ label: p.date, value: Number(p.score), count: 1 }));
+  const weeks = {};
+  numeric.forEach(p => {
+    const key = progWeekStart(p.date);
+    (weeks[key] ||= []).push(Number(p.score));
+  });
+  return Object.keys(weeks).sort().map(key => {
+    const vals = weeks[key];
+    const d = new Date(key + "T00:00:00");
+    return {
+      label: `Week of ${d.toLocaleDateString(undefined, { month:"short", day:"numeric" })}`,
+      value: Math.round((vals.reduce((a,b) => a+b, 0) / vals.length) * 100) / 100,
+      count: vals.length
+    };
+  });
+}
+
+function renderProgressChart(goal, entries) {
   const section = document.getElementById("prog-chartSection");
-  const numeric = entries.filter(p => p.date && p.score !== "" && !isNaN(Number(p.score)));
+  const numeric = entries.filter(p => p.date && p.score !== "" && !isNaN(Number(p.score)))
+                         .sort((a, b) => a.date.localeCompare(b.date));
 
   if (numeric.length === 0) {
     section.innerHTML = entries.length
@@ -191,12 +260,41 @@ function renderGoalView() {
     return;
   }
 
-  numeric.sort((a, b) => a.date.localeCompare(b.date));
-  const labels = numeric.map(p => p.date);
-  const scores = numeric.map(p => Number(p.score));
+  const cfg = progInferChart(goal, numeric);
+  const points = progChartPoints(numeric, cfg.weekly);
+  const state = progAxisState[progSelected] ||= {};
+  const lastIdx = Math.max(0, points.length - 1);
+  const xMin = Math.min(state.xMin ?? 0, lastIdx);
+  const xMax = Math.max(xMin, Math.min(state.xMax ?? lastIdx, lastIdx));
+  const yMin = Number.isFinite(state.yMin) ? state.yMin : cfg.yMin;
+  const yMax = Number.isFinite(state.yMax) ? state.yMax : cfg.yMax;
+  const visible = points.slice(xMin, xMax + 1);
+  const labels = visible.map(p => p.label);
+  const scores = visible.map(p => p.value);
   const color  = colorForDomain(progSelected);
+  const sliderCeiling = Math.max(cfg.yMax, Math.ceil(Math.max(...points.map(p => p.value)) * 2), 10);
+  const ySliderStep = cfg.yMax <= 10 ? 1 : cfg.yMax <= 100 ? 5 : Math.max(1, Math.round(sliderCeiling / 20));
 
-  section.innerHTML = `<div class="chart-wrap wide"><canvas id="prog-chart"></canvas></div>`;
+  section.innerHTML = `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;">
+      ${cfg.detected.map(label => `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#eaf2ff;color:var(--primary-dark);">${escapeHtml(label)}</span>`).join("")}
+      ${cfg.weekly ? `<span style="font-size:11px;color:var(--muted);align-self:center;">Multiple entries in a week are averaged.</span>` : ""}
+    </div>
+    <div class="chart-wrap wide"><canvas id="prog-chart"></canvas></div>
+    <div class="prog-axis-controls" style="display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:14px;margin:12px 0 22px;">
+      <div style="padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface,#f8fafc);">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Y-axis range: <span id="prog-y-range">${yMin}–${yMax}</span></div>
+        <label style="text-transform:none;">Minimum<input type="range" min="0" max="${sliderCeiling}" step="${ySliderStep}" value="${yMin}" onchange="progSetAxis('yMin',this.value)"></label>
+        <label style="text-transform:none;margin-top:6px;">Maximum<input type="range" min="${ySliderStep}" max="${sliderCeiling}" step="${ySliderStep}" value="${yMax}" onchange="progSetAxis('yMax',this.value)"></label>
+      </div>
+      <div style="padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--surface,#f8fafc);">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;">X-axis window: <span id="prog-x-range">${escapeHtml(points[xMin].label)}–${escapeHtml(points[xMax].label)}</span></div>
+        <label style="text-transform:none;">Start<input type="range" min="0" max="${lastIdx}" step="1" value="${xMin}" ${lastIdx === 0 ? "disabled" : ""} onchange="progSetAxis('xMin',this.value)"></label>
+        <label style="text-transform:none;margin-top:6px;">End<input type="range" min="0" max="${lastIdx}" step="1" value="${xMax}" ${lastIdx === 0 ? "disabled" : ""} onchange="progSetAxis('xMax',this.value)"></label>
+      </div>
+    </div>
+    <button class="secondary" style="font-size:12px;padding:6px 10px;margin:-10px 0 18px;" onclick="progResetAxes()"><i class="bi bi-arrow-counterclockwise"></i> Reset axes to automatic</button>
+    <style>@media(max-width:620px){.prog-axis-controls{grid-template-columns:1fr!important;}}</style>`;
   destroyChart("prog-chart");
 
   chartInstances["prog-chart"] = new Chart(
@@ -205,7 +303,7 @@ function renderGoalView() {
       data: {
         labels,
         datasets: [{
-          label: measure,
+          label: goal?.measure || "Score",
           data: scores,
           borderColor: color,
           backgroundColor: hexToRgba(color, 0.12),
@@ -224,8 +322,12 @@ function renderGoalView() {
         maintainAspectRatio: false,
         interaction: { mode: "index", intersect: false },
         scales: {
-          y: { title: { display: true, text: measure } },
-          x: { grid: { display: false } }
+          y: {
+            min: yMin, max: yMax,
+            ticks: { stepSize: cfg.yStep || undefined },
+            title: { display: true, text: cfg.yLabel }
+          },
+          x: { grid: { display: false }, title: { display: true, text: cfg.weekly ? "Week" : "Date" } }
         },
         plugins: {
           legend: { display: false },
@@ -234,6 +336,26 @@ function renderGoalView() {
       }
     }
   );
+}
+
+function progSetAxis(axis, rawValue) {
+  if (!progSelected) return;
+  const state = progAxisState[progSelected] ||= {};
+  const value = Number(rawValue);
+  state[axis] = value;
+  if (axis === "yMin" && Number.isFinite(state.yMax) && value >= state.yMax) state.yMax = value + 1;
+  if (axis === "yMax" && Number.isFinite(state.yMin) && value <= state.yMin) state.yMin = Math.max(0, value - 1);
+  if (axis === "xMin" && Number.isFinite(state.xMax) && value > state.xMax) state.xMax = value;
+  if (axis === "xMax" && Number.isFinite(state.xMin) && value < state.xMin) state.xMin = value;
+  const goal = progGoals.find(g => g._key === progSelected);
+  renderProgressChart(goal, progAllEntries.filter(p => p.objText === progSelected));
+}
+
+function progResetAxes() {
+  if (!progSelected) return;
+  delete progAxisState[progSelected];
+  const goal = progGoals.find(g => g._key === progSelected);
+  renderProgressChart(goal, progAllEntries.filter(p => p.objText === progSelected));
 }
 
 async function addProgressBatch() {
