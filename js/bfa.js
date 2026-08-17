@@ -252,7 +252,7 @@ function bfaCalculate() {
           <span>${escapeHtml(item.label)}${badge}</span><span>${item.score}/20</span>
         </div>
         <div style="background:#f0f1f5;border-radius:4px;height:22px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:${FN_COLORS[item.fn]};border-radius:4px;min-width:${pct > 0 ? "22px" : "0"};display:flex;align-items:center;padding-left:6px;color:white;font-size:12px;font-weight:700;">${pct > 15 ? item.score : ""}</div>
+          <div class="fba-score-fill" style="height:100%;width:${pct}%;background:${FN_COLORS[item.fn]};border-radius:4px;min-width:${pct > 0 ? "22px" : "0"};display:flex;align-items:center;padding-left:6px;color:white;font-size:12px;font-weight:700;animation-delay:${sorted.indexOf(item) * 90}ms;">${pct > 15 ? item.score : ""}</div>
         </div>
       </div>`;
     });

@@ -68,7 +68,7 @@ function initSessionsSection(root) {
     </div>
 
     ${isProvider ? `
-    <div class="card">
+    <div class="card session-entry-card">
       <h2><i class="bi bi-plus-circle-fill"></i>Add a Session Note</h2>
       <style>
         .sess-editor-wrap .ql-container { font-size:13px; font-family:inherit; border-radius:0 0 8px 8px; border:1.5px solid var(--border); border-top:none; min-height:180px; }
@@ -353,10 +353,20 @@ function sessSyncGoalsBlock() {
   const checked = Array.from(document.querySelectorAll("#sess-goalsChecklist input:checked"))
     .map(cb => cb.dataset.objective);
 
-  // Remove existing goals block (first element with data attr, if present)
+  // Remove the complete generated block (heading, list, and spacer). Previously
+  // only the heading was removed, leaving stale goals behind.
   const editor = _sessQuill.root;
   const existing = editor.querySelector("[data-goals-block]");
-  if (existing) existing.remove();
+  if (existing) {
+    const generatedNodes = [existing];
+    let next = existing.nextElementSibling;
+    if (next && next.tagName === "UL") {
+      generatedNodes.push(next);
+      next = next.nextElementSibling;
+    }
+    if (next && next.tagName === "P" && !next.textContent.trim()) generatedNodes.push(next);
+    generatedNodes.forEach(node => node.remove());
+  }
 
   if (!checked.length) return;
 
@@ -669,6 +679,61 @@ async function deleteSession(sessionId) {
   }
 }
 
+function sessNoteCard(s, isProvider, timeOnly = false) {
+  const start = timeOnly ? (s.dateTime || "").slice(11) : s.dateTime;
+  const end = timeOnly ? (s.endTime || "").slice(11) : s.endTime;
+  return `<article class="session-note-card">
+    <div class="session-note-meta">
+      <span><i class="bi bi-calendar3"></i> ${escapeHtml(start || "—")}</span>
+      <span><i class="bi bi-clock"></i> ${escapeHtml(end || "—")}</span>
+      <span><i class="bi bi-hourglass-split"></i> ${escapeHtml(sessFormatDuration(s.durationMin))}</span>
+      <span><i class="bi bi-person-fill"></i> ${escapeHtml(s.assessor || "—")}</span>
+      ${isProvider ? `<span class="session-note-actions">
+        <button class="secondary" onclick="sessEditSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-pencil-fill"></i> Edit</button>
+        <button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i> Delete</button>
+      </span>` : ""}
+    </div>
+    <div class="session-note-content note-text">${s.noteText || ""}</div>
+  </article>`;
+}
+
+function sessEditSession(sessionId) {
+  const session = sessSessions.find(s => String(s.sessionId) === String(sessionId));
+  if (!session) return;
+  document.getElementById("sess-edit-modal")?.remove();
+  const modal = document.createElement("div");
+  modal.id = "sess-edit-modal";
+  modal.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.52);display:grid;place-items:center;padding:16px;";
+  const toInput = value => String(value || "").replace(" ", "T").slice(0, 16);
+  modal.innerHTML = `<div class="card" style="width:min(720px,100%);max-height:90vh;overflow:auto;margin:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><h2 style="margin:0;"><i class="bi bi-pencil-square"></i>Edit Session Note</h2><button class="secondary icon-btn" onclick="document.getElementById('sess-edit-modal').remove()"><i class="bi bi-x-lg"></i></button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;">
+      <label style="text-transform:none;">Start<input id="sess-edit-start" type="datetime-local" value="${escapeAttr(toInput(session.dateTime))}"></label>
+      <label style="text-transform:none;">End<input id="sess-edit-end" type="datetime-local" value="${escapeAttr(toInput(session.endTime))}"></label>
+    </div>
+    <label style="text-transform:none;">Note</label>
+    <div id="sess-edit-note" contenteditable="true" style="min-height:220px;padding:14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);line-height:1.65;">${session.noteText || ""}</div>
+    <div id="sess-edit-status" style="margin-top:10px;"></div>
+    <div class="btn-row" style="margin-top:12px;"><button onclick="sessSaveEdit('${escapeAttr(sessionId)}')"><i class="bi bi-save-fill"></i> Save Changes</button><button class="secondary" onclick="document.getElementById('sess-edit-modal').remove()">Cancel</button></div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
+async function sessSaveEdit(sessionId) {
+  const noteText = document.getElementById("sess-edit-note")?.innerHTML || "";
+  const start = document.getElementById("sess-edit-start")?.value || "";
+  const end = document.getElementById("sess-edit-end")?.value || "";
+  if (!document.getElementById("sess-edit-note")?.innerText.trim()) { setStatus("sess-edit-status", "Note cannot be blank.", "error"); return; }
+  if (!start || (end && end <= start)) { setStatus("sess-edit-status", "Enter a valid start and end time.", "error"); return; }
+  setStatus("sess-edit-status", "Saving…", "loading");
+  try {
+    await apiCall("updateSession", { sessionId, noteText, dateTime:start.replace("T"," "), endTime:end ? end.replace("T"," ") : "" });
+    document.getElementById("sess-edit-modal")?.remove();
+    await loadSessions();
+  } catch (e) { setStatus("sess-edit-status", "Error: " + e.message, "error"); }
+}
+
 function sessRenderView() {
   if (sessView === "list") sessRenderList();
   else sessRenderCalendar();
@@ -710,19 +775,7 @@ function sessRenderList() {
   }
 
   body.innerHTML = `
-    ${sessSessions.length ? `<table class="summary-table">
-      <thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Assessor</th><th>Note</th>${isProvider ? "<th></th>" : ""}</tr></thead>
-      <tbody>
-        ${sessSessions.map(s => `<tr>
-          <td>${escapeHtml(s.dateTime)}</td>
-          <td>${escapeHtml(s.endTime || "—")}</td>
-          <td>${sessFormatDuration(s.durationMin)}</td>
-          <td>${escapeHtml(s.assessor)}</td>
-          <td class="note-text" style="max-width:340px;">${s.noteText || ""}</td>
-          ${isProvider ? `<td><button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}
-        </tr>`).join("")}
-      </tbody>
-    </table>` : ""}
+    ${sessSessions.length ? `<div class="session-note-grid">${sessSessions.map(s => sessNoteCard(s, isProvider)).join("")}</div>` : ""}
     ${progNotesHtml}
   `;
 }
@@ -835,19 +888,7 @@ function sessRenderDayDetail(key, sessions, isProvider) {
   const NOTE_TYPE_COLOR = { "parent-only": "#3b82f6", "child-only": "#8b5cf6", "parent+child": "#059669", "graduation": "#f59e0b" };
   el.innerHTML = `
     <div class="section-title"><h3><i class="bi bi-calendar-event"></i> ${escapeHtml(key)}</h3></div>
-    ${sessions.length ? `<table class="summary-table">
-      <thead><tr><th>Start</th><th>End</th><th>Duration</th><th>Assessor</th><th>Note</th>${isProvider ? "<th></th>" : ""}</tr></thead>
-      <tbody>
-        ${sessions.map(s => `<tr>
-          <td>${escapeHtml((s.dateTime || "").slice(11))}</td>
-          <td>${escapeHtml((s.endTime || "").slice(11) || "—")}</td>
-          <td>${sessFormatDuration(s.durationMin)}</td>
-          <td>${escapeHtml(s.assessor)}</td>
-          <td class="note-text" style="max-width:340px;">${s.noteText || ""}</td>
-          ${isProvider ? `<td><button class="secondary" onclick="deleteSession('${escapeAttr(s.sessionId)}')"><i class="bi bi-trash3-fill"></i></button></td>` : ""}
-        </tr>`).join("")}
-      </tbody>
-    </table>` : ""}
+    ${sessions.length ? `<div class="session-note-grid">${sessions.map(s => sessNoteCard(s, isProvider, true)).join("")}</div>` : ""}
     ${dayNotes.length ? `
       <h4 style="margin:14px 0 8px;font-size:13px;"><i class="bi bi-calendar2-week-fill"></i> Program Notes</h4>
       ${dayNotes.map(n => {

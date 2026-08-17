@@ -3,7 +3,7 @@
 let _ntfNotifications = [];  // module-level cache updated on render + toggle
 let _ntfActiveFilter  = "all";
 
-async function initNotificationsSection(root) {
+async function initNotificationsSection(root, options = {}) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
     const [notifRes, bcastRes] = await Promise.all([
@@ -13,7 +13,7 @@ async function initNotificationsSection(root) {
     renderNotificationsSection(root, {
       notifications: notifRes.notifications || [],
       broadcasts:    bcastRes.broadcasts    || []
-    });
+    }, options);
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
@@ -22,12 +22,13 @@ async function initNotificationsSection(root) {
   }
 }
 
-function renderNotificationsSection(root, { notifications, broadcasts }) {
+function renderNotificationsSection(root, { notifications, broadcasts }, options = {}) {
+  const compact = !!options.compact;
   const unreadCount = notifications.filter(n => !n.isRead && n.status !== "cancelled").length
                     + broadcasts.filter(b => !b.isRead).length;
 
   root.innerHTML = `
-    <div class="card">
+    <div class="card" style="${compact ? "margin-bottom:10px;" : ""}">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
         <div>
           <h1 style="margin:0;"><i class="bi bi-bell-fill"></i> Notifications
@@ -38,7 +39,7 @@ function renderNotificationsSection(root, { notifications, broadcasts }) {
             Messages and reminders from your care team.
           </p>
         </div>
-        <button class="secondary" onclick="initNotificationsSection(document.getElementById('section-notifications'))"
+        <button class="secondary" onclick="initNotificationsSection(document.getElementById('${escapeAttr(root.id)}'), { compact: ${compact} })"
                 style="font-size:12px;">
           <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>

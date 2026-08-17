@@ -315,6 +315,7 @@ function rmRenderDomainTrend(snapshots, containerId, canvasId) {
   chartInstances[canvasId] = new Chart(document.getElementById(canvasId).getContext("2d"), {
     type: "line", data: { labels, datasets },
     options: {
+      animation: { duration: 1100, easing: "easeOutQuart" },
       responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
       scales: { y: { min: 0, max: 100, title: { display: true, text: "Domain Total (0-100)" } }, x: { grid: { display: false } } },
       plugins: { legend: { position: "bottom" } }
@@ -350,6 +351,7 @@ function rmRenderWheelChart(canvasId, legendId, summary) {
     type: "radar",
     data: { labels, datasets: [{ label: "Mean Score", data, borderColor: "#3185fc", backgroundColor: hexToRgba("#3185fc", 0.22), pointBackgroundColor: pointColors, pointBorderColor: "#fff", pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8, borderWidth: 3 }] },
     options: {
+      animation: { duration: 1200, easing: "easeOutQuart" },
       responsive: true, maintainAspectRatio: false,
       scales: { r: { min: 0, max: 5, ticks: { stepSize: 1 }, pointLabels: { font: { size: 11, weight: 600 }, callback: l => rmShortSubdomainLabel(l) } } },
       plugins: { legend: { display: false }, tooltip: { callbacks: { title: items => items[0]?.label || "" } } }
@@ -369,6 +371,7 @@ function rmRenderBarChart(canvasId, summary) {
     type: "bar",
     data: { labels, datasets: [{ label: "Score Total", data, backgroundColor: colors, borderRadius: 6, maxBarThickness: 46 }] },
     options: {
+      animation: { duration: 1000, easing: "easeOutBounce" },
       responsive: true, maintainAspectRatio: false,
       scales: { y: { min: 0, max: 25, title: { display: true, text: "Total (0-25)" } }, x: { ticks: { autoSkip: false, maxRotation: 0, callback: function (v) { return rmShortSubdomainLabel(this.getLabelForValue(v)); } } } },
       plugins: { legend: { display: false }, tooltip: { callbacks: { title: items => items[0]?.label || "" } } }

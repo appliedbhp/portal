@@ -295,6 +295,7 @@ function winRenderDomainTrend(snapshots, containerId, canvasId) {
   chartInstances[canvasId] = new Chart(document.getElementById(canvasId).getContext("2d"), {
     type: "line", data: { labels, datasets },
     options: {
+      animation: { duration: 1100, easing: "easeOutQuart" },
       responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
       scales: { y: { min: 0, max: 20, title: { display: true, text: "Domain Total (4-20)" } }, x: { grid: { display: false } } },
       plugins: { legend: { position: "bottom" } }
@@ -311,7 +312,7 @@ function winRenderWheelChart(canvasId, legendId, summary) {
   chartInstances[canvasId] = new Chart(document.getElementById(canvasId).getContext("2d"), {
     type: "radar",
     data: { labels, datasets: [{ label: "Mean Score", data, borderColor: "#3185fc", backgroundColor: hexToRgba("#3185fc", 0.22), pointBackgroundColor: pointColors, pointBorderColor: "#fff", pointBorderWidth: 2, pointRadius: 6, pointHoverRadius: 8, borderWidth: 3 }] },
-    options: { responsive: true, maintainAspectRatio: false, scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 1200, easing: "easeOutQuart" }, scales: { r: { min: 1, max: 5, ticks: { stepSize: 1 } } }, plugins: { legend: { display: false } } }
   });
   const legendEl = document.getElementById(legendId);
   if (legendEl) legendEl.innerHTML = ordered.map(s => `<span><span class="swatch" style="background:${colorForDomain(s.domain)}"></span>${escapeHtml(s.domain)}</span>`).join("");
@@ -326,6 +327,6 @@ function winRenderBarChart(canvasId, summary) {
   chartInstances[canvasId] = new Chart(document.getElementById(canvasId).getContext("2d"), {
     type: "bar",
     data: { labels, datasets: [{ label: "Score Total", data, backgroundColor: colors, borderRadius: 6, maxBarThickness: 46 }] },
-    options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 20, title: { display: true, text: "Total (4-20)" } }, x: { ticks: { autoSkip: false, maxRotation: 45 } } }, plugins: { legend: { display: false } } }
+    options: { responsive: true, maintainAspectRatio: false, animation: { duration: 1000, easing: "easeOutBounce" }, scales: { y: { min: 0, max: 20, title: { display: true, text: "Total (4-20)" } }, x: { ticks: { autoSkip: false, maxRotation: 45 } } }, plugins: { legend: { display: false } } }
   });
 }
