@@ -18,7 +18,7 @@ function progGoalKey(g) {
   return (prefix + domPart + text).trim();
 }
 
-const PROG_NUM_COLS = 5;
+const PROG_NUM_COLS = 7;
 
 function initProgressSection(root) {
   root.innerHTML = `
@@ -28,6 +28,7 @@ function initProgressSection(root) {
       .prog-date-col .prog-col-label { font-size:11px; font-weight:600; color:var(--muted); text-align:center; }
       .prog-date-col .prog-col-date  { font-size:12px; text-align:center; color:var(--text); margin-bottom:2px; }
       .prog-date-col input           { text-align:center; font-size:14px; }
+      @media(max-width:760px){ .prog-date-grid{ grid-template-columns:repeat(4,1fr); } }
       @media(max-width:520px){ .prog-date-grid{ grid-template-columns:repeat(2,1fr); } }
     </style>
 

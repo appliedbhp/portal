@@ -1,4 +1,4 @@
-// Behavioral Function Assessment section — standalone (not tied to Programs).
+// Functional Behavior Assessment section — standalone (not tied to Programs).
 // Both parent and provider can submit; both can view past results.
 // Backend stores submissions in data_assessments on the Programs sheet.
 //
@@ -283,7 +283,7 @@ let bfaFormOpen = false;
 function initBfaSection(root) {
   root.innerHTML = `
     <div class="card">
-      <h1><i class="bi bi-clipboard2-check-fill"></i>Behavioral Function Assessment</h1>
+      <h1><i class="bi bi-clipboard2-check-fill"></i>Functional Behavior Assessment (FBA)</h1>
       <p style="color:var(--muted);font-size:14px;margin:0 0 20px;line-height:1.6;">
         This assessment identifies behaviors of concern and helps determine the function
         maintaining each behavior. Complete one assessment per concern period —

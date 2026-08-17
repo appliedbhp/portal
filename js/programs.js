@@ -206,7 +206,7 @@ function buildStepResponseHtml(responseJson) {
   if (!responseJson) return `<div style="font-size:12px;color:var(--muted);font-style:italic;">No responses recorded.</div>`;
   try {
     const saved = JSON.parse(responseJson);
-    if (saved.bfa_scores_json) return `<div style="font-size:12px;color:var(--muted);">BFA scores — open the activity to view.</div>`;
+    if (saved.bfa_scores_json) return `<div style="font-size:12px;color:var(--muted);">FBA scores — open the activity to view.</div>`;
     const entries = Object.entries(saved).filter(([, v]) => String(v).trim() !== "");
     if (!entries.length) return `<div style="font-size:12px;color:var(--muted);font-style:italic;">No text responses recorded.</div>`;
     return entries.map(([k, v]) => `

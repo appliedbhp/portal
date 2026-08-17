@@ -55,7 +55,7 @@ function initReportsSection(root) {
       <h1><i class="bi bi-file-earmark-medical-fill"></i>Assessment Report</h1>
       <p style="color:var(--muted);font-size:14px;margin:0 0 20px;line-height:1.6;">
         Generates a comprehensive <strong>Executive Function and Functional Behavior Assessment</strong>
-        report integrating all assessment data on file — BFA, WIN, Roadmap, BRIEF-2, and ESQ-R.
+        report integrating all assessment data on file — FBA, WIN, Roadmap, BRIEF-2, and ESQ-R.
         The report is created as a formatted Google Doc saved to the client's folder in Drive.
       </p>
 

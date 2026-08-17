@@ -6,8 +6,9 @@ function initHomeSection(root) {
   const isAdult  = getRole() === "adult";
 
   root.innerHTML = `
-    <div class="card">
-      <h1><i class="bi bi-house-fill"></i> Welcome</h1>
+    <div class="card home-priority-card">
+      <h1><i class="bi bi-sun-fill"></i> Today</h1>
+      <p class="home-section-kicker">Your appointments, progress, and next steps at a glance.</p>
       <div id="home-stats" class="stat-grid">
         <div class="stat-card"><div class="stat-label">Loading...</div></div>
       </div>
@@ -33,7 +34,7 @@ function initHomeSection(root) {
     </div>` : ""}
 
     <div class="card">
-      <h2><i class="bi bi-grid-fill"></i> Jump To</h2>
+      <h2><i class="bi bi-grid-fill"></i> All Tools</h2>
       <div class="home-tile-grid">
         ${!isAdult ? `
         <button class="home-tile" onclick="showSection('roadmap')"><i class="bi bi-signpost-split-fill"></i><div><div class="home-tile-label">Roadmap Assessment</div><div class="home-tile-sub">Score &amp; review history</div></div></button>
@@ -245,7 +246,7 @@ const CLIENT_SECTIONS = [
   { section: "scores",        label: "Standardized Scores",   group: "Records" },
   { section: "roadmap",       label: "Roadmap Assessment",    group: "Assessments" },
   { section: "win",           label: "What I Need (WIN)",     group: "Assessments" },
-  { section: "bfa",           label: "Behavior Assessment",   group: "Assessments" },
+  { section: "bfa",           label: "Functional Behavior Assessment (FBA)", group: "Assessments" },
   { section: "assessments",   label: "Progress & Assessments",group: "Assessments" },
   { section: "vanderbilt",    label: "Vanderbilt Scales",     group: "Assessments" },
   { section: "grades",        label: "Grades",                group: "Assessments" },

@@ -2,6 +2,39 @@
 // status banners, domain colors, Chart.js setup, and the assessment-history carousel.
 
 const STATUS_ICONS = { error: "exclamation-triangle-fill", success: "check-circle-fill", info: "info-circle-fill", loading: "arrow-repeat" };
+
+// Shared branded transitions. These deliberately use a single calm motion
+// language so login, data loading, and page entry feel related.
+function playPortalEntry(label = "Preparing your space…") {
+  try { sessionStorage.setItem("portalEntryLabel", label); } catch (_) {}
+  document.body.classList.add("is-leaving");
+  let curtain = document.getElementById("portal-transition");
+  if (!curtain) {
+    curtain = document.createElement("div");
+    curtain.id = "portal-transition";
+    curtain.className = "portal-transition";
+    curtain.setAttribute("role", "status");
+    curtain.setAttribute("aria-live", "polite");
+    curtain.innerHTML = `<div class="brand-motion" aria-hidden="true"><span></span><span></span><span></span></div><strong>${escapeHtml(label)}</strong>`;
+    document.body.appendChild(curtain);
+  }
+  requestAnimationFrame(() => curtain.classList.add("visible"));
+  return new Promise(resolve => setTimeout(resolve, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 650));
+}
+
+function finishPortalEntry() {
+  const curtain = document.getElementById("portal-transition");
+  if (!curtain) return;
+  requestAnimationFrame(() => curtain.classList.add("departing"));
+  setTimeout(() => curtain.remove(), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 650);
+}
+
+function dismissSplash() {
+  const splash = document.getElementById("login-splash");
+  if (!splash) return;
+  splash.classList.add("is-complete");
+  setTimeout(() => splash.remove(), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 700);
+}
 function setStatus(id, msg, type) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -21,7 +54,7 @@ function setStatus(id, msg, type) {
 // Stays visible (indeterminate shimmer) for the full duration of any API call.
 // Counts concurrent calls so it stays up until every one finishes.
 const portalProgress = (function() {
-  let count = 0, bar = null, finishTimer = null, startedAt = 0;
+  let count = 0, bar = null, finishTimer = null, startedAt = 0, busyTimer = null;
   const MIN_MS = 600; // always visible for at least this long
   function getBar() {
     if (!bar) {
@@ -38,6 +71,8 @@ const portalProgress = (function() {
     b.classList.remove("running");
     b.classList.add("finishing");
     finishTimer = setTimeout(() => { b.classList.remove("finishing"); }, 450);
+    clearTimeout(busyTimer);
+    document.body.classList.remove("data-is-loading");
   }
   return {
     start() {
@@ -47,6 +82,8 @@ const portalProgress = (function() {
       const b = getBar();
       b.classList.remove("finishing");
       b.classList.add("running");
+      clearTimeout(busyTimer);
+      busyTimer = setTimeout(() => document.body.classList.add("data-is-loading"), 320);
     },
     done() {
       count = Math.max(0, count - 1);
@@ -315,6 +352,17 @@ async function buildAvatarEl(avatarJson, label, size = 36) {
   function boot() {
     initRippleEffect();
     initScrollReveal();
+    document.querySelectorAll(".sidebar-group-title").forEach(title => {
+      title.setAttribute("role", "button");
+      title.setAttribute("tabindex", "0");
+      title.setAttribute("aria-expanded", String(!title.closest(".sidebar-group")?.classList.contains("collapsed")));
+      title.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          title.click();
+        }
+      });
+    });
   }
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", boot);
@@ -356,7 +404,7 @@ async function buildAvatarEl(avatarJson, label, size = 36) {
   });
 })();
 
-// Renders saved BFA scores (bfa_scores_json) into HTML — used by both
+// Renders saved FBA scores (stored in the legacy bfa_scores_json field) into HTML — used by both
 // programs.js (parent completed view) and program-admin.js (provider review).
 function renderBfaScores(scoresJson) {
   const FN_COLORS = { att: "#6366f1", esc: "#d97706", tan: "#059669", aut: "#db2777" };
