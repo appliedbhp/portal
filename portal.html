@@ -12,7 +12,11 @@
 <link rel="stylesheet" href="css/effects.css">
 <script type="module" src="js/open-peeps-creator.js"></script>
 </head>
-<body>
+<body class="portal-page">
+<div id="portal-transition" class="portal-transition visible" role="status" aria-live="polite">
+  <div class="brand-motion" aria-hidden="true"><span></span><span></span><span></span></div>
+  <strong>Preparing your portal…</strong>
+</div>
 
 <header class="portal-header no-print">
   <div class="brand">
@@ -46,7 +50,7 @@
       <div class="sidebar-group-links">
         <button class="sidebar-link" data-section="roadmap" onclick="showSection('roadmap')" id="roadmapNavBtn"><i class="bi bi-signpost-split-fill"></i> Roadmap</button>
         <button class="sidebar-link" data-section="win" onclick="showSection('win')" id="winNavBtn"><i class="bi bi-heart-pulse-fill"></i> What I Need</button>
-        <button class="sidebar-link" data-section="bfa" onclick="showSection('bfa')" id="bfaNavBtn"><i class="bi bi-clipboard2-check-fill"></i> Behavior Assessment</button>
+        <button class="sidebar-link" data-section="bfa" onclick="showSection('bfa')" id="bfaNavBtn"><i class="bi bi-clipboard2-check-fill"></i> FBA</button>
         <button class="sidebar-link" data-section="grades" onclick="showSection('grades')"><i class="bi bi-mortarboard-fill"></i> Grades</button>
         <button class="sidebar-link" data-section="intake" onclick="showSection('intake')" id="intakeNavBtn"><i class="bi bi-clipboard2-pulse-fill"></i> Intake &amp; Validity</button>
       </div>
@@ -63,17 +67,29 @@
     </div>
 
     <div class="sidebar-group">
-      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Insights<i class="bi bi-chevron-down sg-chevron"></i></div>
+      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Treatment &amp; Reports<i class="bi bi-chevron-down sg-chevron"></i></div>
       <div class="sidebar-group-links">
         <button class="sidebar-link" data-section="recommendation" onclick="showSection('recommendation')" id="recNavBtn"><i class="bi bi-stars"></i> Package Rec</button>
         <button class="sidebar-link" data-section="reports" onclick="showSection('reports')" id="reportsNavBtn"><i class="bi bi-file-earmark-medical-fill"></i> Assessment Report</button>
         <button class="sidebar-link" data-section="progress-report" onclick="showSection('progress-report')" id="progressReportNavBtn"><i class="bi bi-graph-up-arrow"></i> Progress Report</button>
         <button class="sidebar-link" data-section="client-program" onclick="showSection('client-program')" id="clientProgramNavBtn"><i class="bi bi-calendar2-week-fill"></i> Client Program</button>
         <button class="sidebar-link" data-section="program-admin" onclick="showSection('program-admin')" id="programAdminNavBtn"><i class="bi bi-collection-play-fill"></i> Programs</button>
+      </div>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Care Coordination<i class="bi bi-chevron-down sg-chevron"></i></div>
+      <div class="sidebar-group-links">
         <button class="sidebar-link" data-section="appointments" onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i> Appointments</button>
         <button class="sidebar-link" data-section="consent-forms" onclick="showSection('consent-forms')" id="consentFormsNavBtn"><i class="bi bi-pen-fill"></i> Consent Forms</button>
         <button class="sidebar-link" data-section="discharge" onclick="showSection('discharge')" id="dischargeNavBtn" style="display:none;"><i class="bi bi-clipboard2-x-fill"></i> Discharge Summary</button>
         <button class="sidebar-link" data-section="reminders" onclick="showSection('reminders')" id="remindersNavBtn" style="display:none;"><i class="bi bi-bell-fill"></i> Reminders &amp; Messages</button>
+      </div>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Administration<i class="bi bi-chevron-down sg-chevron"></i></div>
+      <div class="sidebar-group-links">
         <button class="sidebar-link" data-section="settings" onclick="showSection('settings')" id="settingsNavBtn" style="display:none;"><i class="bi bi-gear-fill"></i> Settings</button>
         <button class="sidebar-link" data-section="notifications" onclick="showSection('notifications')" id="notificationsNavBtn" style="display:none;"><i class="bi bi-bell-fill"></i> Notifications</button>
         <button class="sidebar-link" data-section="broadcasts" onclick="showSection('broadcasts')" id="broadcastsNavBtn" style="display:none;"><i class="bi bi-megaphone-fill"></i> Broadcasts</button>
@@ -254,13 +270,18 @@ function switchClient() {
 }
 
 function toggleSidebar() {
-  document.getElementById("sidebar").classList.toggle("collapsed");
+  if (window.matchMedia("(max-width: 820px)").matches) {
+    document.body.classList.toggle("sidebar-open");
+  } else {
+    document.getElementById("sidebar").classList.toggle("collapsed");
+  }
 }
 
 function toggleSidebarGroup(titleEl) {
   const group = titleEl.closest(".sidebar-group");
   const key   = "sbg_" + titleEl.textContent.trim().replace(/\s+/g, "_");
   group.classList.toggle("collapsed");
+  titleEl.setAttribute("aria-expanded", String(!group.classList.contains("collapsed")));
   try { localStorage.setItem(key, group.classList.contains("collapsed") ? "1" : "0"); } catch (_) {}
 }
 
@@ -314,14 +335,10 @@ function showSection(name) {
   document.querySelectorAll(".sidebar-link").forEach(b => b.classList.toggle("active", b.dataset.section === name));
   const section = document.getElementById("section-" + name);
   section.classList.add("active");
+  document.body.classList.remove("sidebar-open");
   if (!initialized[name]) {
     initialized[name] = true;
     SECTION_INIT[name](section);
-  }
-  // Apply gradient headings after init and on every visit (sections re-render headings)
-  if (typeof applyGradientHeadings === "function") {
-    // Delay slightly so async-rendered headings are in the DOM
-    setTimeout(() => applyGradientHeadings(section), 150);
   }
 }
 
@@ -331,6 +348,7 @@ if (_role === "provider") checkProgressReportDue();
 checkGradesAlert();
 startTimeoutWatcher();
 if (_role !== "provider") initNotifications();
+window.addEventListener("load", () => setTimeout(finishPortalEntry, 420), { once: true });
 </script>
 </body>
 </html>

@@ -6,6 +6,7 @@
 <title>Applied Behavioral Health Practice — Log In</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/effects.css">
 <style>
   body {
     min-height: 100vh;
@@ -15,7 +16,15 @@
   }
 </style>
 </head>
-<body>
+<body class="login-page">
+<div id="login-splash" class="login-splash" role="status" aria-label="Loading Applied Behavioral Health Practice">
+  <img class="splash-logo" src="https://d1yei2z3i6k35z.cloudfront.net/15694166/695009dabcbb1_LogoWhite.png" alt="">
+  <div class="splash-copy">
+    <strong>Applied Behavioral Health Practice</strong>
+    <span>Care, progress, and support—all in one place.</span>
+  </div>
+  <div class="brand-motion" aria-hidden="true"><span></span><span></span><span></span></div>
+</div>
 <div class="page" style="max-width:480px;">
   <div class="login-logo-wrap">
     <img class="brand-logo" src="https://d1yei2z3i6k35z.cloudfront.net/15694166/695009dabcbb1_LogoWhite.png" alt="Applied Behavioral Health Practice">
@@ -28,7 +37,7 @@
     <input type="text" name="username" autocomplete="username" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
     <input type="password" name="password" autocomplete="new-password" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
 
-    <div class="btn-row" style="margin-bottom:20px;">
+    <div class="btn-row login-mode-switch" style="margin-bottom:20px;">
       <button id="mode-client" onclick="setMode('client')">I'm a Client</button>
       <button id="mode-provider" class="secondary" onclick="setMode('provider')">I'm a Provider</button>
     </div>
@@ -42,7 +51,7 @@
     <div id="clientMode">
       <div class="row">
         <label>Client ID</label>
-        <div style="display:flex;gap:8px;">
+        <div class="login-inline-action" style="display:flex;gap:8px;">
           <input id="clientId" type="text" placeholder="e.g. C-1042" style="flex:1;"
             onkeydown="if(event.key==='Enter')checkStatus()">
           <button type="button" class="secondary" onclick="checkStatus()" style="white-space:nowrap;"><i class="bi bi-search"></i> Look Up</button>
@@ -54,7 +63,7 @@
           <label>Password</label>
           <input id="loginPassword" type="password" placeholder="Your password" autocomplete="current-password">
         </div>
-        <button onclick="login()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
+        <button class="login-primary-action" onclick="login()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
       </div>
 
       <div id="setupFields" style="display:none;">
@@ -81,7 +90,7 @@
     <div id="providerMode" style="display:none;">
       <div class="row">
         <label>Provider ID</label>
-        <div style="display:flex;gap:8px;">
+        <div class="login-inline-action" style="display:flex;gap:8px;">
           <input id="providerId" type="text" placeholder="e.g. your username" style="flex:1;"
             onkeydown="if(event.key==='Enter')checkProviderStatus()">
           <button type="button" class="secondary" onclick="checkProviderStatus()" style="white-space:nowrap;"><i class="bi bi-search"></i> Look Up</button>
@@ -279,7 +288,7 @@ async function login() {
       effectiveClientId: res.linkedClientId || clientId,
       password, assessorName, role: res.role
     });
-    window.location.href = "portal.html";
+    await openPortalWithTransition();
   } catch (e) {
     setStatus("status", e.message, "error");
   }
@@ -311,7 +320,7 @@ async function setupPassword() {
       effectiveClientId: res.linkedClientId || clientId,
       password: newPassword, assessorName, role: res.role
     });
-    window.location.href = "portal.html";
+    await openPortalWithTransition();
   } catch (e) {
     setStatus("status", e.message, "error");
   }
@@ -388,7 +397,7 @@ async function openClient(clientId) {
   setStatus("status", "Opening " + clientId + "…", "loading");
   try {
     await apiCall("lookupClient", {});
-    window.location.href = "portal.html";
+    await openPortalWithTransition("Opening " + clientId + "…");
   } catch (e) {
     setProviderClient("");
     setStatus("status", e.message, "error");
@@ -1007,6 +1016,11 @@ document.addEventListener("keydown", (e) => {
   else setupPassword();
 });
 
+async function openPortalWithTransition(label = "Preparing your portal…") {
+  await playPortalEntry(label);
+  window.location.href = "portal.html";
+}
+
 if (isProvider()) {
   setMode("provider");
   document.getElementById("clientPicker").style.display = "block";
@@ -1040,6 +1054,8 @@ if (new URLSearchParams(window.location.search).get("reason") === "timeout") {
   document.body.appendChild(banner);
   setTimeout(() => banner.remove(), 6000);
 }
+
+window.addEventListener("load", () => setTimeout(dismissSplash, 520), { once: true });
 </script>
 </body>
 </html>
