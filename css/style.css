@@ -230,6 +230,7 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 body.portal-page { padding-top:65px; }
 .portal-header .brand { min-width:0;font-weight:600;font-size:18px;color:#fff;display:flex;align-items:center;gap:10px; }
 .portal-header .brand-title { overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.portal-header .header-identity { min-width:0;display:flex;align-items:center;justify-content:center;gap:9px; }
 .portal-header .who { min-width:0;font-size:13px;color:rgba(255,255,255,.85);text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .portal-header > .btn-row { flex-wrap:nowrap;justify-content:flex-end;min-width:max-content; }
 .portal-header button.secondary { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.4); }
@@ -325,7 +326,7 @@ body.portal-page { padding-top:65px; }
 
 @media(max-width:620px){ body.portal-page{padding-top:59px}.notifications-popout{ top:auto;bottom:8px;right:8px;width:calc(100vw - 16px);max-height:calc(100vh - 75px); } .session-entry-card.session-writer-pip{right:8px;bottom:8px;width:calc(100vw - 16px);max-height:calc(100vh - 75px);resize:none;} #header-progress-btn{font-size:0!important;} #header-progress-btn i{font-size:16px;margin:0;} }
 @media(max-width:820px){ .portal-header .header-bell-btn{padding:0!important;width:38px;min-width:38px;} }
-@media(max-width:820px){ .portal-header{grid-template-columns:auto 1fr auto;padding:8px 10px;gap:8px}.portal-header .who{display:none}.minimized-panel-dock{justify-content:flex-start}.minimized-panel-dock > *{width:min(300px,78vw)!important;min-width:min(300px,78vw)!important;} }
+@media(max-width:820px){ .portal-header{grid-template-columns:auto 1fr auto;padding:8px 10px;gap:8px}.portal-header .header-identity{display:none}.minimized-panel-dock{justify-content:flex-start}.minimized-panel-dock > *{width:min(300px,78vw)!important;min-width:min(300px,78vw)!important;} }
 @media(max-width:1100px){ .portal-header .brand-title{display:none}.portal-header #header-progress-btn,.portal-header #switchClientBtn,.portal-header button[onclick="logout()"]{font-size:0}.portal-header #header-progress-btn i,.portal-header #switchClientBtn i,.portal-header button[onclick="logout()"] i{font-size:17px;margin:0} }
 
 .sidebar-link:is([data-section="discharge"],[data-section="reminders"],[data-section="broadcasts"],[data-section="assessments-library"],[data-section="assessments-assign"],[data-section="vanderbilt"],[data-section="client-billing"],[data-section="superbill"]) i { background:none!important; color:hsl(var(--nav-icon-hue,215) 78% 45%)!important; -webkit-text-fill-color:currentColor!important; }

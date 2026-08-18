@@ -117,6 +117,12 @@
 .portal-transition { opacity:0; visibility:hidden; transform:scale(.985); }
 .portal-transition.visible { opacity:1; visibility:visible; transform:none; }
 .portal-transition strong { font-size:14px; letter-spacing:.02em; }
+.login-broadcast-icon { width:54px;height:54px;border-radius:18px;display:grid;place-items:center;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);font-size:24px;animation:splash-logo-in 420ms cubic-bezier(.22,1,.36,1) both; }
+.login-broadcast-copy { width:min(520px,calc(100vw - 40px));padding:4px 20px;text-align:center;animation:portal-section-enter 380ms cubic-bezier(.22,1,.36,1) both; }
+.login-broadcast-copy small { display:block;margin-bottom:8px;font-size:10px;font-weight:800;letter-spacing:.14em;color:rgba(255,255,255,.72); }
+.login-broadcast-copy strong { display:block;font:600 clamp(20px,4vw,28px)/1.25 "Lora",Georgia,serif; }
+.login-broadcast-copy p { display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;margin:10px 0 0;font-size:14px;line-height:1.55;color:rgba(255,255,255,.9);white-space:pre-line; }
+.login-broadcast-copy span { display:block;margin-top:10px;font-size:11px;font-weight:700;color:rgba(255,255,255,.7); }
 
 /* A small ambient loader accompanies the existing progress bar only after a
    request lasts long enough to be perceived. */
