@@ -26,20 +26,15 @@
   </div>
   <div class="who" id="whoami"></div>
   <div class="btn-row" style="margin:0;">
-    <div style="position:relative;display:inline-block;">
-      <button class="secondary" id="bell-btn" onclick="toggleNotificationsPopout()"
-              style="padding:6px 10px;font-size:16px;line-height:1;" title="Notifications">
-        <i class="bi bi-bell-fill"></i>
-        <span id="bell-badge" style="display:none;position:absolute;top:-4px;right:-4px;
-          background:#ef4444;color:#fff;font-size:10px;font-weight:700;min-width:18px;height:18px;
-          border-radius:9px;align-items:center;justify-content:center;padding:0 4px;">0</span>
-      </button>
-    </div>
     <button class="secondary" id="header-progress-btn" onclick="sessOpenProgressPip()" style="padding:6px 10px;font-size:13px;" title="Open progress picture-in-picture">
       <i class="bi bi-graph-up-arrow"></i> Progress
     </button>
     <button id="switchClientBtn" class="secondary" onclick="switchClient()" style="display:none;"><i class="bi bi-arrow-left-right"></i> Switch Client</button>
     <button class="secondary" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Log Out</button>
+    <button id="bell-btn" class="header-bell-btn" onclick="toggleNotificationsPopout()" title="Notifications" aria-label="Open notifications">
+      <i class="bi bi-bell-fill"></i>
+      <span id="bell-badge">0</span>
+    </button>
   </div>
 </header>
 
@@ -190,7 +185,7 @@
 <aside id="notifications-popout" class="notifications-popout no-print" role="dialog" aria-label="Notifications" aria-hidden="true">
   <div class="notifications-popout-head">
     <div><i class="bi bi-bell-fill"></i><strong>Notifications</strong></div>
-    <button class="secondary icon-btn" onclick="toggleNotificationsPopout(false)" aria-label="Close notifications"><i class="bi bi-x-lg"></i></button>
+    <div class="sess-pip-actions"><button class="secondary icon-btn" onclick="minimizeNotificationsPopout()" aria-label="Minimize notifications"><i class="bi bi-dash-lg"></i></button><button class="secondary icon-btn" onclick="toggleNotificationsPopout(false)" aria-label="Close notifications"><i class="bi bi-x-lg"></i></button></div>
   </div>
   <div id="notifications-popout-body" class="notifications-popout-body"></div>
 </aside>
@@ -304,8 +299,16 @@ function toggleNotificationsPopout(forceOpen) {
   const body = document.getElementById("notifications-popout-body");
   const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : !panel.classList.contains("open");
   panel.classList.toggle("open", shouldOpen);
+  if (shouldOpen) panel.classList.remove("minimized");
   panel.setAttribute("aria-hidden", String(!shouldOpen));
   if (shouldOpen) initNotificationsSection(body, { compact: true });
+}
+
+function minimizeNotificationsPopout() {
+  const panel = document.getElementById("notifications-popout");
+  panel.classList.toggle("minimized");
+  panel.style.bottom = "8px";
+  panel.style.top = "auto";
 }
 
 document.addEventListener("keydown", e => {
