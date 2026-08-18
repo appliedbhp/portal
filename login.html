@@ -850,7 +850,7 @@ async function doScheduleSession(clientId) {
       title, startLocal: start, endLocal: end, timeZone: "America/Los_Angeles",
       startTime: new Date(start).toISOString(), endTime: new Date(end).toISOString(), sendSms
     });
-    let msg = "Scheduled in Pacific Time with Google Meet.";
+    let msg = "Scheduled in Google Calendar in Pacific Time.";
     if (res.clientEmail) msg += ` Invite → ${res.clientEmail}.`;
     if (res.meetUrl)     msg += ` Meet: ${res.meetUrl}.`;
     if (res.smsSent)     msg += " SMS sent.";
