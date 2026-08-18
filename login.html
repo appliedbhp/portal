@@ -794,6 +794,11 @@ async function showScheduleSession(clientId) {
             <input type="datetime-local" id="ls-end-${clientId}"   value="${toLocal(end)}"  style="font-size:12px;width:100%;" />
           </div>
         </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Google Meet Link (optional)</div>
+          <input type="url" id="ls-meet-${clientId}" placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                 style="font-size:12px;width:100%;" />
+        </div>
         ${smsConsent ? `
         <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
           <input type="checkbox" id="ls-sms-${clientId}" checked />
@@ -829,6 +834,7 @@ async function doScheduleSession(clientId) {
   const title = document.getElementById("ls-title-" + clientId)?.value?.trim();
   const start = document.getElementById("ls-start-" + clientId)?.value;
   const end   = document.getElementById("ls-end-"   + clientId)?.value;
+  const meetUrl = document.getElementById("ls-meet-" + clientId)?.value?.trim() || "";
   const smsEl = document.getElementById("ls-sms-"   + clientId);
   const sendSms = smsEl ? smsEl.checked : false;
   const statusEl = document.getElementById("ls-status-" + clientId);
@@ -840,6 +846,9 @@ async function doScheduleSession(clientId) {
   };
 
   if (!title || !start || !end) { setS("All fields required.", "#dc2626"); return; }
+  if (meetUrl && !/^https:\/\/meet\.google\.com\/[a-z0-9-]+(?:[/?#].*)?$/i.test(meetUrl)) {
+    setS("Enter a valid Google Meet link.", "#dc2626"); return;
+  }
   if (new Date(end) <= new Date(start)) { setS("End must be after start.", "#dc2626"); return; }
 
   setS("Scheduling…", "var(--muted)");
@@ -848,7 +857,7 @@ async function doScheduleSession(clientId) {
     const res = await apiCallNoCreds("createAppointment", {
       providerId: creds.providerId, providerPassword: creds.providerPassword, asProvider: true, clientId,
       title, startLocal: start, endLocal: end, timeZone: "America/Los_Angeles",
-      startTime: new Date(start).toISOString(), endTime: new Date(end).toISOString(), sendSms
+      startTime: new Date(start).toISOString(), endTime: new Date(end).toISOString(), meetUrl, sendSms
     });
     let msg = "Scheduled in Google Calendar in Pacific Time.";
     if (res.clientEmail) msg += ` Invite → ${res.clientEmail}.`;
