@@ -675,6 +675,9 @@ async function showLinkedAdults(childId) {
             <i class="bi bi-x-lg"></i> Unlink
           </button>
         </div>`).join("") : `<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">No adults linked yet.</div>`}
+      <div style="font-size:12px;line-height:1.45;color:var(--muted);background:var(--bg-alt,#f8fafc);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+        First create the adult through <strong>Add New Client</strong> and choose <strong>Adult</strong>. Then enter that adult's Client ID below. When the adult signs in, they will securely view ${escapeHtml(childId)}'s portal.
+      </div>
       <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
         <input id="link-adult-input-${escapeHtml(childId)}" type="text" placeholder="Adult Client ID (e.g. C-1042-P1)"
                style="flex:1;font-size:12px;padding:5px 10px;">
@@ -737,10 +740,10 @@ async function showScheduleSession(clientId) {
   try {
     const [apptRes, emailRes] = await Promise.all([
       apiCallNoCreds("getAppointments", {
-        providerId: creds.providerId, providerPassword: creds.providerPassword, clientId
+        providerId: creds.providerId, providerPassword: creds.providerPassword, asProvider: true, clientId
       }),
       apiCallNoCreds("getClientEmail", {
-        providerId: creds.providerId, providerPassword: creds.providerPassword, clientId
+        providerId: creds.providerId, providerPassword: creds.providerPassword, asProvider: true, clientId
       })
     ]);
     const events = (apptRes.events || []).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
@@ -749,8 +752,17 @@ async function showScheduleSession(clientId) {
     smsConsent  = emailRes.smsConsent || false;
   } catch(_) {}
 
-  const now   = new Date(); now.setMinutes(0, 0, 0); now.setHours(now.getHours() + 1);
-  const end   = new Date(now.getTime() + 60 * 60 * 1000);
+  const pacificParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(new Date()).reduce((out, part) => {
+    if (part.type !== "literal") out[part.type] = part.value;
+    return out;
+  }, {});
+  const now = new Date(Number(pacificParts.year), Number(pacificParts.month) - 1,
+    Number(pacificParts.day), Number(pacificParts.hour), Number(pacificParts.minute), 0, 0);
+  now.setDate(now.getDate() + 7);
+  const end   = new Date(now.getTime() + 30 * 60 * 1000);
   const toLocal = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 
   const nextApptHtml = nextAppt
@@ -773,11 +785,12 @@ async function showScheduleSession(clientId) {
                placeholder="Title" style="font-size:13px;" />
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
           <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Start</div>
-            <input type="datetime-local" id="ls-start-${clientId}" value="${toLocal(now)}" style="font-size:12px;width:100%;" />
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Start (Pacific)</div>
+            <input type="datetime-local" id="ls-start-${clientId}" value="${toLocal(now)}" style="font-size:12px;width:100%;"
+                   onchange="syncLoginSessionEnd('${escapeHtml(clientId)}')" />
           </div>
           <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">End</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">End (Pacific)</div>
             <input type="datetime-local" id="ls-end-${clientId}"   value="${toLocal(end)}"  style="font-size:12px;width:100%;" />
           </div>
         </div>
@@ -804,6 +817,14 @@ async function showScheduleSession(clientId) {
     </div>`;
 }
 
+function syncLoginSessionEnd(clientId) {
+  const startEl = document.getElementById("ls-start-" + clientId);
+  const endEl = document.getElementById("ls-end-" + clientId);
+  if (!startEl?.value || !endEl) return;
+  const end = new Date(new Date(startEl.value).getTime() + 30 * 60 * 1000);
+  endEl.value = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
 async function doScheduleSession(clientId) {
   const title = document.getElementById("ls-title-" + clientId)?.value?.trim();
   const start = document.getElementById("ls-start-" + clientId)?.value;
@@ -825,11 +846,13 @@ async function doScheduleSession(clientId) {
   const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
   try {
     const res = await apiCallNoCreds("createAppointment", {
-      providerId: creds.providerId, providerPassword: creds.providerPassword, clientId,
-      title, startTime: new Date(start).toISOString(), endTime: new Date(end).toISOString(), sendSms
+      providerId: creds.providerId, providerPassword: creds.providerPassword, asProvider: true, clientId,
+      title, startLocal: start, endLocal: end, timeZone: "America/Los_Angeles",
+      startTime: new Date(start).toISOString(), endTime: new Date(end).toISOString(), sendSms
     });
-    let msg = "Scheduled.";
+    let msg = "Scheduled in Pacific Time with Google Meet.";
     if (res.clientEmail) msg += ` Invite → ${res.clientEmail}.`;
+    if (res.meetUrl)     msg += ` Meet: ${res.meetUrl}.`;
     if (res.smsSent)     msg += " SMS sent.";
     setS(msg, "#059669");
   } catch(e) {
