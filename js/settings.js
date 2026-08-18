@@ -3,15 +3,17 @@
 async function initSettingsSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
-    const [phoneRes, avatarRes] = await Promise.all([
+    const [phoneRes, avatarRes, timeZoneRes] = await Promise.all([
       apiCall("getClientPhone", {}).catch(() => ({ phone: "", smsConsent: false })),
-      apiCall("getAvatar", {}).catch(() => ({ avatarJson: null }))
+      apiCall("getAvatar", {}).catch(() => ({ avatarJson: null })),
+      apiCall("getClientTimeZone", {}).catch(() => ({ timeZone: "America/Los_Angeles" }))
     ]);
     const avatarJson = avatarRes.avatarJson || null;
     renderSettingsSection(root, {
       phone:      phoneRes.phone      || "",
       smsConsent: phoneRes.smsConsent || false,
-      avatarJson
+      avatarJson,
+      timeZone: timeZoneRes.timeZone || "America/Los_Angeles"
     });
     if (avatarJson) restoreAvatarCreator(avatarJson);
   } catch (e) {
@@ -22,7 +24,17 @@ async function initSettingsSection(root) {
   }
 }
 
-function renderSettingsSection(root, { phone, smsConsent, avatarJson }) {
+function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone }) {
+  const timeZones = [
+    ["America/Los_Angeles", "Pacific Time"], ["America/Denver", "Mountain Time"],
+    ["America/Phoenix", "Arizona Time"], ["America/Chicago", "Central Time"],
+    ["America/New_York", "Eastern Time"], ["America/Anchorage", "Alaska Time"],
+    ["Pacific/Honolulu", "Hawaii Time"], ["America/Puerto_Rico", "Atlantic Time"],
+    ["UTC", "UTC"]
+  ];
+  const timeZoneOptions = timeZones.map(([value, label]) =>
+    `<option value="${value}" ${value === timeZone ? "selected" : ""}>${label} — ${value}</option>`
+  ).join("");
   root.innerHTML = `
     <div class="card">
       <h1><i class="bi bi-gear-fill"></i> Settings</h1>
@@ -42,6 +54,19 @@ function renderSettingsSection(root, { phone, smsConsent, avatarJson }) {
         <button onclick="saveAvatarSettings()"><i class="bi bi-check-circle-fill"></i> Save Avatar</button>
         <div id="st-avatar-status"></div>
       </div>
+    </div>
+
+    <!-- Time Zone -->
+    <div class="card">
+      <h2><i class="bi bi-globe-americas"></i> Appointment Time Zone</h2>
+      <p style="color:var(--muted);font-size:14px;margin:0 0 14px;">
+        Appointment dates and times will be displayed in this time zone throughout your portal.
+      </p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;max-width:620px;">
+        <select id="st-time-zone" style="flex:1;min-width:240px;">${timeZoneOptions}</select>
+        <button onclick="saveSettingsTimeZone()"><i class="bi bi-floppy-fill"></i> Save Time Zone</button>
+      </div>
+      <div id="st-time-zone-status" style="margin-top:10px;"></div>
     </div>
 
     <!-- SMS Consent -->
@@ -136,6 +161,20 @@ function renderSettingsSection(root, { phone, smsConsent, avatarJson }) {
         <i class="bi bi-x-circle-fill"></i> Revoke Consent
       </button>` : ""}
     </div>`;
+}
+
+async function saveSettingsTimeZone() {
+  const timeZone = document.getElementById("st-time-zone")?.value;
+  if (!timeZone) return;
+  setStatus("st-time-zone-status", "Saving…", "loading");
+  try {
+    await apiCall("saveClientTimeZone", { timeZone });
+    setStatus("st-time-zone-status", "Time zone saved. Appointment times will update automatically.", "success");
+    if (typeof appointmentTimeZone !== "undefined") appointmentTimeZone = timeZone;
+    if (typeof showToast === "function") showToast("Time zone saved.", "success");
+  } catch (e) {
+    setStatus("st-time-zone-status", "Error: " + e.message, "error");
+  }
 }
 
 async function saveSettingsSmsConsent() {

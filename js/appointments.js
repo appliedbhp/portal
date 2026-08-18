@@ -6,9 +6,40 @@ const GCAL_BOOKING_IFRAME = `https://calendar.google.com/calendar/appointments/s
 let calViewDate  = new Date();
 let calAppts     = [];
 let calProgSteps = [];
+let appointmentTimeZone = "America/Los_Angeles";
+
+const APPOINTMENT_TIME_ZONES = [
+  ["America/Los_Angeles", "Pacific Time"], ["America/Denver", "Mountain Time"],
+  ["America/Phoenix", "Arizona Time"], ["America/Chicago", "Central Time"],
+  ["America/New_York", "Eastern Time"], ["America/Anchorage", "Alaska Time"],
+  ["Pacific/Honolulu", "Hawaii Time"], ["America/Puerto_Rico", "Atlantic Time"],
+  ["UTC", "UTC"]
+];
+
+function appointmentTimeZoneControls() {
+  const options = APPOINTMENT_TIME_ZONES.map(([value, label]) =>
+    `<option value="${value}" ${value === appointmentTimeZone ? "selected" : ""}>${label}</option>`
+  ).join("");
+  return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:var(--muted);">Shown in ${escapeHtml(appointmentTimeZone)}</span>
+    <button class="secondary" style="font-size:12px;padding:6px 10px;" onclick="toggleAppointmentTimeZone()">
+      <i class="bi bi-globe-americas"></i> Change time zone
+    </button>
+    <div id="appt-timezone-editor" style="display:none;align-items:center;gap:6px;">
+      <select id="appt-timezone-select" style="font-size:12px;padding:6px 8px;">${options}</select>
+      <button style="font-size:12px;padding:6px 10px;" onclick="saveAppointmentTimeZone()">Save</button>
+    </div>
+  </div>`;
+}
 
 async function initAppointmentsSection(root) {
   const isProvider = getRole() === "provider";
+  try {
+    const tzRes = await apiCall("getClientTimeZone", {});
+    appointmentTimeZone = tzRes.timeZone || "America/Los_Angeles";
+  } catch (_) {
+    appointmentTimeZone = "America/Los_Angeles";
+  }
 
   if (isProvider) {
     // Provider view: scheduling form + appointment list
@@ -30,11 +61,11 @@ async function initAppointmentsSection(root) {
                    value="Session — ${escapeHtml(getClientId())}" style="width:100%;" />
           </div>
           <div>
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; Start Time</label>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; Start Time (Pacific)</label>
             <input type="datetime-local" id="appt-start" style="width:100%;" onchange="apptSyncEndTime()" />
           </div>
           <div>
-            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; End Time</label>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; End Time (Pacific)</label>
             <input type="datetime-local" id="appt-end" style="width:100%;" />
           </div>
           <div style="grid-column:1/-1;">
@@ -73,7 +104,10 @@ async function initAppointmentsSection(root) {
         <div id="cal-widget"><p style="color:var(--muted);font-size:14px;">Loading calendar…</p></div>
       </div>
       <div class="card">
-        <h2><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <h2 style="margin:0;"><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
+          ${appointmentTimeZoneControls()}
+        </div>
         <div id="appt-list"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
       </div>`;
   } else {
@@ -99,7 +133,10 @@ async function initAppointmentsSection(root) {
         <div id="cal-widget"><p style="color:var(--muted);font-size:14px;">Loading calendar…</p></div>
       </div>
       <div class="card">
-        <h2><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <h2 style="margin:0;"><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
+          ${appointmentTimeZoneControls()}
+        </div>
         <div id="appt-list"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
       </div>`;
   }
@@ -108,15 +145,45 @@ async function initAppointmentsSection(root) {
   loadAppointmentsData();
 }
 
+function toggleAppointmentTimeZone() {
+  const editor = document.getElementById("appt-timezone-editor");
+  if (editor) editor.style.display = editor.style.display === "flex" ? "none" : "flex";
+}
+
+async function saveAppointmentTimeZone() {
+  const select = document.getElementById("appt-timezone-select");
+  if (!select?.value) return;
+  try {
+    const res = await apiCall("saveClientTimeZone", { timeZone: select.value });
+    appointmentTimeZone = res.timeZone || select.value;
+    if (typeof showToast === "function") showToast("Appointment time zone saved.", "success");
+    const root = document.getElementById("section-appointments");
+    if (root) initAppointmentsSection(root);
+  } catch (e) {
+    if (typeof showToast === "function") showToast("Could not save time zone: " + e.message, "error");
+  }
+}
+
 function apptToLocalInput(d) {
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function apptPacificNowAsWallDate() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(new Date()).reduce((out, part) => {
+    if (part.type !== "literal") out[part.type] = part.value;
+    return out;
+  }, {});
+  return new Date(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), 0, 0);
 }
 
 function apptSetDefaultTimes() {
   const startEl = document.getElementById("appt-start");
   const endEl = document.getElementById("appt-end");
   if (!startEl || !endEl) return;
-  const start = new Date();
+  const start = apptPacificNowAsWallDate();
   start.setDate(start.getDate() + 7);
   start.setSeconds(0, 0);
   startEl.value = apptToLocalInput(start);
@@ -150,13 +217,17 @@ async function apptCreate() {
   try {
     const res = await apiCall("createAppointment", {
       title,
+      startLocal: start,
+      endLocal: end,
+      timeZone: "America/Los_Angeles",
       startTime: new Date(start).toISOString(),
       endTime:   new Date(end).toISOString(),
       notes, sendSms
     });
 
-    let msg = "Appointment added to your calendar.";
+    let msg = "Appointment added to Google Calendar in Pacific Time.";
     if (res.clientEmail) msg += ` Invite sent to ${res.clientEmail}.`;
+    if (res.meetUrl) msg += ` Meet: ${res.meetUrl}`;
     if (res.smsSent)     msg += " SMS reminder sent.";
     if (res.smsSkipped)  msg += " (SMS skipped — client not opted in.)";
     if (res.smsError)    msg += ` SMS failed: ${res.smsError}`;
@@ -218,7 +289,9 @@ function renderCalendar() {
 
   // Build date → events map (key = "YYYY-MM-DD")
   const dayMap = {};
-  const toKey  = d => d.toLocaleDateString("en-CA"); // locale-independent YYYY-MM-DD
+  const toKey  = d => new Intl.DateTimeFormat("en-CA", {
+    timeZone: appointmentTimeZone, year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(d);
 
   calAppts.forEach(ev => {
     const k = toKey(new Date(ev.start_time));
@@ -300,9 +373,14 @@ function renderAppointments(events) {
   el.innerHTML = events.map(ev => {
     const start = new Date(ev.start_time);
     const end   = new Date(ev.end_time);
-    const date  = start.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-    const time  = start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-                + " – " + end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    const date  = start.toLocaleDateString(undefined, {
+      timeZone: appointmentTimeZone, weekday: "long", year: "numeric", month: "long", day: "numeric"
+    });
+    const time  = start.toLocaleTimeString(undefined, {
+      timeZone: appointmentTimeZone, hour: "numeric", minute: "2-digit"
+    }) + " – " + end.toLocaleTimeString(undefined, {
+      timeZone: appointmentTimeZone, hour: "numeric", minute: "2-digit", timeZoneName: "short"
+    });
     return `
       <div class="appt-card">
         <div class="appt-info">
@@ -311,6 +389,9 @@ function renderAppointments(events) {
           <div class="appt-meta"><i class="bi bi-clock"></i>${escapeHtml(time)}</div>
         </div>
         <div class="appt-actions">
+          ${ev.meetUrl ? `<a href="${escapeHtml(ev.meetUrl)}" target="_blank" rel="noopener noreferrer"
+            style="font-size:12px;padding:6px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;border-radius:8px;background:#0f9d58;color:white;font-weight:700;">
+            <i class="bi bi-camera-video-fill"></i> Join Google Meet</a>` : ""}
           ${ev.reschedule_url ? `<a href="${escapeHtml(ev.reschedule_url)}" target="_blank"
             class="secondary" style="font-size:12px;padding:6px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:8px;color:var(--text);">
             <i class="bi bi-arrow-clockwise"></i> Reschedule</a>` : ""}
