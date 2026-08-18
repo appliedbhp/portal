@@ -75,13 +75,14 @@ function renderDashboard(root, data) {
 
   const apptHtml = todayAppointments.length
     ? todayAppointments.map(a => `
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;
-                    border-bottom:1px solid var(--border);">
-          <i class="bi bi-calendar-check-fill" style="color:var(--primary);font-size:16px;flex-shrink:0;"></i>
-          <div>
+        <div class="dash-appt-card${a.joinUrl ? " has-video" : ""}">
+          <div class="dash-appt-icon"><i class="bi ${a.joinUrl ? "bi-camera-video-fill" : "bi-calendar-check-fill"}"></i></div>
+          <div style="min-width:0;flex:1;">
             <div style="font-size:13px;font-weight:600;">${escapeHtml(a.title)}</div>
-            <div style="font-size:12px;color:var(--muted);">${escapeHtml(a.start)} – ${escapeHtml(a.end)}</div>
+            <div style="font-size:12px;color:var(--muted);">${escapeHtml(a.start)} – ${escapeHtml(a.end)}${a.clientId ? " · " + escapeHtml(a.clientId) : ""}</div>
+            ${a.location ? `<div style="font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><i class="bi bi-geo-alt"></i> ${escapeHtml(a.location)}</div>` : ""}
           </div>
+          ${a.joinUrl ? `<a class="dash-join-btn" href="${escapeAttr(a.joinUrl)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-camera-video-fill"></i> Join</a>` : ""}
         </div>`).join("")
     : `<p style="color:var(--muted);font-size:13px;margin:0;">No appointments scheduled for today.</p>`;
 
@@ -132,19 +133,20 @@ function renderDashboard(root, data) {
         <td style="font-size:12px;color:var(--muted);">
           ${c.lastActivity ? escapeHtml(c.lastActivity) : `<span style="color:#dc2626;">Never</span>`}
         </td>
-        <td>
+        <td><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;">
+          ${c.nextAppointment?.joinUrl ? `<a class="dash-row-video" href="${escapeAttr(c.nextAppointment.joinUrl)}" target="_blank" rel="noopener noreferrer" title="Join ${escapeAttr(c.nextAppointment.title || "video visit")} · ${escapeAttr(c.nextAppointment.start || "")}"><i class="bi bi-camera-video-fill"></i><span>Join</span></a>` : ""}
           <button class="secondary" style="font-size:11px;padding:4px 10px;"
             onclick="dashJumpToClient('${escapeAttr(c.clientId)}')">
             <i class="bi bi-person-fill"></i> Open
           </button>
-        </td>
+        </div></td>
       </tr>`;
   }).join("");
 
   root.innerHTML = `
     <div class="card dash-hero">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
-        <h1 style="margin:0;"><i class="bi bi-speedometer2"></i> Provider Dashboard</h1>
+        <div><div class="dash-eyebrow"><span></span> LIVE PRACTICE OVERVIEW</div><h1 style="margin:4px 0 0;"><i class="bi bi-speedometer2"></i> Provider Dashboard</h1><p style="margin:6px 0 0;color:var(--muted);font-size:13px;">Your caseload, clinical momentum, and visits at a glance.</p></div>
         <button class="secondary" onclick="initDashboardSection(document.getElementById('section-dashboard'))"
           style="font-size:12px;">
           <i class="bi bi-arrow-clockwise"></i> Refresh
@@ -189,7 +191,7 @@ function renderDashboard(root, data) {
               <th style="text-align:center;">Sessions</th>
               <th>End Date</th>
               <th>Last Active</th>
-              <th></th>
+              <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody>${caseloadRows || `<tr><td colspan="8" style="text-align:center;color:var(--muted);">No clients found.</td></tr>`}</tbody>
@@ -198,12 +200,25 @@ function renderDashboard(root, data) {
     </div>
 
     <style>
-      .dash-hero { position:relative;overflow:hidden;background:linear-gradient(145deg,var(--card,#fff) 55%,color-mix(in srgb,var(--primary) 10%,var(--card,#fff))); }
-      .dash-hero::after { content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-90px;top:-130px;background:radial-gradient(circle,rgba(6,182,212,.18),transparent 68%);pointer-events:none; }
+      .dash-hero { position:relative;overflow:hidden;background:linear-gradient(135deg,var(--card,#fff) 34%,color-mix(in srgb,var(--primary) 12%,var(--card,#fff)) 72%,color-mix(in srgb,#06b6d4 12%,var(--card,#fff)));box-shadow:0 18px 45px rgba(49,133,252,.09); }
+      .dash-hero::before,.dash-hero::after { content:"";position:absolute;border-radius:50%;pointer-events:none;filter:blur(1px);animation:dash-float 7s ease-in-out infinite; }
+      .dash-hero::before { width:190px;height:190px;left:42%;bottom:-150px;background:radial-gradient(circle,rgba(139,92,246,.2),transparent 68%); }
+      .dash-hero::after { width:280px;height:280px;right:-90px;top:-140px;background:radial-gradient(circle,rgba(6,182,212,.22),transparent 68%);animation-delay:-3s; }
+      .dash-eyebrow { display:flex;align-items:center;gap:7px;font-size:10px;font-weight:800;letter-spacing:.14em;color:var(--primary); }
+      .dash-eyebrow span { width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.12);animation:ac-badge-pulse 1.8s ease-in-out infinite; }
       .dash-stat-strip .stat-card { transition:transform .2s ease,box-shadow .2s ease;cursor:default; }
       .dash-stat-strip .stat-card:hover { transform:translateY(-3px);box-shadow:0 12px 28px rgba(49,133,252,.14); }
       .dash-client-row { transition:background .18s ease,transform .18s ease; }
       .dash-client-row:hover { background:color-mix(in srgb,var(--primary) 5%,transparent); }
+      .dash-appt-card { display:flex;align-items:center;gap:11px;padding:11px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;background:color-mix(in srgb,var(--card,#fff) 94%,var(--primary));transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease; }
+      .dash-appt-card:hover { transform:translateY(-2px);box-shadow:0 10px 24px rgba(15,23,42,.08); }
+      .dash-appt-card.has-video { border-color:rgba(16,185,129,.3);background:linear-gradient(100deg,rgba(16,185,129,.07),color-mix(in srgb,var(--card,#fff) 96%,#fff)); }
+      .dash-appt-icon { width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:0 0 34px;color:var(--primary);background:color-mix(in srgb,var(--primary) 12%,transparent); }
+      .has-video .dash-appt-icon { color:#047857;background:rgba(16,185,129,.14); }
+      .dash-join-btn,.dash-row-video { display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:#fff;background:linear-gradient(135deg,#059669,#10b981);font-size:11px;font-weight:800;border-radius:9px;padding:7px 11px;box-shadow:0 7px 16px rgba(5,150,105,.2);transition:transform .16s ease,box-shadow .16s ease;white-space:nowrap; }
+      .dash-join-btn:hover,.dash-row-video:hover { transform:translateY(-1px) scale(1.02);box-shadow:0 10px 22px rgba(5,150,105,.3); }
+      .dash-row-video { padding:5px 9px; }
+      @keyframes dash-float { 0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(10px) scale(1.04)} }
       @media (max-width: 700px) { .dash-grid { grid-template-columns: 1fr !important; } }
     </style>`;
 
