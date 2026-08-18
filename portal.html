@@ -63,8 +63,8 @@
     <div class="sidebar-group">
       <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Records<i class="bi bi-chevron-down sg-chevron"></i></div>
       <div class="sidebar-group-links">
-        <button class="sidebar-link" data-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
-        <button class="sidebar-link" data-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i> Progress</button>
+        <button class="sidebar-link" data-section="plan" onclick="showSection('plan')" id="planNavBtn"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
+        <button class="sidebar-link" data-section="progress" onclick="showSection('progress')" id="progressNavBtn"><i class="bi bi-graph-up"></i> Progress</button>
         <button class="sidebar-link" data-section="client-viz" onclick="showSection('client-viz')" id="clientVizNavBtn" style="display:none;"><i class="bi bi-bar-chart-fill"></i> My Progress</button>
         <button class="sidebar-link" data-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i> Standardized Scores</button>
         <button class="sidebar-link" data-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i> Session Notes</button>
@@ -202,6 +202,7 @@
 <script src="js/roadmap.js"></script>
 <script src="js/win.js"></script>
 <script src="js/plan.js"></script>
+<script src="js/goals-unified.js"></script>
 <script src="js/progress.js"></script>
 <script src="js/scores.js"></script>
 <script src="js/sessions.js"></script>
@@ -209,6 +210,7 @@
 <script src="js/appointments.js"></script>
 <script src="js/programs.js"></script>
 <script src="js/program-admin.js"></script>
+<script src="js/program-studio.js"></script>
 <script src="js/bfa.js"></script>
 <script src="js/reports.js"></script>
 <script src="js/progress-report.js"></script>
@@ -259,7 +261,11 @@ if (_role !== "provider") document.getElementById("progressReportNavBtn").style.
 if (_role !== "provider") document.getElementById("clientProgramNavBtn").style.display = "none";
 if (_role !== "provider") document.getElementById("programAdminNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("programsNavBtn").style.display = "none";
-if (_role !== "provider") document.getElementById("clientVizNavBtn").style.display = "block";
+if (_role !== "provider") {
+  document.getElementById("planNavBtn").innerHTML = '<i class="bi bi-bullseye"></i> Goals &amp; Progress';
+  document.getElementById("progressNavBtn").style.display = "none";
+  document.getElementById("clientVizNavBtn").style.display = "none";
+}
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("providerBillingNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
