@@ -48,12 +48,11 @@ function initHomeSection(root) {
         <button class="home-tile" data-access-section="roadmap" onclick="showSection('roadmap')"><i class="bi bi-signpost-split-fill"></i><div><div class="home-tile-label">Roadmap Assessment</div><div class="home-tile-sub">Score &amp; review history</div></div></button>
         <button class="home-tile" data-access-section="win" onclick="showSection('win')"><i class="bi bi-heart-pulse-fill"></i><div><div class="home-tile-label">What I Need</div><div class="home-tile-sub">Score &amp; review history</div></div></button>
         ` : ""}
-        <button class="home-tile" data-access-section="plan" onclick="showSection('plan')"><i class="bi bi-flag-fill"></i><div><div class="home-tile-label">Goals &amp; Plan</div><div class="home-tile-sub">View objectives</div></div></button>
-        <button class="home-tile" data-access-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i><div><div class="home-tile-label">Progress</div><div class="home-tile-sub">Track scores over time</div></div></button>
+        <button class="home-tile" data-access-section="plan" onclick="showSection('plan')"><i class="bi bi-bullseye"></i><div><div class="home-tile-label">${isClient ? "Goals &amp; Progress" : "Goals &amp; Plan"}</div><div class="home-tile-sub">${isClient ? "Goals, timelines, and recorded progress" : "View objectives"}</div></div></button>
+        ${!isClient ? `<button class="home-tile" data-access-section="progress" onclick="showSection('progress')"><i class="bi bi-graph-up"></i><div><div class="home-tile-label">Progress</div><div class="home-tile-sub">Track scores over time</div></div></button>` : ""}
         <button class="home-tile" data-access-section="scores" onclick="showSection('scores')"><i class="bi bi-clipboard2-data-fill"></i><div><div class="home-tile-label">Standardized Scores</div><div class="home-tile-sub">BRIEF-2 &amp; ESQR</div></div></button>
         <button class="home-tile" data-access-section="sessions" onclick="showSection('sessions')"><i class="bi bi-journal-text"></i><div><div class="home-tile-label">Session Notes</div><div class="home-tile-sub">List &amp; calendar view</div></div></button>
         ${isClient ? `<button class="home-tile" data-access-section="programs" onclick="showSection('programs')"><i class="bi bi-play-circle-fill"></i><div><div class="home-tile-label">My Program</div><div class="home-tile-sub">Sessions &amp; activities</div></div></button>` : ""}
-        ${isClient ? `<button class="home-tile" data-access-section="client-viz" onclick="showSection('client-viz')"><i class="bi bi-bar-chart-fill"></i><div><div class="home-tile-label">My Progress</div><div class="home-tile-sub">Charts &amp; goal activity</div></div></button>` : ""}
       </div>
     </div>
   `;
