@@ -305,16 +305,41 @@ function openSessionNotesPip() {
 
 let _todayMeetUrl = "";
 async function initTodayVideoSessionButton() {
-  if (getRole() === "provider") return;
   try {
-    const res = await apiCall("getAppointments", {});
-    const today = new Date().toDateString();
-    const meeting = (res.events || []).find(event => event.meetUrl && new Date(event.start_time).toDateString() === today);
-    if (!meeting || !/^https:\/\/meet\.google\.com\/[a-z0-9-]+(?:[/?#].*)?$/i.test(meeting.meetUrl)) return;
-    _todayMeetUrl = meeting.meetUrl;
+    let meetings = [];
+    if (getRole() === "provider") {
+      const sess = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "getProviderDashboard",
+          providerId: sess.providerId,
+          providerPassword: sess.providerPassword
+        })
+      }).then(response => response.json());
+      if (!res.ok) return;
+      meetings = (res.todayAppointments || []).filter(event => event.joinUrl);
+    } else {
+      const res = await apiCall("getAppointments", {});
+      const today = new Date().toDateString();
+      meetings = (res.events || []).filter(event => {
+        return (event.joinUrl || event.meetUrl) && new Date(event.start_time).toDateString() === today;
+      }).map(event => ({
+        title: event.name || "Video session",
+        startTime: event.start_time,
+        joinUrl: event.joinUrl || event.meetUrl
+      }));
+    }
+    const now = Date.now();
+    const meeting = meetings.find(event => new Date(event.startTime).getTime() >= now - 30 * 60000) || meetings[0];
+    if (!meeting || !/^https:\/\//i.test(meeting.joinUrl || "")) return;
+    _todayMeetUrl = meeting.joinUrl;
     const button = document.getElementById("videoSessionBtn");
     button.style.display = "inline-flex";
-    button.dataset.label = `Join ${new Date(meeting.start_time).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" })} Session`;
+    const time = new Date(meeting.startTime).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" });
+    button.dataset.label = `Join Video Visit · ${time}${meeting.clientId ? " · " + meeting.clientId : ""}`;
+    button.setAttribute("aria-label", button.dataset.label);
   } catch (_) {}
 }
 
@@ -456,7 +481,7 @@ if (_role !== "provider" && typeof loadHeaderAvatar === "function") loadHeaderAv
 if (_role === "provider") checkProgressReportDue();
 checkGradesAlert();
 startTimeoutWatcher();
-if (_role !== "provider") initTodayVideoSessionButton();
+initTodayVideoSessionButton();
 </script>
 </body>
 </html>
