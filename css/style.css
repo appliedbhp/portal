@@ -234,10 +234,18 @@ body.portal-page { padding-top:65px; }
 .portal-header > .btn-row { flex-wrap:nowrap;justify-content:flex-end;min-width:max-content; }
 .portal-header button.secondary { background: rgba(255,255,255,0.12); color: #fff; border-color: rgba(255,255,255,0.4); }
 .portal-header button.secondary:hover { background: rgba(255,255,255,0.22); }
-.portal-header .header-bell-btn { position:relative; display:inline-flex; align-items:center; justify-content:center; flex:0 0 38px; width:38px; height:42px; min-height:42px; padding:0; margin-left:3px; overflow:visible; border:0; border-radius:0; background:transparent; color:#fff; box-shadow:none; }
+.portal-header .header-action-btn { position:relative;display:inline-flex;align-items:center;justify-content:center;flex:0 0 40px;width:40px;height:40px;min-height:40px;padding:0!important;font-size:0!important;overflow:visible; }
+.portal-header .header-action-btn > .bi { margin:0!important;font-size:18px!important; }
+.portal-header .header-action-btn::after { content:attr(data-label);position:absolute;top:calc(100% + 9px);left:50%;z-index:150;transform:translate(-50%,-4px);padding:6px 9px;border-radius:7px;background:#172033;color:#fff;box-shadow:0 7px 20px rgba(15,23,42,.25);font-size:11px;line-height:1;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease,transform .15s ease; }
+.portal-header .header-action-btn:hover::after,.portal-header .header-action-btn:focus-visible::after { opacity:1;visibility:visible;transform:translate(-50%,0); }
+.portal-header .header-action-btn:last-child::after { left:auto;right:0;transform:translateY(-4px); }
+.portal-header .header-action-btn:last-child:hover::after,.portal-header .header-action-btn:last-child:focus-visible::after { transform:none; }
+.portal-header .header-bell-btn { position:relative; display:inline-flex; align-items:center; justify-content:center; flex:0 0 38px; width:38px; height:40px; min-height:40px; padding:0; margin-left:3px; overflow:visible; border:0; border-radius:0; background:transparent; color:#fff; box-shadow:none; }
 .portal-header .header-bell-btn:hover { background:transparent; transform:scale(1.08); }
 .portal-header .header-bell-btn .bi { margin:0; font-size:21px; filter:drop-shadow(0 2px 5px rgba(0,0,0,.18)); }
 .portal-header #bell-badge { display:none; position:absolute; z-index:2; top:-5px; right:-7px; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 5px; border:2px solid color-mix(in srgb,var(--primary) 78%,#fff); border-radius:999px; background:#ef4444; color:#fff; font-size:10px; line-height:1; font-weight:800; box-sizing:border-box; box-shadow:0 2px 8px rgba(127,29,29,.35); }
+.portal-header .video-session-btn { background:rgba(16,185,129,.28)!important;border-color:rgba(167,243,208,.7)!important; }
+.portal-header .video-live-dot { position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.2);animation:ac-badge-pulse 1.5s ease-in-out infinite; }
 .app-shell { display: flex; align-items: flex-start; }
 .sidebar {
   width: 230px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border);
