@@ -107,7 +107,7 @@ function renderDashboard(root, data) {
       : "";
 
     return `
-      <tr>
+      <tr class="dash-client-row" data-search="${escapeAttr((c.clientId + " " + c.email + " " + (c.programModel || "")).toLowerCase())}" data-state="${!c.active ? "inactive" : c.onTrack === false ? "attention" : "active"}">
         <td style="font-weight:700;">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="client-avatar-cell" data-avatar='${escapeAttr(c.avatarJson || "")}' data-label="${escapeAttr(c.clientId)}"
@@ -142,7 +142,7 @@ function renderDashboard(root, data) {
   }).join("");
 
   root.innerHTML = `
-    <div class="card">
+    <div class="card dash-hero">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
         <h1 style="margin:0;"><i class="bi bi-speedometer2"></i> Provider Dashboard</h1>
         <button class="secondary" onclick="initDashboardSection(document.getElementById('section-dashboard'))"
@@ -150,7 +150,7 @@ function renderDashboard(root, data) {
           <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>
       </div>
-      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div class="dash-stat-strip" style="display:flex;gap:12px;flex-wrap:wrap;">
         ${statCard("people-fill",        "Total Clients",     total)}
         ${statCard("person-check-fill",  "Active",            active)}
         ${statCard("calendar2-week-fill","On a Program",      withProgram)}
@@ -171,7 +171,13 @@ function renderDashboard(root, data) {
     </div>
 
     <div class="card">
-      <h2 style="margin:0 0 16px;"><i class="bi bi-table"></i> Caseload Overview</h2>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+        <h2 style="margin:0;"><i class="bi bi-grid-3x3-gap-fill"></i> Caseload Explorer</h2>
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          <div style="position:relative;"><i class="bi bi-search" style="position:absolute;left:10px;top:9px;color:var(--muted);"></i><input id="dash-search" placeholder="Search clients…" oninput="dashFilterClients()" style="width:210px;padding-left:31px;"></div>
+          <select id="dash-filter" onchange="dashFilterClients()" style="width:145px;"><option value="all">All clients</option><option value="active">Active</option><option value="attention">Needs attention</option><option value="inactive">Inactive</option></select>
+        </div>
+      </div>
       <div style="overflow-x:auto;">
         <table class="summary-table">
           <thead>
@@ -192,6 +198,12 @@ function renderDashboard(root, data) {
     </div>
 
     <style>
+      .dash-hero { position:relative;overflow:hidden;background:linear-gradient(145deg,var(--card,#fff) 55%,color-mix(in srgb,var(--primary) 10%,var(--card,#fff))); }
+      .dash-hero::after { content:"";position:absolute;width:260px;height:260px;border-radius:50%;right:-90px;top:-130px;background:radial-gradient(circle,rgba(6,182,212,.18),transparent 68%);pointer-events:none; }
+      .dash-stat-strip .stat-card { transition:transform .2s ease,box-shadow .2s ease;cursor:default; }
+      .dash-stat-strip .stat-card:hover { transform:translateY(-3px);box-shadow:0 12px 28px rgba(49,133,252,.14); }
+      .dash-client-row { transition:background .18s ease,transform .18s ease; }
+      .dash-client-row:hover { background:color-mix(in srgb,var(--primary) 5%,transparent); }
       @media (max-width: 700px) { .dash-grid { grid-template-columns: 1fr !important; } }
     </style>`;
 
@@ -205,6 +217,16 @@ function renderDashboard(root, data) {
       cell.replaceWith(el);
     });
   }
+}
+
+function dashFilterClients() {
+  const query = (document.getElementById("dash-search")?.value || "").trim().toLowerCase();
+  const state = document.getElementById("dash-filter")?.value || "all";
+  document.querySelectorAll(".dash-client-row").forEach(row => {
+    const matchesText = !query || (row.dataset.search || "").includes(query);
+    const matchesState = state === "all" || row.dataset.state === state;
+    row.style.display = matchesText && matchesState ? "" : "none";
+  });
 }
 
 async function dashJumpToClient(clientId) {

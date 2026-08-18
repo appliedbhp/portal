@@ -69,7 +69,7 @@ function initSessionsSection(root) {
 
     ${isProvider ? `
     <div class="card session-entry-card">
-      <h2><i class="bi bi-plus-circle-fill"></i>Add a Session Note</h2>
+      <h2><span><i class="bi bi-plus-circle-fill"></i>Add a Session Note</span><span class="session-writer-actions no-print"><button class="secondary" title="Open as PIP" onclick="sessToggleWriterPip()"><i class="bi bi-window-stack"></i></button></span></h2>
       <style>
         .sess-editor-wrap .ql-container { font-size:13px; font-family:inherit; border-radius:0 0 8px 8px; border:1.5px solid var(--border); border-top:none; min-height:180px; }
         .sess-editor-wrap .ql-toolbar { border-radius:8px 8px 0 0; border:1.5px solid var(--border); background:var(--surface); flex-wrap:wrap; }
@@ -159,7 +159,41 @@ function initSessionsSection(root) {
         ["blockquote", "clean"]
       ]}
     });
+    _sessQuill.root.setAttribute("spellcheck", "true");
+    _sessQuill.root.setAttribute("autocorrect", "on");
   }
+}
+
+let _sessWriterPlaceholder = null;
+function sessToggleWriterPip() {
+  const card = document.querySelector(".session-entry-card");
+  if (!card) return;
+  if (!card.classList.contains("session-writer-pip")) {
+    _sessWriterPlaceholder = document.createComment("session-writer-placeholder");
+    card.parentNode.insertBefore(_sessWriterPlaceholder, card);
+    document.body.appendChild(card);
+    card.classList.add("session-writer-pip");
+    const actions = card.querySelector(".session-writer-actions");
+    actions.innerHTML = `<button class="secondary" title="Minimize" onclick="sessMinimizeWriterPip()"><i class="bi bi-dash-lg"></i></button><button class="secondary" title="Return to Session Notes" onclick="sessCloseWriterPip()"><i class="bi bi-x-lg"></i></button>`;
+  } else card.classList.remove("minimized");
+}
+
+function sessMinimizeWriterPip() {
+  const card = document.querySelector(".session-entry-card.session-writer-pip");
+  if (!card) return;
+  card.classList.toggle("minimized");
+  card.style.bottom = "8px";
+  card.style.top = "auto";
+}
+
+function sessCloseWriterPip() {
+  const card = document.querySelector(".session-entry-card.session-writer-pip");
+  if (!card) return;
+  card.classList.remove("session-writer-pip", "minimized");
+  const actions = card.querySelector(".session-writer-actions");
+  actions.innerHTML = `<button class="secondary" title="Open as PIP" onclick="sessToggleWriterPip()"><i class="bi bi-window-stack"></i></button>`;
+  if (_sessWriterPlaceholder?.parentNode) _sessWriterPlaceholder.parentNode.replaceChild(card, _sessWriterPlaceholder);
+  _sessWriterPlaceholder = null;
 }
 
 // ── Floating progress panel ──────────────────────────────────────────────────
@@ -205,7 +239,13 @@ async function sessOpenProgressPip() {
 }
 
 function sessToggleProgressPip() {
-  document.getElementById("sess-progress-pip")?.classList.toggle("minimized");
+  const pip = document.getElementById("sess-progress-pip");
+  if (!pip) return;
+  pip.classList.toggle("minimized");
+  pip.style.bottom = "8px";
+  pip.style.top = "auto";
+  pip.style.left = "auto";
+  pip.style.right = "18px";
 }
 
 function sessCloseProgressPip() {
@@ -503,13 +543,13 @@ async function addSession() {
     document.getElementById("sess-dateTime").value = sessNowForInput_();
     document.getElementById("sess-endTime").value = sessNowPlusMinutes_(30);
     loadSessions();
-    sessShowPostSaveModal();
+    sessShowPostSaveModal(result.safeNote || noteText);
   } catch (e) {
     setStatus("sess-status", "Error: " + e.message, "error");
   }
 }
 
-async function sessShowPostSaveModal() {
+async function sessShowPostSaveModal(savedNoteText) {
   // Build modal skeleton immediately
   const modal = document.createElement("div");
   modal.id = "sess-post-save-modal";
@@ -529,6 +569,12 @@ async function sessShowPostSaveModal() {
       <h2 style="margin:0 0 18px;font-size:17px;">
         <i class="bi bi-check-circle-fill" style="color:#059669;margin-right:8px;"></i>Note Saved
       </h2>
+
+      <div style="border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
+        <div style="font-weight:600;font-size:13px;margin-bottom:6px;"><i class="bi bi-stars" style="color:#7c3aed;margin-right:6px;"></i>Insurance Documentation Review</div>
+        <p style="font-size:12px;color:var(--muted);margin:0 0 10px;">Claude can suggest documentation details that may improve clarity and support medical necessity. Suggestions are educational and should be reviewed by the provider.</p>
+        <div id="sess-compliance-suggestions" style="font-size:12px;"><div class="portal-preloader"><span></span><span></span><span></span></div></div>
+      </div>
 
       <!-- Notify section -->
       <div style="border:1.5px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px;">
@@ -556,6 +602,7 @@ async function sessShowPostSaveModal() {
     </div>`;
   document.body.appendChild(modal);
   modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+  sessLoadComplianceSuggestions(savedNoteText);
 
   // Load next appointment
   try {
@@ -578,6 +625,16 @@ async function sessShowPostSaveModal() {
     const el = document.getElementById("sess-next-appt");
     if (el) el.innerHTML = sessQuickScheduleForm();
   }
+}
+
+async function sessLoadComplianceSuggestions(noteText) {
+  const el = document.getElementById("sess-compliance-suggestions");
+  if (!el) return;
+  try {
+    const res = await apiCall("suggestSessionCompliance", { noteText });
+    const suggestions = res.suggestions || [];
+    el.innerHTML = suggestions.length ? `<ul style="margin:6px 0 0;padding-left:18px;line-height:1.55;">${suggestions.map(s => `<li>${escapeHtml(s)}</li>`).join("")}</ul>` : `<span style="color:#059669;"><i class="bi bi-check-circle-fill"></i> No major documentation gaps identified.</span>`;
+  } catch (e) { el.innerHTML = `<span style="color:var(--muted);">Review unavailable: ${escapeHtml(e.message)}</span>`; }
 }
 
 function sessQuickScheduleForm() {
