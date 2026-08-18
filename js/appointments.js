@@ -381,17 +381,26 @@ function renderAppointments(events) {
     }) + " – " + end.toLocaleTimeString(undefined, {
       timeZone: appointmentTimeZone, hour: "numeric", minute: "2-digit", timeZoneName: "short"
     });
+    const joinUrl = ev.joinUrl || ev.meetUrl || "";
+    const joinLabel = /zoom\.us/i.test(joinUrl) ? "Join Zoom"
+      : /teams\.(microsoft|live)\.com/i.test(joinUrl) ? "Join Microsoft Teams"
+      : /webex\.com/i.test(joinUrl) ? "Join Webex"
+      : "Join Google Meet";
     return `
       <div class="appt-card">
         <div class="appt-info">
           <div class="appt-name">${escapeHtml(ev.name || "Appointment")}</div>
           <div class="appt-meta"><i class="bi bi-calendar3"></i>${escapeHtml(date)}</div>
           <div class="appt-meta"><i class="bi bi-clock"></i>${escapeHtml(time)}</div>
+          ${ev.location ? `<div class="appt-meta"><i class="bi bi-geo-alt-fill"></i>${escapeHtml(ev.location)}</div>` : ""}
+          ${ev.description ? `<div class="appt-meta" style="align-items:flex-start;white-space:pre-line;line-height:1.45;">
+            <i class="bi bi-card-text" style="margin-top:2px;"></i><span>${escapeHtml(ev.description)}</span>
+          </div>` : ""}
         </div>
         <div class="appt-actions">
-          ${ev.meetUrl ? `<a href="${escapeHtml(ev.meetUrl)}" target="_blank" rel="noopener noreferrer"
+          ${joinUrl ? `<a href="${escapeHtml(joinUrl)}" target="_blank" rel="noopener noreferrer"
             style="font-size:12px;padding:6px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;border-radius:8px;background:#0f9d58;color:white;font-weight:700;">
-            <i class="bi bi-camera-video-fill"></i> Join Google Meet</a>` : ""}
+            <i class="bi bi-camera-video-fill"></i> ${joinLabel}</a>` : ""}
           ${ev.reschedule_url ? `<a href="${escapeHtml(ev.reschedule_url)}" target="_blank"
             class="secondary" style="font-size:12px;padding:6px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:8px;color:var(--text);">
             <i class="bi bi-arrow-clockwise"></i> Reschedule</a>` : ""}
