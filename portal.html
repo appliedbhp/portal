@@ -298,6 +298,11 @@ function toggleNotificationsPopout(forceOpen) {
   const panel = document.getElementById("notifications-popout");
   const body = document.getElementById("notifications-popout-body");
   const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : !panel.classList.contains("open");
+  if (shouldOpen) undockMinimizedPanel(panel);
+  if (!shouldOpen) {
+    undockMinimizedPanel(panel);
+    panel.classList.remove("minimized");
+  }
   panel.classList.toggle("open", shouldOpen);
   if (shouldOpen) panel.classList.remove("minimized");
   panel.setAttribute("aria-hidden", String(!shouldOpen));
@@ -306,9 +311,28 @@ function toggleNotificationsPopout(forceOpen) {
 
 function minimizeNotificationsPopout() {
   const panel = document.getElementById("notifications-popout");
-  panel.classList.toggle("minimized");
-  panel.style.bottom = "8px";
-  panel.style.top = "auto";
+  const minimizing = !panel.classList.contains("minimized");
+  panel.classList.toggle("minimized", minimizing);
+  if (minimizing) dockMinimizedPanel(panel); else undockMinimizedPanel(panel);
+}
+
+function getMinimizedPanelDock() {
+  let dock = document.getElementById("minimized-panel-dock");
+  if (!dock) {
+    dock = document.createElement("div");
+    dock.id = "minimized-panel-dock";
+    dock.className = "minimized-panel-dock no-print";
+    document.body.appendChild(dock);
+  }
+  return dock;
+}
+
+function dockMinimizedPanel(panel) {
+  if (panel) getMinimizedPanelDock().appendChild(panel);
+}
+
+function undockMinimizedPanel(panel) {
+  if (panel && panel.parentElement?.id === "minimized-panel-dock") document.body.appendChild(panel);
 }
 
 document.addEventListener("keydown", e => {
