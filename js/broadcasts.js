@@ -93,6 +93,10 @@ function renderBroadcastsSection(root, broadcasts) {
         <label>Expires On <span style="color:var(--muted);font-weight:400;">(optional)</span></label>
         <input id="bc-expires" type="date">
       </div>
+      <label style="display:flex;align-items:flex-start;gap:9px;padding:11px;border:1px solid var(--border);border-radius:10px;max-width:520px;cursor:pointer;">
+        <input id="bc-public-login" type="checkbox" style="margin-top:3px;">
+        <span><strong>Show in login strategy ticker</strong><small style="display:block;color:var(--muted);margin-top:2px;">Public before sign-in. Do not include client names, protected health information, appointment details, or private care-team messages.</small></span>
+      </label>
       <div id="bc-create-status" style="margin:8px 0;"></div>
       <button onclick="createBroadcast()">
         <i class="bi bi-megaphone-fill"></i> Publish Broadcast
@@ -135,6 +139,7 @@ function broadcastRowHtml(b, active) {
               padding:1px 8px;border-radius:6px;margin-left:6px;">ACTIVE</span>` :
               `<span style="font-size:10px;font-weight:700;background:#f3f4f6;color:#6b7280;
               padding:1px 8px;border-radius:6px;margin-left:6px;">ARCHIVED</span>`}
+            ${b.publicLogin ? `<span style="font-size:10px;font-weight:700;background:#e0e7ff;color:#3730a3;padding:1px 8px;border-radius:6px;margin-left:6px;"><i class="bi bi-display"></i> LOGIN TICKER</span>` : ""}
           </div>
           <div style="font-size:13px;color:var(--text);white-space:pre-line;margin-bottom:6px;">
             ${escapeHtml(b.message)}
@@ -157,15 +162,17 @@ async function createBroadcast() {
   const title     = ((document.getElementById("bc-title")   || {}).value || "").trim();
   const message   = ((document.getElementById("bc-message") || {}).value || "").trim();
   const expiresAt = ((document.getElementById("bc-expires") || {}).value || "").trim();
+  const publicLogin = !!document.getElementById("bc-public-login")?.checked;
   if (!title)   { setStatus("bc-create-status", "Title is required.", "error"); return; }
   if (!message) { setStatus("bc-create-status", "Message is required.", "error"); return; }
   setStatus("bc-create-status", "Publishing…", "loading");
   try {
-    await apiCall("createBroadcast", { title, message, expiresAt });
+    await apiCall("createBroadcast", { title, message, expiresAt, publicLogin });
     setStatus("bc-create-status", "Broadcast published to all clients.", "success");
     document.getElementById("bc-title").value   = "";
     document.getElementById("bc-message").value = "";
     document.getElementById("bc-expires").value = "";
+    document.getElementById("bc-public-login").checked = false;
     setTimeout(() => initBroadcastsSection(document.getElementById("section-broadcasts")), 1200);
   } catch (e) {
     setStatus("bc-create-status", "Error: " + e.message, "error");
