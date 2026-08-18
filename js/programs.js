@@ -62,7 +62,7 @@ function renderProgramTabs(myProgram, clientProgram, notes, goals) {
     const done  = notes.length;
     const pct   = total ? Math.round(done / total * 100) : 0;
     summaryCards.push(`
-      <div style="flex:1;min-width:200px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);padding:14px 16px;">
+      <div class="program-summary-card" style="flex:1;min-width:200px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);padding:14px 16px;">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;"><i class="bi bi-calendar2-week-fill" style="color:var(--primary);"></i> Session Plan</div>
         <div style="font-size:18px;font-weight:700;margin-bottom:4px;">${done} / ${total} <span style="font-size:13px;font-weight:400;color:var(--muted);">sessions</span></div>
         <div class="prog-progress-bar" style="margin:6px 0 4px;"><div class="prog-progress-fill" style="width:${pct}%;"></div></div>
@@ -74,7 +74,7 @@ function renderProgramTabs(myProgram, clientProgram, notes, goals) {
     const done  = steps.filter(s => s.status === "completed").length;
     const pct   = steps.length ? Math.round(done / steps.length * 100) : 0;
     summaryCards.push(`
-      <div style="flex:1;min-width:200px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);padding:14px 16px;">
+      <div class="program-summary-card" style="flex:1;min-width:200px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);padding:14px 16px;">
         <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;"><i class="bi bi-collection-play-fill" style="color:var(--primary);"></i> ${escapeHtml(myProgram.assignment.programName)}</div>
         <div style="font-size:18px;font-weight:700;margin-bottom:4px;">${done} / ${steps.length} <span style="font-size:13px;font-weight:400;color:var(--muted);">activities</span></div>
         <div class="prog-progress-bar" style="margin:6px 0 4px;"><div class="prog-progress-fill" style="width:${pct}%;"></div></div>
@@ -83,15 +83,25 @@ function renderProgramTabs(myProgram, clientProgram, notes, goals) {
   }
 
   document.getElementById("prog-content").innerHTML = `
-    <div class="card" style="margin-bottom:0;">
-      <h1 style="margin-bottom:16px;"><i class="bi bi-play-circle-fill"></i> My Program</h1>
+    <div class="card program-client-hero" style="margin-bottom:0;">
+      <div class="program-client-kicker"><span></span> YOUR GUIDED JOURNEY</div>
+      <h1 style="margin:6px 0 16px;"><i class="bi bi-play-circle-fill"></i> My Program</h1>
       <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:${hasClient && hasAssigned ? '16px' : '0'};">
         ${summaryCards.join("")}
       </div>
       ${tabBar}
     </div>
     <div id="prog-tab-client-panel"   style="display:${_progActiveTab==='client'   ? 'block' : 'none'};"></div>
-    <div id="prog-tab-assigned-panel" style="display:${_progActiveTab==='assigned' ? 'block' : 'none'};"></div>`;
+    <div id="prog-tab-assigned-panel" style="display:${_progActiveTab==='assigned' ? 'block' : 'none'};"></div>
+    <style>
+      .program-client-hero{position:relative;overflow:hidden;background:linear-gradient(135deg,var(--card,#fff) 35%,color-mix(in srgb,var(--primary) 13%,var(--card,#fff)),rgba(34,211,238,.09));box-shadow:0 18px 42px rgba(49,133,252,.09)}
+      .program-client-hero::after{content:"";position:absolute;width:240px;height:240px;border-radius:50%;right:-100px;top:-140px;background:radial-gradient(circle,rgba(34,211,238,.28),transparent 68%);animation:programOrb 7s ease-in-out infinite;pointer-events:none}
+      .program-client-kicker{font-size:10px;font-weight:900;letter-spacing:.14em;color:var(--primary)}.program-client-kicker span{display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 5px rgba(34,197,94,.12);margin-right:7px}
+      .program-summary-card{position:relative;z-index:1;transition:transform .2s ease,box-shadow .2s ease;background:color-mix(in srgb,var(--card,#fff) 94%,var(--primary))!important}.program-summary-card:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(49,133,252,.13)}
+      .program-journey-week{position:relative;overflow:hidden;border-left:4px solid color-mix(in srgb,var(--primary) 70%,#22d3ee)!important;transition:transform .2s ease,box-shadow .2s ease}.program-journey-week:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(15,23,42,.08)}
+      .program-journey-session{transition:transform .16s ease,border-color .16s ease}.program-journey-session:hover{transform:translateX(3px);border-color:color-mix(in srgb,var(--primary) 35%,var(--border))!important}
+      @keyframes programOrb{50%{transform:translateY(12px) scale(1.05)}}
+    </style>`;
 
   if (hasClient)   renderClientProgramPanel(clientProgram, notes, goals);
   if (hasAssigned) renderProgram(myProgram);
@@ -150,7 +160,7 @@ function renderClientProgramPanel(program, notes, goals) {
         ? n.fields._goals_addressed.map(g => `<span style="display:inline-block;background:#dbeafe;color:#1e40af;font-size:11px;font-weight:600;padding:1px 7px;border-radius:8px;margin:2px 3px 2px 0;"><i class="bi bi-check2"></i> ${escapeHtml(g)}</span>`).join("")
         : "";
       return `
-        <div style="padding:12px 14px;background:${done ? "#f0fdf4" : "var(--surface)"};
+        <div class="program-journey-session" style="padding:12px 14px;background:${done ? "#f0fdf4" : "var(--surface)"};
                     border-radius:8px;border:1.5px solid ${done ? "#bbf7d0" : "var(--border)"};margin-bottom:8px;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px;">
             <span style="font-size:11px;font-weight:700;background:${color}22;color:${color};padding:2px 8px;border-radius:10px;">${escapeHtml(label)}</span>
@@ -165,7 +175,7 @@ function renderClientProgramPanel(program, notes, goals) {
     }).join("");
 
     return `
-      <div class="card" style="margin-bottom:12px;">
+      <div class="card program-journey-week" style="margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
           <div>
             <span style="font-weight:700;font-size:15px;">Week ${wk.week} — ${escapeHtml(wk.phase || "")}</span>
