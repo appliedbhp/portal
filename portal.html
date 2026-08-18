@@ -232,6 +232,10 @@
 <script src="js/vanderbilt.js"></script>
 <script>
 requireLogin();
+// Register transition cleanup before any role-specific initialization. This
+// guarantees a recoverable UI even if a later optional widget fails to load.
+window.addEventListener("load", () => setTimeout(finishPortalEntry, 420), { once: true });
+setTimeout(finishPortalEntry, 3500);
 if (isProvider() && !getClientId()) {
   window.location.href = "login.html";
 }
@@ -452,9 +456,7 @@ if (_role !== "provider" && typeof loadHeaderAvatar === "function") loadHeaderAv
 if (_role === "provider") checkProgressReportDue();
 checkGradesAlert();
 startTimeoutWatcher();
-if (_role !== "provider") initNotifications();
 if (_role !== "provider") initTodayVideoSessionButton();
-window.addEventListener("load", () => setTimeout(finishPortalEntry, 420), { once: true });
 </script>
 </body>
 </html>
