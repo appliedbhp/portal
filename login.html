@@ -13,7 +13,10 @@
     background: var(--gradient);
     display: flex;
     align-items: center;
+    padding-bottom: 76px;
   }
+  .login-strategy-ticker{position:fixed;z-index:1200;left:14px;right:14px;bottom:12px;display:none;align-items:center;gap:12px;min-height:54px;padding:9px 14px;border:1px solid rgba(255,255,255,.26);border-radius:16px;background:rgba(15,23,42,.82);color:#fff;box-shadow:0 12px 34px rgba(15,23,42,.28);backdrop-filter:blur(15px)}
+  .login-strategy-ticker.visible{display:flex;animation:ticker-in .42s cubic-bezier(.22,1,.36,1) both}.ticker-label{display:flex;align-items:center;gap:7px;flex:0 0 auto;font-size:10px;font-weight:900;letter-spacing:.11em;color:#bfdbfe}.ticker-label i{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,#4f46e5,#2563eb);color:#fff;font-size:14px}.ticker-copy{min-width:0;flex:1;opacity:1;transform:translateY(0);transition:opacity .22s ease,transform .22s ease}.ticker-copy.changing{opacity:0;transform:translateY(5px)}.ticker-copy strong{font-size:12px;margin-right:7px}.ticker-copy span{font-size:12px;color:#e2e8f0}.ticker-controls{display:flex;align-items:center;gap:5px}.ticker-controls button{width:27px;height:27px;padding:0;border-radius:8px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15);box-shadow:none}.ticker-count{font-size:10px;color:#94a3b8;white-space:nowrap}@keyframes ticker-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}@media(max-width:650px){body{padding-bottom:105px}.login-strategy-ticker{align-items:flex-start}.ticker-label span{display:none}.ticker-copy strong,.ticker-copy span{display:block}.ticker-controls{margin-left:auto}}@media(prefers-reduced-motion:reduce){.login-strategy-ticker.visible{animation:none}.ticker-copy{transition:none}}
 </style>
 </head>
 <body class="login-page">
@@ -212,10 +215,27 @@
   </div>
 </div>
 
+<aside id="login-strategy-ticker" class="login-strategy-ticker" aria-label="Practice strategies and announcements" aria-live="polite">
+  <div class="ticker-label"><i class="bi bi-lightbulb-fill"></i><span>STRATEGY</span></div>
+  <div id="ticker-copy" class="ticker-copy"></div>
+  <div class="ticker-controls">
+    <button type="button" onclick="moveLoginTicker(-1)" aria-label="Previous strategy"><i class="bi bi-chevron-left"></i></button>
+    <span id="ticker-count" class="ticker-count"></span>
+    <button type="button" onclick="moveLoginTicker(1)" aria-label="Next strategy"><i class="bi bi-chevron-right"></i></button>
+  </div>
+</aside>
+
 <script src="js/common.js"></script>
 <script src="js/api.js"></script>
 <script>
 let statusKnown = false;
+let loginTickerItems = [], loginTickerIndex = 0, loginTickerTimer = null;
+
+async function loadLoginTicker(){try{const res=await apiCallNoCreds("getLoginBroadcasts",{});loginTickerItems=(res.broadcasts||[]).filter(b=>b.title||b.message);if(!loginTickerItems.length)return;document.getElementById("login-strategy-ticker").classList.add("visible");renderLoginTicker();startLoginTicker();const ticker=document.getElementById("login-strategy-ticker");ticker.addEventListener("mouseenter",stopLoginTicker);ticker.addEventListener("mouseleave",startLoginTicker);ticker.addEventListener("focusin",stopLoginTicker);ticker.addEventListener("focusout",startLoginTicker);}catch(_){}}
+function renderLoginTicker(){const item=loginTickerItems[loginTickerIndex]||{},copy=document.getElementById("ticker-copy");copy.classList.add("changing");setTimeout(()=>{copy.innerHTML=`<strong>${escapeHtml(item.title||"Strategy")}</strong><span>${escapeHtml(item.message||"")}</span>`;document.getElementById("ticker-count").textContent=`${loginTickerIndex+1} / ${loginTickerItems.length}`;copy.classList.remove("changing");},180);}
+function moveLoginTicker(direction){if(!loginTickerItems.length)return;loginTickerIndex=(loginTickerIndex+direction+loginTickerItems.length)%loginTickerItems.length;renderLoginTicker();startLoginTicker();}
+function startLoginTicker(){stopLoginTicker();if(loginTickerItems.length>1&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches)loginTickerTimer=setInterval(()=>moveLoginTicker(1),7000);}
+function stopLoginTicker(){if(loginTickerTimer){clearInterval(loginTickerTimer);loginTickerTimer=null;}}
 
 function setMode(mode) {
   document.getElementById("clientMode").style.display = mode === "client" ? "block" : "none";
@@ -1123,7 +1143,7 @@ if (new URLSearchParams(window.location.search).get("reason") === "timeout") {
   setTimeout(() => banner.remove(), 6000);
 }
 
-window.addEventListener("load", () => setTimeout(dismissSplash, 520), { once: true });
+window.addEventListener("load", () => { setTimeout(dismissSplash, 520); loadLoginTicker(); }, { once: true });
 </script>
 </body>
 </html>
