@@ -26,12 +26,18 @@
   </div>
   <div class="who" id="whoami"></div>
   <div class="btn-row" style="margin:0;">
-    <button class="secondary" id="header-progress-btn" onclick="sessOpenProgressPip()" style="padding:6px 10px;font-size:13px;" title="Open progress picture-in-picture">
-      <i class="bi bi-graph-up-arrow"></i> Progress
+    <button class="secondary header-action-btn video-session-btn" id="videoSessionBtn" onclick="joinTodayVideoSession()" data-label="Join Video Session" aria-label="Join today's video session" style="display:none;">
+      <i class="bi bi-camera-video-fill"></i><span class="video-live-dot" aria-hidden="true"></span>
     </button>
-    <button id="switchClientBtn" class="secondary" onclick="switchClient()" style="display:none;"><i class="bi bi-arrow-left-right"></i> Switch Client</button>
-    <button class="secondary" onclick="logout()"><i class="bi bi-box-arrow-right"></i> Log Out</button>
-    <button id="bell-btn" class="header-bell-btn" onclick="toggleNotificationsPopout()" title="Notifications" aria-label="Open notifications">
+    <button class="secondary header-action-btn" id="sessionNotesPipBtn" onclick="openSessionNotesPip()" data-label="Session Notes" aria-label="Open session notes writer" style="display:none;">
+      <i class="bi bi-journal-plus"></i>
+    </button>
+    <button class="secondary header-action-btn" id="header-progress-btn" onclick="sessOpenProgressPip()" data-label="Progress" aria-label="Open progress picture-in-picture">
+      <i class="bi bi-graph-up-arrow"></i>
+    </button>
+    <button id="switchClientBtn" class="secondary header-action-btn" onclick="switchClient()" data-label="Switch Client" aria-label="Switch client" style="display:none;"><i class="bi bi-arrow-left-right"></i></button>
+    <button class="secondary header-action-btn" onclick="logout()" data-label="Log Out" aria-label="Log out"><i class="bi bi-box-arrow-right"></i></button>
+    <button id="bell-btn" class="header-bell-btn header-action-btn" onclick="toggleNotificationsPopout()" data-label="Notifications" aria-label="Open notifications">
       <i class="bi bi-bell-fill"></i>
       <span id="bell-badge">0</span>
     </button>
@@ -241,6 +247,7 @@ if (typeof isLinkedAdult === "function" && isLinkedAdult()) {
   document.getElementById("whoami").textContent = `${getClientId()} — ${getAssessorName()} (${getRole()})`;
 }
 if (isProvider()) document.getElementById("switchClientBtn").style.display = "inline-block";
+if (isProvider()) document.getElementById("sessionNotesPipBtn").style.display = "inline-flex";
 const _role = getRole();
 if (_role !== "provider") document.getElementById("recNavBtn").style.display = "none";
 if (_role !== "provider") document.getElementById("reportsNavBtn").style.display = "none";
@@ -276,6 +283,41 @@ if (typeof applyClientAccessRestrictions === "function" && getRole() !== "provid
 function switchClient() {
   setProviderClient("");
   window.location.href = "login.html";
+}
+
+function openSessionNotesPip() {
+  const existing = document.querySelector(".session-entry-card");
+  if (existing) {
+    sessToggleWriterPip();
+    return;
+  }
+  const section = document.getElementById("section-sessions");
+  if (!initialized.sessions) {
+    initialized.sessions = true;
+    initSessionsSection(section);
+  }
+  sessToggleWriterPip();
+}
+
+let _todayMeetUrl = "";
+async function initTodayVideoSessionButton() {
+  if (getRole() === "provider") return;
+  try {
+    const res = await apiCall("getAppointments", {});
+    const today = new Date().toDateString();
+    const meeting = (res.events || []).find(event => event.meetUrl && new Date(event.start_time).toDateString() === today);
+    if (!meeting || !/^https:\/\/meet\.google\.com\/[a-z0-9-]+(?:[/?#].*)?$/i.test(meeting.meetUrl)) return;
+    _todayMeetUrl = meeting.meetUrl;
+    const button = document.getElementById("videoSessionBtn");
+    button.style.display = "inline-flex";
+    button.dataset.label = `Join ${new Date(meeting.start_time).toLocaleTimeString([], { hour:"numeric", minute:"2-digit" })} Session`;
+  } catch (_) {}
+}
+
+function joinTodayVideoSession() {
+  if (!_todayMeetUrl) return;
+  window.open(_todayMeetUrl, "_blank", "noopener,noreferrer");
+  showToast("Google Meet opened. In Meet, choose More options → Open picture-in-picture, or return here if Chrome automatic PiP is enabled.", "info", 8000);
 }
 
 function toggleSidebar() {
@@ -411,6 +453,7 @@ if (_role === "provider") checkProgressReportDue();
 checkGradesAlert();
 startTimeoutWatcher();
 if (_role !== "provider") initNotifications();
+if (_role !== "provider") initTodayVideoSessionButton();
 window.addEventListener("load", () => setTimeout(finishPortalEntry, 420), { once: true });
 </script>
 </body>
