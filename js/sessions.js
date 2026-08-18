@@ -14,6 +14,7 @@ let _sessQuill = null;
 let _sessPipChart = null;
 let _sessPipGoals = [];
 let _sessPipProgress = [];
+let _sessGoalsBlockLength = 0;
 
 // ── Built-in format templates ─────────────────────────────────────────────────
 const SESS_FORMAT_TEMPLATES = [
@@ -86,6 +87,7 @@ function initSessionsSection(root) {
           ${SESS_FORMAT_TEMPLATES.map(t =>
             `<button class="format-tpl-btn" onclick="sessInsertFormatTemplate('${t.id}')">${t.label}</button>`
           ).join("")}
+          <button class="format-tpl-btn" onclick="sessInsertTable()"><i class="bi bi-table"></i> Insert Table</button>
           <span style="font-size:12px;color:var(--muted);margin-left:4px;">Quick-insert a structured format</span>
         </div>
       </div>
@@ -175,21 +177,25 @@ function sessToggleWriterPip() {
     card.classList.add("session-writer-pip");
     const actions = card.querySelector(".session-writer-actions");
     actions.innerHTML = `<button class="secondary" title="Minimize" onclick="sessMinimizeWriterPip()"><i class="bi bi-dash-lg"></i></button><button class="secondary" title="Return to Session Notes" onclick="sessCloseWriterPip()"><i class="bi bi-x-lg"></i></button>`;
-  } else card.classList.remove("minimized");
+  } else {
+    undockMinimizedPanel(card);
+    card.classList.remove("minimized");
+  }
 }
 
 function sessMinimizeWriterPip() {
   const card = document.querySelector(".session-entry-card.session-writer-pip");
   if (!card) return;
-  card.classList.toggle("minimized");
-  card.style.bottom = "8px";
-  card.style.top = "auto";
+  const minimizing = !card.classList.contains("minimized");
+  card.classList.toggle("minimized", minimizing);
+  if (minimizing) dockMinimizedPanel(card); else undockMinimizedPanel(card);
 }
 
 function sessCloseWriterPip() {
   const card = document.querySelector(".session-entry-card.session-writer-pip");
   if (!card) return;
   card.classList.remove("session-writer-pip", "minimized");
+  undockMinimizedPanel(card);
   const actions = card.querySelector(".session-writer-actions");
   actions.innerHTML = `<button class="secondary" title="Open as PIP" onclick="sessToggleWriterPip()"><i class="bi bi-window-stack"></i></button>`;
   if (_sessWriterPlaceholder?.parentNode) _sessWriterPlaceholder.parentNode.replaceChild(card, _sessWriterPlaceholder);
@@ -201,6 +207,7 @@ function sessCloseWriterPip() {
 async function sessOpenProgressPip() {
   let pip = document.getElementById("sess-progress-pip");
   if (pip) {
+    undockMinimizedPanel(pip);
     pip.classList.remove("minimized");
     pip.style.display = "flex";
     return;
@@ -241,11 +248,9 @@ async function sessOpenProgressPip() {
 function sessToggleProgressPip() {
   const pip = document.getElementById("sess-progress-pip");
   if (!pip) return;
-  pip.classList.toggle("minimized");
-  pip.style.bottom = "8px";
-  pip.style.top = "auto";
-  pip.style.left = "auto";
-  pip.style.right = "18px";
+  const minimizing = !pip.classList.contains("minimized");
+  pip.classList.toggle("minimized", minimizing);
+  if (minimizing) dockMinimizedPanel(pip); else undockMinimizedPanel(pip);
 }
 
 function sessCloseProgressPip() {
@@ -386,35 +391,28 @@ async function loadSessionGoals() {
   }
 }
 
-// Replaces a goals block at the top of the Quill editor when checkboxes change.
-// The block is identified by a data-goals-block attribute on the first element.
+// Maintains one tracked generated block at the start of the Quill document.
 function sessSyncGoalsBlock() {
   if (!_sessQuill) return;
   const checked = Array.from(document.querySelectorAll("#sess-goalsChecklist input:checked"))
     .map(cb => cb.dataset.objective);
 
-  // Remove the complete generated block (heading, list, and spacer). Previously
-  // only the heading was removed, leaving stale goals behind.
-  const editor = _sessQuill.root;
-  const existing = editor.querySelector("[data-goals-block]");
-  if (existing) {
-    const generatedNodes = [existing];
-    let next = existing.nextElementSibling;
-    if (next && next.tagName === "UL") {
-      generatedNodes.push(next);
-      next = next.nextElementSibling;
-    }
-    if (next && next.tagName === "P" && !next.textContent.trim()) generatedNodes.push(next);
-    generatedNodes.forEach(node => node.remove());
-  }
+  if (_sessGoalsBlockLength > 0) _sessQuill.deleteText(0, _sessGoalsBlockLength, "silent");
+  _sessGoalsBlockLength = 0;
+  if (!checked.length) { _sessQuill.setSelection(0, 0, "silent"); return; }
+  const heading = "Goals Addressed This Session:\n";
+  const block = heading + checked.map(o => `• ${o}`).join("\n") + "\n\n";
+  _sessQuill.insertText(0, block, "silent");
+  _sessQuill.formatText(0, heading.length - 1, "bold", true, "silent");
+  _sessGoalsBlockLength = block.length;
+  _sessQuill.setSelection(_sessGoalsBlockLength, 0, "silent");
+}
 
-  if (!checked.length) return;
-
-  const items = checked.map(o => `<li>${escapeHtml(o)}</li>`).join("");
-  const block = `<p data-goals-block="1"><strong>Goals Addressed This Session:</strong></p><ul>${items}</ul><p><br></p>`;
-
-  const currentHtml = editor.innerHTML;
-  _sessQuill.clipboard.dangerouslyPasteHTML(0, block);
+function sessInsertTable() {
+  if (!_sessQuill) return;
+  const range = _sessQuill.getSelection(true) || { index:_sessQuill.getLength() - 1 };
+  const html = `<table><thead><tr><th>Area</th><th>Observation / Data</th></tr></thead><tbody><tr><td>Intervention</td><td><br></td></tr><tr><td>Client response</td><td><br></td></tr><tr><td>Next step</td><td><br></td></tr></tbody></table><p><br></p>`;
+  _sessQuill.clipboard.dangerouslyPasteHTML(range.index, html, "user");
 }
 
 // "YYYY-MM-DDTHH:mm" in local time, the format <input type="datetime-local"> expects.
@@ -485,6 +483,7 @@ function sessInsertFormatTemplate(id) {
   if (!tpl) return;
   if (_sessQuill.getText().trim() && !confirm("Replace the current note with the " + tpl.label + " template?")) return;
   _sessQuill.setText("");
+  _sessGoalsBlockLength = 0;
   _sessQuill.clipboard.dangerouslyPasteHTML(0, tpl.html);
   document.getElementById("sess-templateSelect").value = "";
 }
@@ -497,6 +496,7 @@ function sessApplyTemplate() {
   if (!tpl) return;
   if (_sessQuill.getText().trim() && !confirm("Replace the current note text with this template?")) return;
   _sessQuill.setText("");
+  _sessGoalsBlockLength = 0;
   _sessQuill.clipboard.dangerouslyPasteHTML(0, tpl.text || "");
 }
 
@@ -508,6 +508,7 @@ function sessCopyPrevious() {
   if (_sessQuill.getText().trim() && !confirm("Replace the current note with the previous session's note?")) return;
   const prev = sessSessions[0].noteText || "";
   _sessQuill.setText("");
+  _sessGoalsBlockLength = 0;
   _sessQuill.clipboard.dangerouslyPasteHTML(0, prev);
 }
 
@@ -538,6 +539,7 @@ async function addSession() {
       : "Session note saved.";
     setStatus("sess-status", msg, "success");
     if (_sessQuill) _sessQuill.setText("");
+    _sessGoalsBlockLength = 0;
     document.getElementById("sess-templateSelect").value = "";
     document.querySelectorAll("#sess-goalsChecklist input:checked").forEach(cb => { cb.checked = false; });
     document.getElementById("sess-dateTime").value = sessNowForInput_();
