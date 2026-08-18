@@ -192,10 +192,6 @@ body.portal-page.data-is-loading::before {
   opacity: 0;
   transition: opacity 400ms ease;
 }
-.portal-header {
-  position: relative;
-}
-
 /* ── Creative Preloader ───────────────────────────────────────────────────── */
 /* Usage: <div class="portal-preloader"><span></span><span></span><span></span></div> */
 .portal-preloader {
