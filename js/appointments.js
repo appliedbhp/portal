@@ -74,6 +74,13 @@ async function initAppointmentsSection(root) {
                       style="width:100%;resize:vertical;"></textarea>
           </div>
           <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Google Meet Link (optional)</label>
+            <input type="url" id="appt-meet-url" placeholder="https://meet.google.com/xxx-xxxx-xxx" style="width:100%;" />
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+              Saved as the Calendar event location so clients can join from the portal and invitation.
+            </div>
+          </div>
+          <div style="grid-column:1/-1;">
             <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Client Email</label>
             <input type="email" id="appt-email" value="${escapeHtml(clientEmail)}"
                    placeholder="auto-filled from client record" style="width:100%;" readonly />
@@ -203,12 +210,16 @@ async function apptCreate() {
   const start = document.getElementById("appt-start")?.value;
   const end   = document.getElementById("appt-end")?.value;
   const notes = document.getElementById("appt-notes")?.value?.trim() || "";
+  const meetUrl = document.getElementById("appt-meet-url")?.value?.trim() || "";
   const smsEl = document.getElementById("appt-sms");
   const sendSms = smsEl ? smsEl.checked : false;
 
   if (!title) { setStatus("appt-create-status", "Title is required.", "error"); return; }
   if (!start) { setStatus("appt-create-status", "Start time is required.", "error"); return; }
   if (!end)   { setStatus("appt-create-status", "End time is required.", "error"); return; }
+  if (meetUrl && !/^https:\/\/meet\.google\.com\/[a-z0-9-]+(?:[/?#].*)?$/i.test(meetUrl)) {
+    setStatus("appt-create-status", "Enter a valid Google Meet link.", "error"); return;
+  }
   if (new Date(end) <= new Date(start)) {
     setStatus("appt-create-status", "End time must be after start time.", "error"); return;
   }
@@ -222,7 +233,7 @@ async function apptCreate() {
       timeZone: "America/Los_Angeles",
       startTime: new Date(start).toISOString(),
       endTime:   new Date(end).toISOString(),
-      notes, sendSms
+      notes, meetUrl, sendSms
     });
 
     let msg = "Appointment added to Google Calendar in Pacific Time.";
@@ -393,9 +404,6 @@ function renderAppointments(events) {
           <div class="appt-meta"><i class="bi bi-calendar3"></i>${escapeHtml(date)}</div>
           <div class="appt-meta"><i class="bi bi-clock"></i>${escapeHtml(time)}</div>
           ${ev.location ? `<div class="appt-meta"><i class="bi bi-geo-alt-fill"></i>${escapeHtml(ev.location)}</div>` : ""}
-          ${ev.description ? `<div class="appt-meta" style="align-items:flex-start;white-space:pre-line;line-height:1.45;">
-            <i class="bi bi-card-text" style="margin-top:2px;"></i><span>${escapeHtml(ev.description)}</span>
-          </div>` : ""}
         </div>
         <div class="appt-actions">
           ${joinUrl ? `<a href="${escapeHtml(joinUrl)}" target="_blank" rel="noopener noreferrer"
