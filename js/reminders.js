@@ -1,6 +1,8 @@
 // #10 Reminders & Messages — AI-detected reminders from session notes,
 // scheduled email/SMS delivery via Twilio, and Twilio message thread view.
 
+let _rmFamilyEmails = [];
+
 async function initRemindersSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
@@ -36,6 +38,7 @@ async function initRemindersSection(root) {
       notes:      allNotes,
       phone:      phoneRes.phone       || "",
       smsConsent: phoneRes.smsConsent  || false,
+      familyEmails: phoneRes.familyEmails || [],
       messages:   msgsRes.messages     || []
     });
   } catch (e) {
@@ -46,7 +49,8 @@ async function initRemindersSection(root) {
   }
 }
 
-function renderRemindersSection(root, { reminders, notes, phone, smsConsent, messages }) {
+function renderRemindersSection(root, { reminders, notes, phone, smsConsent, familyEmails, messages }) {
+  _rmFamilyEmails = familyEmails || [];
   const role = (typeof getCreds === "function" ? getCreds().role : null) || "provider";
   const isProvider = role === "provider";
   const pendingReminders  = reminders.filter(r => r.status === "pending");
@@ -175,7 +179,8 @@ function renderRemindersSection(root, { reminders, notes, phone, smsConsent, mes
         </div>
         <div class="row">
           <label>Recipient</label>
-          <input id="rm-recipient" value="${escapeHtml(phone)}" placeholder="+1 555 555 5555">
+          <input id="rm-recipient" value="${escapeHtml(smsConsent ? phone : _rmFamilyEmails.join(', '))}" placeholder="${smsConsent ? '+1 555 555 5555' : 'Linked family email addresses'}" ${!smsConsent ? "readonly" : ""}>
+          <small id="rm-recipient-hint" style="color:var(--muted);">${!smsConsent ? `${_rmFamilyEmails.length} family email recipient${_rmFamilyEmails.length===1?'':'s'} · managed through linked accounts` : ""}</small>
         </div>
         <div class="row">
           <label>Schedule For</label>
@@ -287,9 +292,13 @@ function updateRmRecipient() {
   if (channel === "sms") {
     recipEl.placeholder = "+1 555 555 5555";
     recipEl.value = phoneEl ? phoneEl.value : recipEl.value;
+    recipEl.readOnly = false;
+    const hint=document.getElementById("rm-recipient-hint");if(hint)hint.textContent="";
   } else {
-    recipEl.placeholder = "client@email.com";
-    recipEl.value = "";
+    recipEl.placeholder = "Linked family email addresses";
+    recipEl.value = _rmFamilyEmails.join(", ");
+    recipEl.readOnly = true;
+    const hint=document.getElementById("rm-recipient-hint");if(hint)hint.textContent=`${_rmFamilyEmails.length} family email recipient${_rmFamilyEmails.length===1?'':'s'} · managed through linked accounts`;
   }
 }
 
