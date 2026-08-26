@@ -66,6 +66,7 @@
     <div class="sidebar-group">
       <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Records<i class="bi bi-chevron-down sg-chevron"></i></div>
       <div class="sidebar-group-links">
+        <button class="sidebar-link" data-section="client-hub" onclick="showSection('client-hub')"><i class="bi bi-grid-1x2-fill"></i> Client Hub</button>
         <button class="sidebar-link" data-section="plan" onclick="showSection('plan')" id="planNavBtn"><i class="bi bi-flag-fill"></i> Goals &amp; Plan</button>
         <button class="sidebar-link" data-section="progress" onclick="showSection('progress')" id="progressNavBtn"><i class="bi bi-graph-up"></i> Progress</button>
         <button class="sidebar-link" data-section="client-viz" onclick="showSection('client-viz')" id="clientVizNavBtn" style="display:none;"><i class="bi bi-bar-chart-fill"></i> My Progress</button>
@@ -164,6 +165,7 @@
       <div id="section-client-viz" class="section"></div>
       <div id="section-scores" class="section"></div>
       <div id="section-sessions" class="section"></div>
+      <div id="section-client-hub" class="section"></div>
       <div id="section-recommendation" class="section"></div>
       <div id="section-appointments" class="section"></div>
       <div id="section-programs" class="section"></div>
@@ -209,6 +211,7 @@
 <script src="js/progress.js"></script>
 <script src="js/scores.js"></script>
 <script src="js/sessions.js"></script>
+<script src="js/client-hub.js"></script>
 <script src="js/recommendation.js"></script>
 <script src="js/appointments.js"></script>
 <script src="js/programs.js"></script>
@@ -438,6 +441,7 @@ const SECTION_INIT = {
   "client-viz": initClientVizSection,
   scores: initScoresSection,
   sessions: initSessionsSection,
+  "client-hub": initClientHubSection,
   recommendation: initRecommendationSection,
   appointments: initAppointmentsSection,
   programs: initProgramsSection,
