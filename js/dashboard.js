@@ -135,6 +135,7 @@ function renderDashboard(root, data) {
         </td>
         <td><div style="display:flex;align-items:center;gap:6px;justify-content:flex-end;">
           ${c.nextAppointment?.joinUrl ? `<a class="dash-row-video" href="${escapeAttr(c.nextAppointment.joinUrl)}" target="_blank" rel="noopener noreferrer" title="Join ${escapeAttr(c.nextAppointment.title || "video visit")} · ${escapeAttr(c.nextAppointment.start || "")}"><i class="bi bi-camera-video-fill"></i><span>Join</span></a>` : ""}
+          <button class="secondary" style="font-size:11px;padding:4px 9px;" onclick="dashOpenClientHub('${escapeAttr(c.clientId)}')" title="Open documents and action center"><i class="bi bi-grid-1x2-fill"></i> Hub</button>
           <button class="secondary" style="font-size:11px;padding:4px 10px;"
             onclick="dashJumpToClient('${escapeAttr(c.clientId)}')">
             <i class="bi bi-person-fill"></i> Open
@@ -253,4 +254,10 @@ async function dashJumpToClient(clientId) {
     const { initHomeSection } = window;
     if (typeof initHomeSection === "function") initHomeSection(homeEl);
   }
+}
+
+function dashOpenClientHub(clientId) {
+  setProviderClient(clientId);
+  if (typeof _hubTab !== "undefined") _hubTab = "overview";
+  showSection("client-hub");
 }

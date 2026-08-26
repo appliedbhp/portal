@@ -183,8 +183,11 @@ async function archiveBroadcast(broadcastId, btn) {
   if (!confirm("Archive this broadcast? Clients will no longer see it.")) return;
   if (btn) btn.disabled = true;
   try {
-    await apiCall("deleteBroadcast", { broadcastId });
-    initBroadcastsSection(document.getElementById("section-broadcasts"));
+    const result = await apiCall("deleteBroadcast", { broadcastId });
+    if (!result.archived || result.active !== false) throw new Error("The server did not confirm that the broadcast was archived.");
+    await initBroadcastsSection(document.getElementById("section-broadcasts"));
+    if (typeof updateBellBadge === "function") updateBellBadge();
+    showToast("Broadcast archived and removed from client views.", "success");
   } catch (e) {
     alert("Error: " + e.message);
     if (btn) btn.disabled = false;
