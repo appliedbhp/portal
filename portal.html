@@ -320,31 +320,18 @@ function openSessionNotesPip() {
 let _todayMeetUrl = "";
 async function initTodayVideoSessionButton() {
   try {
-    let meetings = [];
-    if (getRole() === "provider") {
-      const sess = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "getProviderDashboard",
-          providerId: sess.providerId,
-          providerPassword: sess.providerPassword
-        })
-      }).then(response => response.json());
-      if (!res.ok) return;
-      meetings = (res.todayAppointments || []).filter(event => event.joinUrl);
-    } else {
-      const res = await apiCall("getAppointments", {});
-      const today = new Date().toDateString();
-      meetings = (res.events || []).filter(event => {
-        return (event.joinUrl || event.meetUrl) && new Date(event.start_time).toDateString() === today;
-      }).map(event => ({
-        title: event.name || "Video session",
-        startTime: event.start_time,
-        joinUrl: event.joinUrl || event.meetUrl
-      }));
-    }
+    // getAppointments is scoped server-side to the authenticated client. For a
+    // provider it uses only the client currently selected in portalSession.
+    const res = await apiCall("getAppointments", {});
+    const today = new Date().toDateString();
+    const meetings = (res.events || []).filter(event => {
+      return (event.joinUrl || event.meetUrl) && new Date(event.start_time).toDateString() === today;
+    }).map(event => ({
+      title: event.name || "Video session",
+      clientId: getRole() === "provider" ? getClientId() : "",
+      startTime: event.start_time,
+      joinUrl: event.joinUrl || event.meetUrl
+    }));
     const now = Date.now();
     const meeting = meetings.find(event => new Date(event.startTime).getTime() >= now - 30 * 60000) || meetings[0];
     if (!meeting || !/^https:\/\//i.test(meeting.joinUrl || "")) return;
