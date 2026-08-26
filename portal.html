@@ -37,6 +37,9 @@
     </button>
     <button id="switchClientBtn" class="secondary header-action-btn" onclick="switchClient()" data-label="Switch Client" aria-label="Switch client" style="display:none;"><i class="bi bi-arrow-left-right"></i></button>
     <button class="secondary header-action-btn" onclick="logout()" data-label="Log Out" aria-label="Log out"><i class="bi bi-box-arrow-right"></i></button>
+    <button id="header-settings-btn" class="header-plain-icon header-action-btn" onclick="showSection('settings')" data-label="Settings" aria-label="Open settings" style="display:none;">
+      <i class="bi bi-gear-fill"></i>
+    </button>
     <button id="bell-btn" class="header-bell-btn header-action-btn" onclick="toggleNotificationsPopout()" data-label="Notifications" aria-label="Open notifications">
       <i class="bi bi-bell-fill"></i>
       <span id="bell-badge">0</span>
@@ -275,7 +278,10 @@ if (_role !== "provider") document.getElementById("clientBillingNavBtn").style.d
 if (_role !== "provider") document.getElementById("consentFormsNavBtn").style.display = "none";
 if (_role === "provider") document.getElementById("dischargeNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("remindersNavBtn").style.display = "block";
-if (_role !== "provider") document.getElementById("settingsNavBtn").style.display = "block";
+if (_role !== "provider") {
+  document.getElementById("settingsNavBtn").style.display = "block";
+  document.getElementById("header-settings-btn").style.display = "inline-flex";
+}
 if (_role !== "provider") document.getElementById("notificationsNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("broadcastsNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("assessmentsLibraryNavBtn").style.display = "block";
