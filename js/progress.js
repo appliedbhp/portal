@@ -184,8 +184,8 @@ function renderGoalView() {
   renderProgressChart(goal, entries);
 }
 
-function progInferChart(goal, numeric) {
-  const text = `${progSelected} ${goal?.measure || ""}`.toLowerCase();
+function progInferChart(goal, numeric, goalKey = progSelected) {
+  const text = `${goalKey} ${goal?.measure || ""}`.toLowerCase();
   const values = numeric.map(p => Number(p.score));
   const dataMax = values.length ? Math.max(...values) : 10;
   const dataMin = values.length ? Math.min(...values) : 0;
@@ -230,11 +230,10 @@ function progWeekStart(dateStr) {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 
-function progChartPoints(numeric, grouping) {
-  if (grouping === "daily") return numeric.map(p => ({ label: p.date, value: Number(p.score), count: 1 }));
+function progChartPoints(numeric, grouping, aggregation = "average") {
   const groups = {};
   numeric.forEach(p => {
-    const key = grouping === "monthly" ? p.date.slice(0, 7) : progWeekStart(p.date);
+    const key = grouping === "monthly" ? p.date.slice(0, 7) : grouping === "weekly" ? progWeekStart(p.date) : p.date;
     (groups[key] ||= []).push(Number(p.score));
   });
   return Object.keys(groups).sort().map(key => {
@@ -243,8 +242,8 @@ function progChartPoints(numeric, grouping) {
     return {
       label: grouping === "monthly"
         ? d.toLocaleDateString(undefined, { month:"short", year:"numeric" })
-        : `Week of ${d.toLocaleDateString(undefined, { month:"short", day:"numeric" })}`,
-      value: Math.round((vals.reduce((a,b) => a+b, 0) / vals.length) * 100) / 100,
+        : grouping === "weekly" ? `Week of ${d.toLocaleDateString(undefined, { month:"short", day:"numeric" })}` : key,
+      value: Math.round((aggregation === "sum" ? vals.reduce((a,b) => a+b, 0) : vals.reduce((a,b) => a+b, 0) / vals.length) * 100) / 100,
       count: vals.length
     };
   });
@@ -265,17 +264,20 @@ function renderProgressChart(goal, entries) {
   const state = progAxisState[progSelected] ||= {};
   const cfg = progInferChart(goal, numeric);
   const grouping = state.xGrouping || (cfg.weekly ? "weekly" : "daily");
-  const points = progChartPoints(numeric, grouping);
+  const aggregation = state.aggregation || "average";
+  const points = progChartPoints(numeric, grouping, aggregation);
   const lastIdx = Math.max(0, points.length - 1);
   const xMin = Math.min(state.xMin ?? 0, lastIdx);
   const xMax = Math.max(xMin, Math.min(state.xMax ?? lastIdx, lastIdx));
+  const aggregateMax = Math.max(...points.map(p => p.value));
+  const autoYMax = aggregation === "sum" ? Math.max(cfg.yMax, Math.ceil(aggregateMax * 1.2)) : cfg.yMax;
   const yMin = Number.isFinite(state.yMin) ? state.yMin : cfg.yMin;
-  const yMax = Number.isFinite(state.yMax) ? state.yMax : cfg.yMax;
+  const yMax = Number.isFinite(state.yMax) ? state.yMax : autoYMax;
   const visible = points.slice(xMin, xMax + 1);
   const labels = visible.map(p => p.label);
   const scores = visible.map(p => p.value);
   const color  = colorForDomain(progSelected);
-  const sliderCeiling = Math.max(cfg.yMax, Math.ceil(Math.max(...points.map(p => p.value)) * 2), 10);
+  const sliderCeiling = Math.max(autoYMax, state.yMin || 0, state.yMax || 0, Math.ceil(aggregateMax * 2), 10);
   const ySliderStep = cfg.yMax <= 10 ? 1 : cfg.yMax <= 100 ? 5 : Math.max(1, Math.round(sliderCeiling / 20));
 
   section.innerHTML = `
@@ -283,9 +285,14 @@ function renderProgressChart(goal, entries) {
       <span style="font-size:12px;font-weight:700;margin-right:2px;">X-axis:</span>
       ${["daily","weekly","monthly"].map(mode => `<button class="${grouping === mode ? "" : "secondary"}" style="font-size:12px;padding:6px 11px;" onclick="progSetGrouping('${mode}')">${mode[0].toUpperCase() + mode.slice(1)}</button>`).join("")}
     </div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 10px;">
+      <span style="font-size:12px;font-weight:700;margin-right:2px;">Measure:</span>
+      ${[["average","Average"],["sum","Sum"]].map(([mode,label]) => `<button class="${aggregation === mode ? "" : "secondary"}" style="font-size:12px;padding:6px 11px;" onclick="progSetAggregation('${mode}')">${label}</button>`).join("")}
+      <span style="font-size:11px;color:var(--muted);">${aggregation === "sum" ? "Adds all values in each time period." : "Averages all values in each time period."}</span>
+    </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;">
       ${cfg.detected.map(label => `<span style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#eaf2ff;color:var(--primary-dark);">${escapeHtml(label)}</span>`).join("")}
-      ${grouping !== "daily" ? `<span style="font-size:11px;color:var(--muted);align-self:center;">Multiple entries in each ${grouping === "weekly" ? "week" : "month"} are averaged.</span>` : ""}
+      ${points.some(p => p.count > 1) ? `<span style="font-size:11px;color:var(--muted);align-self:center;">Multiple entries in a period use ${aggregation}.</span>` : ""}
     </div>
     <div class="chart-wrap wide"><canvas id="prog-chart"></canvas></div>
     <div class="prog-axis-controls" style="display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:14px;margin:12px 0 22px;">
@@ -351,6 +358,16 @@ function progSetGrouping(grouping) {
   state.xGrouping = grouping;
   delete state.xMin;
   delete state.xMax;
+  const goal = progGoals.find(g => g._key === progSelected);
+  renderProgressChart(goal, progAllEntries.filter(p => p.objText === progSelected));
+}
+
+function progSetAggregation(aggregation) {
+  if (!progSelected || !["average", "sum"].includes(aggregation)) return;
+  const state = progAxisState[progSelected] ||= {};
+  state.aggregation = aggregation;
+  delete state.yMin;
+  delete state.yMax;
   const goal = progGoals.find(g => g._key === progSelected);
   renderProgressChart(goal, progAllEntries.filter(p => p.objText === progSelected));
 }

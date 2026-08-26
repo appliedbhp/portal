@@ -6,6 +6,7 @@ let sessSessions = [];
 let sessNoteTemplates = [];
 let sessGoals = [];
 let sessProgramNotes = []; // from client program (data_session_notes)
+let sessAttachments = [];
 let sessView = "calendar"; // "list" | "calendar"
 let sessCalDate = new Date(); // current month being viewed in calendar mode
 let sessSelectedDay = null; // "YYYY-MM-DD" of the day expanded in calendar mode
@@ -14,6 +15,7 @@ let _sessQuill = null;
 let _sessPipChart = null;
 let _sessPipGoals = [];
 let _sessPipProgress = [];
+const _sessPipChartState = {};
 let _sessGoalsBlockLength = 0;
 
 // ── Built-in format templates ─────────────────────────────────────────────────
@@ -49,6 +51,7 @@ const SESS_FORMAT_TEMPLATES = [
 
 function initSessionsSection(root) {
   const isProvider = getRole() === "provider";
+  sessAttachments = [];
   sessView = "calendar";
   sessCalDate = new Date();
   sessSelectedDay = null;
@@ -114,6 +117,16 @@ function initSessionsSection(root) {
         <div class="sess-editor-wrap">
           <div id="sess-noteEditor"></div>
         </div>
+      </div>
+
+      <div class="row sess-attachments-editor">
+        <label>Link Attachments</label>
+        <div class="sess-attachment-add">
+          <input id="sess-attachment-url" type="url" inputmode="url" placeholder="https://example.com/resource" onkeydown="if(event.key==='Enter'){event.preventDefault();sessAddAttachment();}">
+          <button type="button" class="secondary" onclick="sessAddAttachment()"><i class="bi bi-paperclip"></i> Add Attachment</button>
+        </div>
+        <div id="sess-attachment-list" class="sess-attachment-list"></div>
+        <div class="field-hint"><i class="bi bi-shield-check"></i> Links are stored separately from the clinical note so note-text PHI redaction does not alter them. Avoid placing PHI in a URL.</div>
       </div>
 
       <div class="row">
@@ -295,6 +308,7 @@ function sessRenderProgressPip(selectedKey) {
       ${_sessPipGoals.map(g => `<option value="${escapeAttr(g._key)}" ${g._key === key ? "selected" : ""}>${escapeHtml(g._key)}</option>`).join("")}
     </select>
     <div class="sess-pip-measure"><i class="bi bi-rulers"></i>${escapeHtml(goal.measure || "Score")}</div>
+    <div id="sess-pip-chart-controls"></div>
     <div class="sess-pip-chart"><canvas id="sess-pip-chart"></canvas></div>
     <div class="sess-pip-entry-head">
       <strong><i class="bi bi-plus-circle-fill"></i>Add progress data</strong>
@@ -325,31 +339,35 @@ function sessRenderPipDays() {
 function sessRenderPipChart(goal) {
   if (_sessPipChart) { _sessPipChart.destroy(); _sessPipChart = null; }
   const canvas = document.getElementById("sess-pip-chart");
-  if (!canvas) return;
+  const controls = document.getElementById("sess-pip-chart-controls");
+  if (!canvas || !controls) return;
   const rows = _sessPipProgress.filter(p => p.objText === goal._key && p.date && p.score !== "" && !isNaN(Number(p.score)))
-                               .sort((a,b) => a.date.localeCompare(b.date)).slice(-12);
-  const text = `${goal._key} ${goal.measure || ""}`;
-  const isPct = /\b(percent(?:age)?|%|accuracy|success rate)\b/i.test(text);
-  const isWeekly = /\bweekly\b|\bper\s+week\b|\beach\s+week\b|\ba\s+week\b|\/\s*week\b/i.test(text);
-  let chartRows = rows.map(r => ({ label:r.date, value:Number(r.score) }));
-  if (isWeekly) {
-    const buckets = {};
-    rows.forEach(r => {
-      const week = typeof progWeekStart === "function" ? progWeekStart(r.date) : r.date;
-      (buckets[week] ||= []).push(Number(r.score));
-    });
-    chartRows = Object.keys(buckets).sort().map(week => {
-      const vals = buckets[week];
-      const d = new Date(week + "T00:00:00");
-      return { label:`Week of ${d.toLocaleDateString(undefined,{month:"short",day:"numeric"})}`, value:Math.round(vals.reduce((a,b)=>a+b,0)/vals.length*100)/100 };
-    });
-  }
+                               .sort((a,b) => a.date.localeCompare(b.date));
+  if (!rows.length) { controls.innerHTML = `<div class="field-hint"><i class="bi bi-info-circle-fill"></i>No numeric progress data yet.</div>`; return; }
+  const state = _sessPipChartState[goal._key] ||= {};
+  const cfg = typeof progInferChart === "function" ? progInferChart(goal, rows, goal._key) : {weekly:false,yMin:0,yMax:10,yStep:null,yLabel:goal.measure||"Score"};
+  const grouping = state.xGrouping || (cfg.weekly ? "weekly" : "daily");
+  const aggregation = state.aggregation || "average";
+  const chartRows = typeof progChartPoints === "function" ? progChartPoints(rows, grouping, aggregation) : rows.map(r=>({label:r.date,value:Number(r.score),count:1}));
+  const lastIdx = Math.max(0, chartRows.length-1);
+  const xMin = Math.min(state.xMin ?? 0,lastIdx), xMax = Math.max(xMin,Math.min(state.xMax ?? lastIdx,lastIdx));
+  const aggregateMax = Math.max(...chartRows.map(r=>r.value));
+  const autoYMax = aggregation === "sum" ? Math.max(cfg.yMax,Math.ceil(aggregateMax*1.2)) : cfg.yMax;
+  const yMin = Number.isFinite(state.yMin)?state.yMin:cfg.yMin, yMax=Number.isFinite(state.yMax)?state.yMax:autoYMax;
+  const sliderCeiling=Math.max(autoYMax,state.yMin||0,state.yMax||0,Math.ceil(aggregateMax*2),10), yStep=cfg.yMax<=10?1:cfg.yMax<=100?5:Math.max(1,Math.round(sliderCeiling/20));
+  const visible=chartRows.slice(xMin,xMax+1);
+  controls.innerHTML=`<div class="sess-pip-chart-toolbar"><span>Time</span>${["daily","weekly","monthly"].map(mode=>`<button class="${grouping===mode?"active":"secondary"}" onclick="sessSetPipChartOption('xGrouping','${mode}')">${mode[0].toUpperCase()+mode.slice(1)}</button>`).join("")}</div><div class="sess-pip-chart-toolbar"><span>Measure</span>${[["average","Average"],["sum","Sum"]].map(([mode,label])=>`<button class="${aggregation===mode?"active":"secondary"}" onclick="sessSetPipChartOption('aggregation','${mode}')">${label}</button>`).join("")}</div><details class="sess-pip-axis"><summary><i class="bi bi-sliders"></i> Adjust axes</summary><div><label>Y minimum <b>${yMin}</b><input type="range" min="0" max="${sliderCeiling}" step="${yStep}" value="${yMin}" onchange="sessSetPipAxis('yMin',this.value)"></label><label>Y maximum <b>${yMax}</b><input type="range" min="${yStep}" max="${sliderCeiling}" step="${yStep}" value="${yMax}" onchange="sessSetPipAxis('yMax',this.value)"></label><label>X start <b>${escapeHtml(chartRows[xMin].label)}</b><input type="range" min="0" max="${lastIdx}" value="${xMin}" ${lastIdx===0?"disabled":""} onchange="sessSetPipAxis('xMin',this.value)"></label><label>X end <b>${escapeHtml(chartRows[xMax].label)}</b><input type="range" min="0" max="${lastIdx}" value="${xMax}" ${lastIdx===0?"disabled":""} onchange="sessSetPipAxis('xMax',this.value)"></label><button class="secondary" onclick="sessResetPipAxes()"><i class="bi bi-arrow-counterclockwise"></i> Automatic</button></div></details>`;
   _sessPipChart = new Chart(canvas.getContext("2d"), {
     type:"line",
-    data:{ labels:chartRows.map(r => r.label), datasets:[{ data:chartRows.map(r => r.value), borderColor:"#3185fc", backgroundColor:"rgba(49,133,252,.14)", fill:true, tension:.35, pointRadius:3, borderWidth:2 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{display:false},title:{display:true,text:isWeekly?"Week":"Date"}}, y:{min:isPct?0:undefined,max:isPct?100:undefined,title:{display:true,text:isPct?"Percent (%)":(goal.measure||"Score")}} } }
+    data:{ labels:visible.map(r => r.label), datasets:[{ data:visible.map(r => r.value), borderColor:"#3185fc", backgroundColor:"rgba(49,133,252,.14)", fill:true, tension:.35, pointRadius:3, borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{display:false},title:{display:true,text:grouping==="weekly"?"Week":grouping==="monthly"?"Month":"Date"}}, y:{min:yMin,max:yMax,ticks:{stepSize:cfg.yStep||undefined},title:{display:true,text:cfg.yLabel}} } }
   });
 }
+
+function sessCurrentPipGoal(){return _sessPipGoals.find(g=>g._key===document.getElementById("sess-pip-goal")?.value);}
+function sessSetPipChartOption(key,value){const goal=sessCurrentPipGoal();if(!goal)return;const state=_sessPipChartState[goal._key]||={};state[key]=value;if(key==="xGrouping"){delete state.xMin;delete state.xMax;}if(key==="aggregation"){delete state.yMin;delete state.yMax;}sessRenderPipChart(goal);}
+function sessSetPipAxis(axis,rawValue){const goal=sessCurrentPipGoal();if(!goal)return;const state=_sessPipChartState[goal._key]||={},value=Number(rawValue);state[axis]=value;if(axis==="yMin"&&Number.isFinite(state.yMax)&&value>=state.yMax)state.yMax=value+1;if(axis==="yMax"&&Number.isFinite(state.yMin)&&value<=state.yMin)state.yMin=Math.max(0,value-1);if(axis==="xMin"&&Number.isFinite(state.xMax)&&value>state.xMax)state.xMax=value;if(axis==="xMax"&&Number.isFinite(state.xMin)&&value<state.xMin)state.xMin=value;sessRenderPipChart(goal);}
+function sessResetPipAxes(){const goal=sessCurrentPipGoal();if(!goal)return;delete _sessPipChartState[goal._key];sessRenderPipChart(goal);}
 
 async function sessSavePipProgress() {
   const goal = _sessPipGoals.find(g => g._key === document.getElementById("sess-pip-goal")?.value);
@@ -533,12 +551,14 @@ async function addSession() {
   const endTime  = localEndTime ? localEndTime.replace("T", " ") : "";
   setStatus("sess-status", "Saving…", "loading");
   try {
-    const result = await apiCall("addSession", { noteText, dateTime, endTime });
+    const result = await apiCall("addSession", { noteText, dateTime, endTime, attachments:sessAttachments });
     const msg = result.redacted
       ? "Session note saved. <strong>PHI was detected and redacted</strong> before storing. <i class='bi bi-shield-fill-check' style='color:#059669;'></i>"
       : "Session note saved.";
     setStatus("sess-status", msg, "success");
     if (_sessQuill) _sessQuill.setText("");
+    sessAttachments = [];
+    sessRenderAttachments();
     _sessGoalsBlockLength = 0;
     document.getElementById("sess-templateSelect").value = "";
     document.querySelectorAll("#sess-goalsChecklist input:checked").forEach(cb => { cb.checked = false; });
@@ -728,6 +748,62 @@ function sessFormatDuration(mins) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
+function sessNormalizeAttachmentUrl(raw) {
+  const value = String(raw || "").trim();
+  if (!value) throw new Error("Paste a link first.");
+  let parsed;
+  try { parsed = new URL(value); } catch (_) { throw new Error("Enter a complete link beginning with https:// or http://."); }
+  if (!["https:", "http:"].includes(parsed.protocol)) throw new Error("Only http:// and https:// links can be attached.");
+  if (parsed.href.length > 2048) throw new Error("That link is too long.");
+  return parsed.href;
+}
+
+function sessAttachmentLabel(url) {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname === "/" ? "" : parsed.pathname;
+    const label = parsed.hostname.replace(/^www\./, "") + path;
+    return label.length > 64 ? label.slice(0, 61) + "…" : label;
+  } catch (_) { return "Attached link"; }
+}
+
+function sessAddAttachment(editing = false) {
+  const input = document.getElementById(editing ? "sess-edit-attachment-url" : "sess-attachment-url");
+  const statusId = editing ? "sess-edit-status" : "sess-status";
+  try {
+    const url = sessNormalizeAttachmentUrl(input?.value);
+    const list = editing ? (window._sessEditAttachments ||= []) : sessAttachments;
+    if (!list.includes(url)) list.push(url);
+    if (input) input.value = "";
+    editing ? sessRenderEditAttachments() : sessRenderAttachments();
+  } catch (e) { setStatus(statusId, e.message, "error"); }
+}
+
+function sessRemoveAttachment(index, editing = false) {
+  const list = editing ? (window._sessEditAttachments ||= []) : sessAttachments;
+  list.splice(index, 1);
+  editing ? sessRenderEditAttachments() : sessRenderAttachments();
+}
+
+function sessAttachmentItems(list, editing = false) {
+  return (list || []).map((url, index) => `<div class="sess-attachment-chip"><a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" title="${escapeAttr(url)}"><i class="bi bi-link-45deg"></i>${escapeHtml(sessAttachmentLabel(url))}</a><button type="button" class="icon-btn" onclick="sessRemoveAttachment(${index},${editing})" aria-label="Remove attachment"><i class="bi bi-x-lg"></i></button></div>`).join("");
+}
+
+function sessRenderAttachments() {
+  const root = document.getElementById("sess-attachment-list");
+  if (root) root.innerHTML = sessAttachmentItems(sessAttachments);
+}
+
+function sessRenderEditAttachments() {
+  const root = document.getElementById("sess-edit-attachment-list");
+  if (root) root.innerHTML = sessAttachmentItems(window._sessEditAttachments || [], true);
+}
+
+function sessRenderedAttachments(list) {
+  if (!Array.isArray(list) || !list.length) return "";
+  return `<div class="sess-note-attachments"><span><i class="bi bi-paperclip"></i> Attachments</span>${list.map(url => `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer" title="${escapeAttr(url)}"><i class="bi bi-box-arrow-up-right"></i>${escapeHtml(sessAttachmentLabel(url))}</a>`).join("")}</div>`;
+}
+
 async function deleteSession(sessionId) {
   if (!confirm("Delete this session note? This cannot be undone.")) return;
   try {
@@ -753,6 +829,7 @@ function sessNoteCard(s, isProvider, timeOnly = false) {
       </span>` : ""}
     </div>
     <div class="session-note-content note-text">${s.noteText || ""}</div>
+    ${sessRenderedAttachments(s.attachments)}
   </article>`;
 }
 
@@ -764,6 +841,7 @@ function sessEditSession(sessionId) {
   modal.id = "sess-edit-modal";
   modal.style.cssText = "position:fixed;inset:0;z-index:9999;background:rgba(15,23,42,.52);display:grid;place-items:center;padding:16px;";
   const toInput = value => String(value || "").replace(" ", "T").slice(0, 16);
+  window._sessEditAttachments = Array.isArray(session.attachments) ? [...session.attachments] : [];
   modal.innerHTML = `<div class="card" style="width:min(720px,100%);max-height:90vh;overflow:auto;margin:0;">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;"><h2 style="margin:0;"><i class="bi bi-pencil-square"></i>Edit Session Note</h2><button class="secondary icon-btn" onclick="document.getElementById('sess-edit-modal').remove()"><i class="bi bi-x-lg"></i></button></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;">
@@ -772,6 +850,9 @@ function sessEditSession(sessionId) {
     </div>
     <label style="text-transform:none;">Note</label>
     <div id="sess-edit-note" contenteditable="true" style="min-height:220px;padding:14px;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);line-height:1.65;">${session.noteText || ""}</div>
+    <label style="text-transform:none;margin-top:14px;">Link Attachments</label>
+    <div class="sess-attachment-add"><input id="sess-edit-attachment-url" type="url" inputmode="url" placeholder="https://example.com/resource" onkeydown="if(event.key==='Enter'){event.preventDefault();sessAddAttachment(true);}"><button type="button" class="secondary" onclick="sessAddAttachment(true)"><i class="bi bi-paperclip"></i> Add Attachment</button></div>
+    <div id="sess-edit-attachment-list" class="sess-attachment-list">${sessAttachmentItems(window._sessEditAttachments, true)}</div>
     <div id="sess-edit-status" style="margin-top:10px;"></div>
     <div class="btn-row" style="margin-top:12px;"><button onclick="sessSaveEdit('${escapeAttr(sessionId)}')"><i class="bi bi-save-fill"></i> Save Changes</button><button class="secondary" onclick="document.getElementById('sess-edit-modal').remove()">Cancel</button></div>
   </div>`;
@@ -787,7 +868,7 @@ async function sessSaveEdit(sessionId) {
   if (!start || (end && end <= start)) { setStatus("sess-edit-status", "Enter a valid start and end time.", "error"); return; }
   setStatus("sess-edit-status", "Saving…", "loading");
   try {
-    await apiCall("updateSession", { sessionId, noteText, dateTime:start.replace("T"," "), endTime:end ? end.replace("T"," ") : "" });
+    await apiCall("updateSession", { sessionId, noteText, dateTime:start.replace("T"," "), endTime:end ? end.replace("T"," ") : "", attachments:window._sessEditAttachments || [] });
     document.getElementById("sess-edit-modal")?.remove();
     await loadSessions();
   } catch (e) { setStatus("sess-edit-status", "Error: " + e.message, "error"); }
