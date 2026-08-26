@@ -2,17 +2,26 @@
 
 let _ntfNotifications = [];  // module-level cache updated on render + toggle
 let _ntfActiveFilter  = "all";
+let _ntfMessaging = { portalMessages:[], smsMessages:[], phone:"", smsNumber:"", smsConsent:false };
 
 async function initNotificationsSection(root, options = {}) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
-    const [notifRes, bcastRes] = await Promise.all([
+    const [notifRes, bcastRes, portalRes, smsRes, phoneRes] = await Promise.all([
       apiCall("getNotifications", {}),
-      apiCall("getBroadcasts",    {}).catch(() => ({ broadcasts: [] }))
+      apiCall("getBroadcasts",    {}).catch(() => ({ broadcasts: [] })),
+      apiCall("getPortalMessages", {}).catch(() => ({ messages: [] })),
+      apiCall("getTwilioMessages", {}).catch(() => ({ messages: [], clientPhone:"", smsNumber:"" })),
+      apiCall("getClientPhone", {}).catch(() => ({ phone:"", smsConsent:false }))
     ]);
     renderNotificationsSection(root, {
       notifications: notifRes.notifications || [],
-      broadcasts:    bcastRes.broadcasts    || []
+      broadcasts:    bcastRes.broadcasts    || [],
+      portalMessages: portalRes.messages || [],
+      smsMessages: smsRes.messages || [],
+      phone: phoneRes.phone || smsRes.clientPhone || "",
+      smsNumber: smsRes.smsNumber || "",
+      smsConsent: !!phoneRes.smsConsent
     }, options);
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
@@ -22,10 +31,12 @@ async function initNotificationsSection(root, options = {}) {
   }
 }
 
-function renderNotificationsSection(root, { notifications, broadcasts }, options = {}) {
+function renderNotificationsSection(root, { notifications, broadcasts, portalMessages = [], smsMessages = [], phone = "", smsNumber = "", smsConsent = false }, options = {}) {
   const compact = !!options.compact;
   const unreadCount = notifications.filter(n => !n.isRead && n.status !== "cancelled").length
-                    + broadcasts.filter(b => !b.isRead).length;
+                    + broadcasts.filter(b => !b.isRead).length
+                    + portalMessages.filter(m => !m.mine && !m.isRead).length;
+  _ntfMessaging = { portalMessages, smsMessages, phone, smsNumber, smsConsent };
 
   root.innerHTML = `
     <div class="card" style="${compact ? "margin-bottom:10px;" : ""}">
@@ -43,6 +54,26 @@ function renderNotificationsSection(root, { notifications, broadcasts }, options
                 style="font-size:12px;">
           <i class="bi bi-arrow-clockwise"></i> Refresh
         </button>
+      </div>
+    </div>
+
+    <div class="card ntf-conversation-card">
+      <div class="ntf-conversation-head">
+        <div><h2><i class="bi bi-chat-dots-fill"></i> Conversation</h2><p>Portal replies and SMS messages in one thread.</p></div>
+        <button class="secondary icon-btn" onclick="ntfRefreshConversation()" aria-label="Refresh conversation"><i class="bi bi-arrow-clockwise"></i></button>
+      </div>
+      <div id="ntf-conversation-thread" class="ntf-conversation-thread">${ntfConversationHtml()}</div>
+      <div class="ntf-composer">
+        <textarea id="ntf-message" rows="3" maxlength="1600" placeholder="Write a message…"></textarea>
+        <div class="ntf-compose-actions">
+          <button onclick="ntfSendPortalReply()"><i class="bi bi-shield-lock-fill"></i> Send Portal Reply</button>
+          ${getRole() === "provider"
+            ? `<button class="secondary" onclick="ntfSendProviderSms()" ${!phone || !smsConsent ? "disabled" : ""}><i class="bi bi-phone-fill"></i> Send SMS</button>`
+            : `<button class="secondary" onclick="ntfOpenSmsApp()" ${!smsNumber ? "disabled" : ""}><i class="bi bi-phone-fill"></i> Open SMS App</button>`}
+        </div>
+        <div id="ntf-message-status"></div>
+        ${getRole() === "provider" && !smsConsent ? `<div class="field-hint"><i class="bi bi-info-circle-fill"></i>SMS requires the client’s consent; portal replies remain available.</div>` : ""}
+        ${getRole() !== "provider" ? `<div class="field-hint"><i class="bi bi-phone"></i>Open SMS App sends from your own phone number. Send Portal Reply keeps the message inside the portal.</div>` : ""}
       </div>
     </div>
 
@@ -72,6 +103,10 @@ function renderNotificationsSection(root, { notifications, broadcasts }, options
       .ntf-item.unread { border-color:var(--primary);background:color-mix(in srgb,var(--primary) 5%,transparent); }
       .ntf-unread-dot { width:8px;height:8px;background:#ef4444;border-radius:50%;flex-shrink:0;margin-top:5px; }
       .ntf-read-dot   { width:8px;height:8px;background:var(--border);border-radius:50%;flex-shrink:0;margin-top:5px; }
+      .ntf-conversation-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.ntf-conversation-head h2{margin:0}.ntf-conversation-head p{margin:3px 0 0;color:var(--muted);font-size:12px}
+      .ntf-conversation-thread{display:flex;flex-direction:column;gap:7px;max-height:300px;overflow:auto;padding:10px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(145deg,#f8faff,#f6fbff)}
+      .ntf-msg{display:flex;flex-direction:column;max-width:82%}.ntf-msg.mine{align-self:flex-end;align-items:flex-end}.ntf-msg.theirs{align-self:flex-start;align-items:flex-start}.ntf-msg-body{padding:9px 12px;border-radius:14px;background:#e2e8f0;color:var(--text);font-size:13px;line-height:1.45}.ntf-msg.mine .ntf-msg-body{background:linear-gradient(135deg,#4338ca,#3185fc);color:#fff}.ntf-msg-meta{margin:3px 4px 0;color:var(--muted);font-size:9px}.ntf-channel{font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+      .ntf-composer{margin-top:10px}.ntf-composer textarea{width:100%;resize:vertical;min-height:72px}.ntf-compose-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px}.ntf-compose-actions button{font-size:12px;padding:7px 11px}
     </style>`;
 
   // Store notifications in module cache for filter re-renders
@@ -80,6 +115,10 @@ function renderNotificationsSection(root, { notifications, broadcasts }, options
 
   // Set active tab style
   ntfSetActiveTab("all");
+
+  if (portalMessages.some(m => !m.mine && !m.isRead)) {
+    apiCall("markPortalMessagesRead", {}).then(() => updateBellBadge()).catch(() => {});
+  }
 
   // Auto-mark broadcasts as read after 3s
   broadcasts.filter(b => !b.isRead).forEach(b => {
@@ -165,6 +204,73 @@ function broadcastNotifHtml(b) {
     </div>`;
 }
 
+function ntfConversationHtml() {
+  const role = getRole() === "provider" ? "provider" : "client";
+  const portal = (_ntfMessaging.portalMessages || []).map(m => ({
+    body:m.body || "", at:m.createdAt || "", mine:!!m.mine, channel:"Portal"
+  }));
+  const sms = (_ntfMessaging.smsMessages || []).map(m => {
+    const outbound = m.direction === "outbound-api" || m.direction === "outbound";
+    return { body:m.body || "", at:m.dateSent || m.dateCreated || "", mine:role === "provider" ? outbound : !outbound, channel:"SMS" };
+  });
+  const messages = portal.concat(sms).sort((a,b) => new Date(a.at || 0) - new Date(b.at || 0));
+  if (!messages.length) return `<p style="color:var(--muted);font-size:12px;margin:4px;">No messages yet. Start the conversation below.</p>`;
+  return messages.map(m => {
+    const date = m.at ? new Date(m.at) : null;
+    const when = date && !isNaN(date) ? date.toLocaleString([], {month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : "";
+    return `<div class="ntf-msg ${m.mine ? "mine" : "theirs"}"><div class="ntf-msg-body">${escapeHtml(m.body)}</div><div class="ntf-msg-meta"><span class="ntf-channel">${m.channel}</span>${when ? " · " + escapeHtml(when) : ""}</div></div>`;
+  }).join("");
+}
+
+function ntfCurrentRoot() {
+  const popout = document.getElementById("notifications-popout");
+  return popout?.classList.contains("open") ? document.getElementById("notifications-popout-body") : document.getElementById("section-notifications");
+}
+
+async function ntfRefreshConversation() {
+  const root = ntfCurrentRoot();
+  if (root) await initNotificationsSection(root, { compact:root.id === "notifications-popout-body" });
+}
+
+async function ntfSendPortalReply() {
+  const input = document.getElementById("ntf-message");
+  const message = input?.value.trim() || "";
+  if (!message) { setStatus("ntf-message-status", "Write a message first.", "error"); return; }
+  setStatus("ntf-message-status", "Sending portal reply…", "loading");
+  try {
+    await apiCall("sendPortalMessage", { message });
+    if (input) input.value = "";
+    await ntfRefreshConversation();
+  } catch (e) { setStatus("ntf-message-status", "Error: " + e.message, "error"); }
+}
+
+async function ntfSendProviderSms() {
+  const input = document.getElementById("ntf-message");
+  const message = input?.value.trim() || "";
+  if (!message) { setStatus("ntf-message-status", "Write a message first.", "error"); return; }
+  if (!_ntfMessaging.phone) { setStatus("ntf-message-status", "No client mobile number is on file.", "error"); return; }
+  setStatus("ntf-message-status", "Sending SMS…", "loading");
+  try {
+    await apiCall("scheduleReminder", { channel:"sms", recipient:_ntfMessaging.phone, message, scheduledAt:new Date().toISOString(), sendNow:true });
+    if (input) input.value = "";
+    await ntfRefreshConversation();
+  } catch (e) { setStatus("ntf-message-status", "Error: " + e.message, "error"); }
+}
+
+function ntfOpenSmsApp() {
+  const number = _ntfMessaging.smsNumber || "";
+  if (!number) { setStatus("ntf-message-status", "The practice SMS number is not configured.", "error"); return; }
+  const message = document.getElementById("ntf-message")?.value.trim() || "";
+  const separator = /iPad|iPhone|iPod/.test(navigator.userAgent) ? "&" : "?";
+  window.location.href = `sms:${number}${message ? separator + "body=" + encodeURIComponent(message) : ""}`;
+}
+
+if (!window._ntfConversationRefreshTimer) {
+  window._ntfConversationRefreshTimer = setInterval(() => {
+    if (document.getElementById("notifications-popout")?.classList.contains("open")) ntfRefreshConversation();
+  }, 30000);
+}
+
 // Filter tabs
 function ntfFilter(filter) {
   _ntfActiveFilter = filter;
@@ -220,12 +326,15 @@ async function toggleNotifRead(reminderId, markRead) {
 // ── Bell badge (called on portal load and after read state changes) ───────────
 async function updateBellBadge() {
   try {
-    const [notifRes, bcastRes] = await Promise.all([
-      apiCall("getNotifications", {}).catch(() => ({ notifications: [] })),
-      apiCall("getBroadcasts",    {}).catch(() => ({ broadcasts:    [] }))
+    const provider = getRole() === "provider";
+    const [notifRes, bcastRes, portalRes] = await Promise.all([
+      provider ? Promise.resolve({ notifications:[] }) : apiCall("getNotifications", {}).catch(() => ({ notifications: [] })),
+      provider ? Promise.resolve({ broadcasts:[] }) : apiCall("getBroadcasts", {}).catch(() => ({ broadcasts: [] })),
+      apiCall("getPortalMessages", {}).catch(() => ({ messages: [] }))
     ]);
     const count = (notifRes.notifications || []).filter(n => !n.isRead && n.status !== "cancelled").length
-                + (bcastRes.broadcasts    || []).filter(b => !b.isRead).length;
+                + (bcastRes.broadcasts    || []).filter(b => !b.isRead).length
+                + (portalRes.messages     || []).filter(m => !m.mine && !m.isRead).length;
     const badge = document.getElementById("bell-badge");
     if (badge) {
       badge.textContent = count > 0 ? (count > 99 ? "99+" : count) : "";
