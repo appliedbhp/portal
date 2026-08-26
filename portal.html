@@ -295,7 +295,8 @@ if (_role === "adult") {
 }
 
 loadBroadcastBanner();
-if (typeof updateBellBadge === "function" && typeof getRole === "function" && getRole() !== "provider") updateBellBadge();
+if (typeof updateBellBadge === "function") updateBellBadge();
+if (typeof updateBellBadge === "function") setInterval(updateBellBadge, 60000);
 if (typeof applyClientAccessRestrictions === "function" && getRole() !== "provider") applyClientAccessRestrictions();
 
 function switchClient() {
