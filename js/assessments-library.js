@@ -62,9 +62,13 @@ function renderAssessmentsLibrary(root, assessments) {
 }
 
 function assessmentLibraryRowHtml(a) {
+  a = a || {};
+  const definition = a.definition && typeof a.definition === "object" ? a.definition : {};
   const targetBadge = { adult: "#6366f1", child: "#059669", parent: "#d97706", adolescent: "#0891b2" };
   const color = targetBadge[a.target] || "#6b7280";
-  const qCount = (a.definition.parts || []).reduce((n, p) => n + (p.questions || []).length, 0);
+  const qCount = (Array.isArray(definition.parts) ? definition.parts : [])
+    .filter(Boolean)
+    .reduce((n, p) => n + (Array.isArray(p.questions) ? p.questions.length : 0), 0);
   return `
     <div style="border:1.5px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:8px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;">
@@ -121,8 +125,9 @@ async function uploadAssessmentFromText() {
 }
 
 function renderAssessmentPreview(assessmentId, def) {
-  const scale    = (def.scale || []).join(" · ");
-  const parts    = def.parts || [];
+  def = def && typeof def === "object" ? def : {};
+  const scale    = (Array.isArray(def.scale) ? def.scale : []).join(" · ");
+  const parts    = (Array.isArray(def.parts) ? def.parts : []).filter(Boolean);
   const totalQs  = parts.reduce((n, p) => n + (p.questions || []).length, 0);
   const preview  = document.getElementById("al-preview");
   if (!preview) return;
