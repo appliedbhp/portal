@@ -14,6 +14,8 @@ function initHomeSection(root) {
       </div>
     </div>
 
+    ${isClient ? `<div id="home-youth-today"></div>` : ""}
+
     <div class="card home-insights-card">
       <div class="home-insights-heading">
         <div><h2><i class="bi bi-stars gradient-icon"></i>Progress Snapshot</h2><p>Recent engagement and milestones—not a clinical score.</p></div>
@@ -64,6 +66,7 @@ function initHomeSection(root) {
 
 async function loadHomeStats() {
   const el = document.getElementById("home-stats");
+  const isClient = getRole() !== "provider";
   try {
     const [roadmapHist, winHist, plan, progress, sessions] = await Promise.all([
       apiCall("getHistory", { type: "roadmap" }).catch(() => ({ history: [] })),
@@ -85,18 +88,35 @@ async function loadHomeStats() {
 
     const isAdult = getRole() === "adult";
     el.innerHTML = [
-      statCard("person-badge-fill", "Client ID", getClientId()),
-      statCard("person-fill", "Logged in as", `${getAssessorName()} (${getRole()})`),
+      !isClient ? statCard("person-badge-fill", "Client ID", getClientId()) : statCard("sparkles", "Today’s focus", plan.goals.length ? "One small step" : "Explore your tools"),
+      !isClient ? statCard("person-fill", "Logged in as", `${getAssessorName()} (${getRole()})`) : statCard("activity", "Active days (4 weeks)", new Set(progress.progress.map(p=>homeDateKey(p.date)).filter(d=>homeDaysAgo(d)<28)).size),
       !isAdult ? statCard("signpost-split-fill", "Last Roadmap Assessment", lastRoadmap ? `${lastRoadmap.date} — ${lastRoadmap.level || ""}` : "None yet") : "",
       !isAdult ? statCard("heart-pulse-fill", "Last WIN Assessment", lastWin ? lastWin.date : "None yet") : "",
       statCard("flag-fill", "Goals on File", plan.goals.length),
       statCard("journal-text", "Sessions This Month", thisMonthSessions.length),
       statCard("hourglass-split", "Session Time This Month", monthMinutes > 0 ? sessFormatDuration(monthMinutes) : "—")
     ].filter(Boolean).join("");
-    renderHomeVisualDashboard({ roadmap:roadmapHist.history || [], win:winHist.history || [], goals:plan.goals || [], progress:progress.progress || [], sessions:sessions.sessions || [] });
+    const dashboardData={ roadmap:roadmapHist.history || [], win:winHist.history || [], goals:plan.goals || [], progress:progress.progress || [], sessions:sessions.sessions || [] };
+    renderHomeVisualDashboard(dashboardData);
+    if(isClient) renderYouthToday(dashboardData);
   } catch (e) {
     el.innerHTML = `<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>Error loading overview: ${escapeHtml(e.message)}</span></div>`;
   }
+}
+
+function renderYouthToday(data){
+  const el=document.getElementById("home-youth-today");if(!el)return;
+  const prefs=typeof getYouthPreferences==="function"?getYouthPreferences():{mode:"teen",goalLabel:"Goals"};
+  if(prefs.mode==="classic"){el.innerHTML="";return;}
+  const label=typeof youthGoalLabel==="function"?youthGoalLabel(true):"Goal";
+  const activeDates=[...new Set([...data.progress.map(p=>homeDateKey(p.date)),...data.sessions.map(s=>homeDateKey(s.dateTime))].filter(d=>homeDaysAgo(d)<28))];
+  const xp=Math.min(999,activeDates.length*10+data.progress.filter(p=>homeDaysAgo(homeDateKey(p.date))<28).length*3+data.sessions.filter(s=>homeDaysAgo(homeDateKey(s.dateTime))<28).length*15);
+  const nextGoal=data.goals.find(g=>!guEntries(g,data.progress).length)||data.goals[0];
+  const today=new Date().toISOString().slice(0,10),saved=(()=>{try{return localStorage.getItem("youthCheckIn:"+getClientId()+":"+today)||""}catch(_){return""}})();
+  const feelings=[["low","bi-battery","Low"],["steady","bi-circle-half","Steady"],["good","bi-brightness-high","Good"],["energized","bi-lightning-charge-fill","Energized"]];
+  el.innerHTML=`<section class="youth-today-hero"><div class="youth-hero-copy"><span class="youth-eyebrow">${prefs.mode==="explorer"?"YOUR ADVENTURE TODAY":"YOUR SPACE TODAY"}</span><h2>${typeof youthGreeting==="function"?youthGreeting():"Welcome back"}, ${escapeHtml(getAssessorName()||"there")}.</h2><p>${nextGoal?`Your next step can be small: check in with “${escapeHtml(nextGoal.goalDomain||label)}.”`:"Explore a tool or take a moment to check in."}</p><div class="youth-hero-actions">${nextGoal?`<button onclick="showSection('plan')"><i class="bi bi-${prefs.mode==="explorer"?"map-fill":"arrow-up-right-circle-fill"}"></i> Open ${escapeHtml(label)}</button>`:""}<button class="secondary" onclick="showSection('programs')"><i class="bi bi-play-circle-fill"></i> Continue program</button></div></div><div class="youth-level-card"><i class="bi bi-stars"></i><strong>${xp} XP</strong><span>for showing up and practicing</span></div></section>
+  <div class="youth-today-grid"><section class="card youth-checkin"><div class="youth-card-title"><i class="bi bi-emoji-smile-fill"></i><div><h3>How’s your energy?</h3><p>Private on this device unless you choose to share it.</p></div></div><div class="youth-feelings">${feelings.map(([v,i,l])=>`<button class="youth-feeling-btn ${saved===v?"selected":""}" onclick="youthCheckIn('${v}',this)"><i class="bi ${i}"></i><span>${l}</span></button>`).join("")}</div><p id="youth-checkin-response" class="youth-response">${saved?"Thanks for checking in today.":"No perfect answer—just notice where you are."}</p></section>
+  <section class="card youth-toolbox"><div class="youth-card-title"><i class="bi bi-tools"></i><div><h3>Quick tools</h3><p>Pick what would help right now.</p></div></div><div class="youth-tools"><button onclick="youthStartFocus(5)"><i class="bi bi-hourglass-split"></i><b>5-minute focus</b><span id="youth-focus-time">Start</span></button><button onclick="showSection('notifications')"><i class="bi bi-chat-heart-fill"></i><b>Ask for help</b><span>Message securely</span></button><button onclick="showSection('appointments')"><i class="bi bi-calendar-check-fill"></i><b>Prepare</b><span>See next session</span></button><button onclick="showSection('client-hub')"><i class="bi bi-folder2-open"></i><b>My resources</b><span>Tools & documents</span></button></div></section></div>`;
 }
 
 function homeDateKey(value) { return String(value || "").slice(0,10); }

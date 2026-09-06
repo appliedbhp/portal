@@ -3,17 +3,19 @@
 async function initSettingsSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
-    const [phoneRes, avatarRes, timeZoneRes] = await Promise.all([
+    const [phoneRes, avatarRes, timeZoneRes, youthRes] = await Promise.all([
       apiCall("getClientPhone", {}).catch(() => ({ phone: "", smsConsent: false })),
       apiCall("getAvatar", {}).catch(() => ({ avatarJson: null })),
-      apiCall("getClientTimeZone", {}).catch(() => ({ timeZone: "America/Los_Angeles" }))
+      apiCall("getClientTimeZone", {}).catch(() => ({ timeZone: "America/Los_Angeles" })),
+      apiCall("getYouthPreferences", {}).catch(() => ({ preferences: typeof getYouthPreferences === "function" ? getYouthPreferences() : {} }))
     ]);
     const avatarJson = avatarRes.avatarJson || null;
     renderSettingsSection(root, {
       phone:      phoneRes.phone      || "",
       smsConsent: phoneRes.smsConsent || false,
       avatarJson,
-      timeZone: timeZoneRes.timeZone || "America/Los_Angeles"
+      timeZone: timeZoneRes.timeZone || "America/Los_Angeles",
+      youth: youthRes.preferences || {}
     });
     if (avatarJson) restoreAvatarCreator(avatarJson);
   } catch (e) {
@@ -24,7 +26,8 @@ async function initSettingsSection(root) {
   }
 }
 
-function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone }) {
+function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone, youth }) {
+  youth = Object.assign({ mode:"teen", accent:"#6366f1", goalLabel:"Goals", reducedMotion:false, celebrations:true }, youth || {});
   const timeZones = [
     ["America/Los_Angeles", "Pacific Time"], ["America/Denver", "Mountain Time"],
     ["America/Phoenix", "Arizona Time"], ["America/Chicago", "Central Time"],
@@ -41,6 +44,19 @@ function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone }
       <p style="color:var(--muted);font-size:14px;margin:0;">
         Manage your avatar, contact preferences, and communication settings.
       </p>
+    </div>
+
+    <div class="card youth-settings-card">
+      <div class="youth-settings-heading"><div><h2><i class="bi bi-palette2"></i> My Experience</h2><p>Choose how the portal looks and talks to you. This never changes your care plan or scores.</p></div><span class="youth-safe-badge"><i class="bi bi-shield-check"></i> Just appearance</span></div>
+      <div class="youth-mode-grid">
+        ${[["explorer","bi-rocket-takeoff-fill","Explorer","Playful, larger, and guided"],["teen","bi-lightning-charge-fill","Teen","Clean, energetic, and independent"],["classic","bi-grid-fill","Classic","Simple and familiar"]].map(([value,icon,title,copy])=>`<label class="youth-mode-option"><input type="radio" name="st-youth-mode" value="${value}" ${youth.mode===value?"checked":""}><span><i class="bi ${icon}"></i><b>${title}</b><small>${copy}</small></span></label>`).join("")}
+      </div>
+      <div class="youth-pref-grid">
+        <label>What should we call them?<select id="st-goal-label">${["Goals","Plans","Quests"].map(x=>`<option ${youth.goalLabel===x?"selected":""}>${x}</option>`).join("")}</select></label>
+        <label>Accent color<div class="youth-color-row">${["#6366f1","#2563eb","#0891b2","#059669","#db2777","#7c3aed"].map(c=>`<button type="button" class="youth-color ${youth.accent===c?"selected":""}" style="--swatch:${c}" data-color="${c}" onclick="document.querySelectorAll('.youth-color').forEach(x=>x.classList.remove('selected'));this.classList.add('selected')" aria-label="Choose ${c}"></button>`).join("")}</div></label>
+      </div>
+      <div class="youth-toggle-row"><label><input id="st-celebrations" type="checkbox" ${youth.celebrations?"checked":""}> Show gentle celebrations</label><label><input id="st-reduced-motion" type="checkbox" ${youth.reducedMotion?"checked":""}> Reduce motion</label></div>
+      <div class="youth-settings-actions"><button onclick="saveYouthExperienceSettings()"><i class="bi bi-check-circle-fill"></i> Save My Experience</button><div id="st-youth-status"></div></div>
     </div>
 
     <!-- Avatar -->
@@ -161,6 +177,23 @@ function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone }
         <i class="bi bi-x-circle-fill"></i> Revoke Consent
       </button>` : ""}
     </div>`;
+}
+
+async function saveYouthExperienceSettings() {
+  const payload={
+    mode:document.querySelector('input[name="st-youth-mode"]:checked')?.value||"teen",
+    accent:document.querySelector('.youth-color.selected')?.dataset.color||"#6366f1",
+    goalLabel:document.getElementById('st-goal-label')?.value||"Goals",
+    celebrations:!!document.getElementById('st-celebrations')?.checked,
+    reducedMotion:!!document.getElementById('st-reduced-motion')?.checked
+  };
+  setStatus("st-youth-status","Saving…","loading");
+  try{
+    const result=await apiCall("saveYouthPreferences",payload);
+    if(typeof applyYouthPreferences==="function")applyYouthPreferences(result.preferences||payload);
+    setStatus("st-youth-status","Saved—your portal has been updated.","success");
+    if(typeof showToast==="function")showToast("Your experience is ready.","success");
+  }catch(e){setStatus("st-youth-status","Error: "+e.message,"error");}
 }
 
 async function saveSettingsTimeZone() {
