@@ -1,9 +1,5 @@
 // ── Assessment Library (provider-only) ───────────────────────────────────────
 
-const ASSESSMENT_LIBRARY_HEADERS = ["ASSESSMENT_ID","NAME","SHORT_NAME","TARGET","VERSION","SOURCE","DEFINITION_JSON","CREATED_AT","ACTIVE"];
-const ASSESSMENT_ASSIGNMENT_HEADERS = ["ASSIGNMENT_ID","CLIENT_ID","ASSESSMENT_ID","FREQUENCY","FREQUENCY_DAYS","NEXT_DUE","ASSIGNED_BY","ASSIGNED_AT","ACTIVE"];
-const ASSESSMENT_RESPONSE_HEADERS = ["RESPONSE_ID","ASSIGNMENT_ID","CLIENT_ID","ASSESSMENT_ID","STARTED_AT","COMPLETED_AT","RESPONSES_JSON","SCORES_JSON","STATUS"];
-
 function assessmentProviderVerify_(params, verify) {
   if (verify && verify.role === "provider") return verify;
   params = params || {};
@@ -95,7 +91,9 @@ threshold_count: count questions where response index >= threshold index. sum/me
   if (!questionCount) throw new Error("Assessment: no questions were found. Include the full item text, scale, and scoring instructions.");
 
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = getOrCreateSheet_(ss, "data_assessments_library", ASSESSMENT_LIBRARY_HEADERS);
+  const sheet = getOrCreateSheet_(ss, "data_assessments_library", [
+    "ASSESSMENT_ID","NAME","SHORT_NAME","TARGET","VERSION","SOURCE","DEFINITION_JSON","CREATED_AT","ACTIVE"
+  ]);
   const id    = Utilities.getUuid();
   sheet.appendRow([id, name || definition.name || "Untitled", definition.shortName || "",
                    definition.target || "adult", definition.version || "", definition.source || "",
@@ -164,7 +162,9 @@ function assignAssessment_(params, verify) {
 
   const nextDue = computeNextDue_(frequency, freqDays);
   const ss      = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet   = getOrCreateSheet_(ss, "data_assessment_assignments", ASSESSMENT_ASSIGNMENT_HEADERS);
+  const sheet   = getOrCreateSheet_(ss, "data_assessment_assignments", [
+    "ASSIGNMENT_ID","CLIENT_ID","ASSESSMENT_ID","FREQUENCY","FREQUENCY_DAYS","NEXT_DUE","ASSIGNED_BY","ASSIGNED_AT","ACTIVE"
+  ]);
   const id      = Utilities.getUuid();
   sheet.appendRow([id, clientId, assessmentId, frequency, freqDays, nextDue, verify.clientId, nowStr_(), true]);
   return { assignmentId: id, nextDue };
@@ -303,7 +303,9 @@ function submitAssessment_(params, verify) {
 
   const scores = scoreAssessment_(def, responses);
   const ss     = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet  = getOrCreateSheet_(ss, "data_assessment_responses", ASSESSMENT_RESPONSE_HEADERS);
+  const sheet  = getOrCreateSheet_(ss, "data_assessment_responses", [
+    "RESPONSE_ID","ASSIGNMENT_ID","CLIENT_ID","ASSESSMENT_ID","STARTED_AT","COMPLETED_AT","RESPONSES_JSON","SCORES_JSON","STATUS"
+  ]);
   const id     = Utilities.getUuid();
   const now    = nowStr_();
   sheet.appendRow([id, assignmentId, verify.clientId, assessmentId, now, now,
