@@ -183,8 +183,8 @@ function carouselStep(prefix, dir) {
 function updateCarouselCharts(prefix) {
   const state = carouselState[prefix];
   const snap = state.snapshots[state.index];
-  state.renderFns.wheel(prefix + "Wheel", prefix + "WheelLegend", snap.summary);
-  state.renderFns.bar(prefix + "Bar", snap.summary);
+  state.renderFns.wheel(prefix + "Wheel", prefix + "WheelLegend", snap.summary, snap);
+  state.renderFns.bar(prefix + "Bar", snap.summary, snap);
 }
 
 // ── Toast notifications ───────────────────────────────────────────────────────
