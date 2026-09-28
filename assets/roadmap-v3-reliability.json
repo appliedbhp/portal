@@ -1,0 +1,246 @@
+{
+  "Preschool": [
+    {
+      "name": "Getting Started & Task Engagement",
+      "items": [
+        "Chooses an activity from a small set of available options.",
+        "Begins a familiar activity after a clear direction or cue.",
+        "Gets the materials needed for a familiar activity.",
+        "Moves from choosing an activity to starting it.",
+        "Joins a familiar group activity when it begins.",
+        "Starts a familiar arrival or departure routine.",
+        "Begins cleanup when the activity ends.",
+        "Approaches a new activity after a brief demonstration.",
+        "Resumes an activity after a short interruption.",
+        "Starts a familiar self-care step when it is time to do it."
+      ]
+    },
+    {
+      "name": "Attention & Persistence",
+      "items": [
+        "Stays engaged in a chosen play activity long enough to develop the play.",
+        "Attends long enough to hear a short direction.",
+        "Participates in a brief group activity appropriate for their age.",
+        "Stays with a mildly difficult activity for a short period.",
+        "Returns to an activity after a distraction.",
+        "Completes a short activity with a clear endpoint.",
+        "Continues after making a small mistake.",
+        "Accepts help and continues with a difficult activity.",
+        "Notices when attention has moved away from the activity and returns.",
+        "Persists with an everyday task until the necessary steps are done."
+      ]
+    },
+    {
+      "name": "Routines & Sequencing",
+      "items": [
+        "Follows the steps of a familiar daily routine in order.",
+        "Carries out two related directions in sequence.",
+        "Remembers what comes next in a well-practiced routine.",
+        "Uses a picture sequence or visual schedule to follow a routine.",
+        "Follows the sequence of a familiar game.",
+        "Imitates a short sequence of actions or movements.",
+        "Completes handwashing steps in a workable order.",
+        "Gets ready for snack or a meal in the expected sequence.",
+        "Follows a simple first–then direction.",
+        "Finishes one step before moving to the next step in an activity."
+      ]
+    },
+    {
+      "name": "Flexibility & Transitions",
+      "items": [
+        "Stops one activity and begins the next after a transition cue.",
+        "Moves from a preferred activity to a necessary routine.",
+        "Adjusts when a familiar activity happens in a different order.",
+        "Accepts a small change to a play plan.",
+        "Tries another approach when the first one does not work.",
+        "Returns to an activity after an unexpected interruption.",
+        "Moves with the group between familiar locations.",
+        "Uses a transition warning to prepare for a change.",
+        "Continues participating when a preferred material is unavailable.",
+        "Recovers enough after a change to take part in what comes next."
+      ]
+    },
+    {
+      "name": "Play & Social Problem Solving",
+      "items": [
+        "Suggests a play idea that another child can join.",
+        "Enters ongoing play using a workable approach.",
+        "Takes a turn during a familiar shared activity.",
+        "Follows simple rules of a familiar game.",
+        "Responds to another child's play idea.",
+        "Allows a peer a turn at leading or choosing.",
+        "Communicates a preference during shared play.",
+        "Uses words, gestures, or a practiced strategy to handle a simple play disagreement.",
+        "Seeks adult help when a peer problem cannot be resolved.",
+        "Returns to shared play after a brief disagreement."
+      ]
+    },
+    {
+      "name": "Communication & Help-Seeking",
+      "items": [
+        "Communicates a need for help using an effective method.",
+        "Shows or tells another person what is not working.",
+        "Asks for clarification when unsure what to do.",
+        "Communicates a choice or preference clearly enough to act on it.",
+        "Shares information needed for another person to join an activity.",
+        "Responds to a relevant question during an activity.",
+        "Explains a simple idea in an order another person can follow.",
+        "Tells or shows an adult when a needed item is missing.",
+        "Communicates a need for a break or change of activity.",
+        "Gets an adult when a problem exceeds what they can manage."
+      ]
+    },
+    {
+      "name": "Organization of Things & Spaces",
+      "items": [
+        "Finds a commonly used personal belonging.",
+        "Returns familiar toys or materials to their usual places.",
+        "Keeps materials together while completing an activity.",
+        "Sets up a workable space for play or a short task.",
+        "Gets the items needed before beginning a familiar activity.",
+        "Uses common materials in a way that supports completing the activity.",
+        "Notices when something needed for an activity is missing.",
+        "Clears or puts away materials when an activity is finished.",
+        "Keeps track of a coat, bag, bottle, or similar belonging during a routine.",
+        "Uses a simple storage or visual system to find or put away materials."
+      ]
+    },
+    {
+      "name": "Independence & Regulation",
+      "items": [
+        "Participates in dressing steps appropriate to their opportunities and abilities.",
+        "Completes familiar toileting steps with the level of help currently appropriate.",
+        "Participates in handwashing or other everyday hygiene routines.",
+        "Manages familiar lunch or snack materials with available adaptations.",
+        "Waits briefly for a turn or desired item.",
+        "Stops an action after a clear safety cue.",
+        "Communicates or shows when they are becoming upset.",
+        "Accepts a familiar adult's help to settle after frustration.",
+        "Uses a practiced calming or coping action when upset.",
+        "Returns to an everyday activity after a manageable upset."
+      ]
+    }
+  ],
+  "Adult": [
+    {
+      "name": "Work & Learning",
+      "items": [
+        "Starts important work early enough to allow for completion.",
+        "Identifies which task needs attention first.",
+        "Breaks a large assignment or project into usable steps.",
+        "Tracks deadlines and upcoming responsibilities.",
+        "Returns to work after an interruption.",
+        "Completes routine tasks after the initial interest fades.",
+        "Brings needed information or materials to meetings, classes, or work sessions.",
+        "Records and follows through on actions agreed to in a meeting or conversation.",
+        "Maintains a workable view of ongoing projects.",
+        "Completes the final step needed to submit or deliver finished work."
+      ]
+    },
+    {
+      "name": "Home & Daily Living",
+      "items": [
+        "Maintains a workable laundry routine.",
+        "Finds commonly used belongings when needed.",
+        "Notices household tasks before they become urgent problems.",
+        "Completes cleaning often enough to keep the living space functional.",
+        "Replenishes food and household supplies before they run out.",
+        "Finishes a household task after starting it.",
+        "Returns items to places where they can be found later.",
+        "Handles recurring home responsibilities on a workable schedule.",
+        "Plans and carries out routine meals or food preparation.",
+        "Uses a routine or system to track household tasks."
+      ]
+    },
+    {
+      "name": "Time & Transportation",
+      "items": [
+        "Estimates how long familiar activities will take well enough to plan.",
+        "Starts getting ready early enough for a commitment.",
+        "Includes travel time when deciding when to leave.",
+        "Arrives at commitments at the intended time.",
+        "Notices when it is time to stop one activity and begin another.",
+        "Allows for predictable delays when planning.",
+        "Uses a calendar, timer, alarm, or equivalent aid effectively when needed.",
+        "Checks upcoming commitments early enough to prepare.",
+        "Notices when an activity is taking more time than intended.",
+        "Adjusts the plan when something takes longer than expected."
+      ]
+    },
+    {
+      "name": "Money & Administration",
+      "items": [
+        "Pays bills by their due dates.",
+        "Opens and responds to important notices.",
+        "Completes required forms before their deadlines.",
+        "Locates important personal or financial records when needed.",
+        "Reviews subscriptions and recurring charges.",
+        "Handles insurance or benefits tasks within required timeframes.",
+        "Prepares tax-related or other recurring paperwork in time.",
+        "Tracks financial commitments made to other people.",
+        "Reviews accounts often enough to notice an unexpected issue.",
+        "Completes the final submission or follow-up step of an administrative task."
+      ]
+    },
+    {
+      "name": "Health & Self-Care",
+      "items": [
+        "Follows an intended medication or treatment routine when applicable.",
+        "Schedules needed health appointments.",
+        "Attends scheduled health appointments.",
+        "Completes follow-up steps after an appointment.",
+        "Maintains eating routines that support daily functioning.",
+        "Maintains a sleep routine that supports everyday responsibilities.",
+        "Notices and responds to basic needs such as food, water, rest, or movement.",
+        "Reorders medication or health supplies before running out when applicable.",
+        "Makes room for personally important health routines.",
+        "Seeks care for a health concern within a reasonable timeframe."
+      ]
+    },
+    {
+      "name": "Relationships & Family",
+      "items": [
+        "Remembers commitments made to other people.",
+        "Follows through on shared responsibilities.",
+        "Responds to important messages within a workable timeframe.",
+        "Tracks plans made with family, friends, or other important people.",
+        "Listens long enough to understand another person's request or perspective.",
+        "Pauses before responding when emotionally activated.",
+        "Communicates when capacity is limited or help is needed.",
+        "Notices when someone is waiting for an action or answer.",
+        "Returns to repair a misunderstanding after conflict.",
+        "Coordinates responsibilities that depend on another person's schedule."
+      ]
+    },
+    {
+      "name": "Digital Life & Information",
+      "items": [
+        "Maintains a workable way to identify important email.",
+        "Finds a needed digital file or record.",
+        "Manages notifications so they do not repeatedly derail intended activity.",
+        "Captures actionable information that arrives through different channels.",
+        "Uses a calendar or equivalent system to track commitments.",
+        "Uses a task or reminder system consistently enough to be useful.",
+        "Recognizes when digital activity has pulled attention from the intended task.",
+        "Returns to the intended activity after checking a message or notification.",
+        "Completes an online form or digital task after opening it.",
+        "Distinguishes information that requires action from information that does not."
+      ]
+    },
+    {
+      "name": "Personal Goals & Self-Management",
+      "items": [
+        "Turns a personally important idea into a specific next action.",
+        "Begins a personal project without relying entirely on an imminent deadline.",
+        "Breaks a longer-term goal into manageable steps.",
+        "Returns to a project after time away from it.",
+        "Continues a worthwhile project after the initial excitement fades.",
+        "Tracks where a paused project was left.",
+        "Notices when a strategy or system has stopped working.",
+        "Adjusts a support or routine to fit the problem it is meant to solve.",
+        "Plans for situations in which stress, fatigue, or distraction predictably affects performance.",
+        "Reviews unfinished commitments often enough to decide what to do next."
+      ]
+    }
+  ]
+}
