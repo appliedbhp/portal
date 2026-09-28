@@ -1,0 +1,344 @@
+{
+  "Elementary": {
+    "A": [
+      "Estimates how long tasks will take up to 30 to 45 minutes",
+      "Follows an identified sequence of steps to complete a simple task.",
+      "Identifies which tasks are more important when given choices",
+      "Gathers materials needed before beginning a familiar task.",
+      "Remembers to complete a task after a short delay (30 seconds to 5 minutes)"
+    ],
+    "B": [
+      "Begins a 1-3 step task when asked, with or without visual supports",
+      "Remains engaged with an assigned activity for the expected work period, using available supports.",
+      "Continues working when typical classroom distractions occur (peers talking, movement, sounds)",
+      "Uses tools or strategies to track how much time has passed (timers, visual clocks, etc.)",
+      "Completes tasks by following different types of visual schedules or checklists"
+    ],
+    "C": [
+      "After a scheduled break, returns to the assigned activity following the return cue.",
+      "When signaled that a work period has ended, records or marks the stopping point and transitions to the next activity.",
+      "After a brief interruption, resumes the interrupted activity.",
+      "Puts materials back in their designated spots in at least one setting (classroom, bedroom, etc.)",
+      "When a planned routine changes, transitions to the revised activity using available supports."
+    ],
+    "D": [
+      "Keeps materials organized using the teacher's system (folders, bins, labeled areas, etc.)",
+      "Returns commonly used materials to designated locations after use.",
+      "Places completed work in the designated submission location.",
+      "Retrieves a needed item that is stored outside immediate view.",
+      "Finds and gets needed materials independently when starting a task"
+    ],
+    "E": [
+      "Identifies that a problem exists when pointed out or described by others",
+      "Selects a solution likely to produce the stated outcome without creating an identified safety or rule violation.",
+      "Uses a problem-solving tool (visual chart, steps, script) with adult coaching",
+      "Selects an alternative action when the initial plan cannot be completed.",
+      "Acknowledges that others may have different ideas or solutions to the same problem"
+    ],
+    "F": [
+      "States a previously taught self-encouraging phrase during a difficult task.",
+      "Recognizes and celebrates successes of self and friends",
+      "Uses strategies to make boring or tedious tasks more tolerable.",
+      "After making an error, uses a taught statement that supports returning to the task.",
+      "After becoming discouraged, resumes the activity following encouragement or a prompt."
+    ],
+    "G": [
+      "Identifies and labels foundational emotions in self and others.",
+      "Uses a previously practiced regulation strategy when prompted.",
+      "Uses an offered break when a break would support continued participation.",
+      "Requests assistance, a break, or another available support when task demands become difficult.",
+      "Uses an available regulation strategy when prompted."
+    ],
+    "H": [
+      "Following a social mistake or conflict, completes a taught repair response with prompting.",
+      "Following disappointment, returns to an available activity with adult support.",
+      "After an upsetting event has ended, re-engages with the current activity with adult support.",
+      "Uses a taught conflict-resolution response when prompted during a peer conflict.",
+      "After a conflict is resolved, resumes interaction or routine activities without repeatedly reinitiating the resolved conflict."
+    ],
+    "I": [
+      "Identifies common forms of money or payment used to obtain goods.",
+      "Identifies whether available money is sufficient for a simple purchase.",
+      "Compares the prices of two items.",
+      "Selects an item that fits within a stated amount of money.",
+      "Saves money or points across opportunities toward a selected purchase or goal."
+    ],
+    "J": [
+      "Maintains appropriate physical and social boundaries (personal space, not oversharing)",
+      "Follows basic internet safety rules and tells an adult about concerning online content.",
+      "Has friendships and mentions friends by name during conversations when they're not present",
+      "Shows concern when others are hurt or upset and understands that others may think differently",
+      "Recognizes situations that require adult help; asks for assistance (safety, conflict, difficult tasks)"
+    ],
+    "K": [
+      "Selects and communicates a preferred play activity when given options.",
+      "Completes activities in order using a visual or written schedule with minimal prompting",
+      "Predicts approximately how long familiar activities will take (within 30 minutes)",
+      "Stops preferred activities and begins non-preferred tasks without major resistance",
+      "Transitions between activities without beginning a new task before the current one is finished."
+    ],
+    "L": [
+      "Completes familiar routines (morning, bedtime, classroom) when given reminders",
+      "Keeps up basic daily habits (brushing teeth, packing backpack, homework folder) with prompting",
+      "Talks about setbacks and mistakes without major emotional upset",
+      "Handles pressure situations (timed tasks, tests, deadlines) without shutting or melting down",
+      "Shows pleasure or pride when achieving a goal (completed project, earned reward, met target)"
+    ],
+    "M": [
+      "Accepts being told 'no' by adults and peers without major upset or arguing",
+      "Handles frustrating situations and unexpected problems without giving up or melting down",
+      "Tries to join activities or conversations 2-3 times but stops if repeatedly declined",
+      "Accepts when rewards, privileges, or preferred items are taken away or end without major upset",
+      "Receives feedback/corrections from adults without shutting down or arguing"
+    ],
+    "N": [
+      "Handles teasing from peers with appropriate strategies (ignore, comebacks, walk away, get help)",
+      "Resists peer pressure to do things they know are wrong or uncomfortable",
+      "Either ignores small problems with peers OR removes self from the situation without escalating",
+      "Says 'no' to peers clearly and without excessive apologizing or explaining",
+      "Asks an adult for help when peers are pressuring them or when conflicts escalate"
+    ],
+    "O": [
+      "Gets others' attention using multiple strategies (saying name, tapping shoulder, raising hand)",
+      "Works cooperatively with others AND competes in games/activities without poor sportsmanship",
+      "Shares personal stories with relevant details in logical order (beginning, middle, end)",
+      "Notices when others don't understand and tries different ways to communicate",
+      "Communicates ideas to peers in an understandable way without excessive hesitation"
+    ],
+    "P": [
+      "Orients to or otherwise responds to a speaker sufficiently to obtain the information being communicated.",
+      "Takes turns in conversations by both speaking and listening",
+      "Remembers and later mentions information others shared (their interests, activities, family, etc.)",
+      "Provides an observable response indicating that the speaker's message was received, such as answering, acknowledging, paraphrasing, or acting on the information.",
+      "Follows through on simple requests given during conversations without needing repetition"
+    ]
+  },
+  "Middle School": {
+    "A": [
+      "Estimates task duration within a predefined acceptable range based on prior performance or task requirements.",
+      "Divides complex projects into manageable subtasks independently",
+      "Determines which goals or tasks are most important and should be addressed first",
+      "Determines what materials, information, and help will be needed before starting projects",
+      "Remembers to complete tasks after delays of several hours or days without external reminders"
+    ],
+    "B": [
+      "Begins various tasks independently after receiving verbal or visual instructions",
+      "Remains engaged with an assigned task for the expected work period, using available self-management strategies.",
+      "During transitions between settings, completes the expected transition routine while managing competing stimuli.",
+      "Selects and uses a time-monitoring strategy when elapsed or remaining time is relevant.",
+      "Uses a calendar or scheduling system to record and retrieve upcoming assignments, activities, and commitments."
+    ],
+    "C": [
+      "Schedules and uses work and break periods to sustain task participation.",
+      "Records a clear stopping point and next action before leaving an unfinished task.",
+      "Following an interruption, resumes the interrupted task.",
+      "Puts materials back in their designated spots across multiple settings (classrooms, locker, home)",
+      "When a plan changes, selects and follows a workable alternative."
+    ],
+    "D": [
+      "Modifies teacher-provided organization systems to fit personal needs and preferences",
+      "Keeps multiple spaces organized including physical areas (backpack, locker, desk) and digital files",
+      "Tracks and meets deadlines for both school assignments and home responsibilities",
+      "Tracks assignments and requirements from multiple teachers and classes",
+      "Uses an established organizational system without adult prompting during routine activities."
+    ],
+    "E": [
+      "Identifies a condition that is likely to interfere with successful task completion before the problem occurs.",
+      "Generates at least two actions that could produce the stated outcome.",
+      "Applies problem-solving steps or strategies with occasional adult support",
+      "Attempts multiple different strategies when first approach fails, with adult guidance",
+      "Considers different perspectives and evaluates solutions suggested by others"
+    ],
+    "F": [
+      "Uses positive self-talk independently when tasks are difficult or frustrating",
+      "Recognizes and celebrates small steps forward for themselves and multiple peers",
+      "Independently creates strategies to make tedious tasks more interesting or tolerable",
+      "Reframes mistakes as learning opportunities rather than failures",
+      "Offers encouragement and support to multiple peers and adults in various situations"
+    ],
+    "G": [
+      "Labels their own current emotional state using available communication.",
+      "Uses a previously learned regulation strategy when relevant, without a direct adult prompt.",
+      "Initiates self-regulation strategies and stays engaged in calming activities when upset",
+      "Expresses emotional needs clearly as they arise ('I need a break,' 'I need help,' 'I'm overwhelmed')",
+      "Independently arranges or uses a regulation support when needed."
+    ],
+    "H": [
+      "Initiates a repair response after their behavior has negatively affected another person.",
+      "Recovers from various setbacks (academic, social, personal) within a reasonable timeframe",
+      "Modifies behavior in response to feedback from various sources (teachers, peers, parents)",
+      "Following a conflict, performs agreed-upon actions intended to repair the relationship.",
+      "Following an error or setback, uses language or actions that support continued participation rather than abandoning the task."
+    ],
+    "I": [
+      "Saves money over weeks or months to make planned purchases",
+      "Manages regular income (allowance, job earnings) by budgeting and tracking spending",
+      "Uses bank account and digital tools to manage money (checking balance, tracking transactions)",
+      "Compares unit prices to determine best value when shopping",
+      "Categorizes expenses and tracks spending patterns over time"
+    ],
+    "J": [
+      "Expresses needs and preferences clearly in written communication (texts, emails, notes)",
+      "Practices internet safety on multiple devices (passwords, privacy settings, recognizing scams)",
+      "Shows care for relationships through intentional actions (remembering events, checking in)",
+      "Considers others' viewpoints when working toward compromises or solutions",
+      "Clearly communicates personal boundaries and limits (time, energy, space, comfort level)"
+    ],
+    "K": [
+      "Proactively checks in with teachers, peers, or mentors about progress toward goals",
+      "Breaks long-term projects into measurable benchmarks or milestones",
+      "Sustains focus on tasks for up to 90 minutes using time management strategies (timers, breaks)",
+      "Balances work/academic responsibilities with leisure and self-care activities",
+      "Plans work sessions in advance and either completes tasks or marks clear stopping points"
+    ],
+    "L": [
+      "Adjusts existing routines when settings change (schedule, different school) with adult support",
+      "Develops new positive habits (study routines, exercise, sleep schedules) with adult coaching",
+      "Bounces back from setbacks using learned coping strategies",
+      "Creates personal deadlines and accountability systems to stay motivated",
+      "Monitors and tracks progress toward goals over weeks or months"
+    ],
+    "M": [
+      "After an initial denial, uses an available advocacy response when additional discussion is permitted.",
+      "Independently problem-solves when facing obstacles or setbacks",
+      "When another person communicates disengagement or a boundary, discontinues or modifies the social approach.",
+      "Accepts consequences for actions without damaging relationships (no grudges, stays respectful)",
+      "Uses constructive feedback to improve performance without excessive defensiveness"
+    ],
+    "N": [
+      "Responds assertively to exclusion by peers (names the behavior, sets boundaries, seeks support)",
+      "Resists group pressure in risky situations (substances, dangerous activities, rule-breaking)",
+      "Suggests or chooses alternative activities when pressured to do something uncomfortable",
+      "Communicates a boundary clearly enough that the requested limit can be understood.",
+      "Chooses and maintains peer relationships in which stated boundaries and preferences are generally respected."
+    ],
+    "O": [
+      "Shares speaking time fairly in conversations by taking turns",
+      "Refrains from interrupting others and waits for appropriate pauses to speak",
+      "Thinks before speaking or sending messages (avoids blurting, oversharing, or reactive responses)",
+      "When a misunderstanding occurs, provides or requests clarification sufficient to resolve the communication problem.",
+      "Presents information to a group at an audible volume and organized pace using available supports."
+    ],
+    "P": [
+      "Maintains focus in conversations (10+ minutes) or uses strategies when attention wanes.",
+      "Summarizes others' main points accurately and takes appropriate action when needed",
+      "Asks clarifying questions when information is unclear or incomplete.",
+      "Provides thoughtful responses that show understanding and consideration",
+      "Follows through on information, requests, or instructions received in conversations"
+    ]
+  },
+  "High School": {
+    "A": [
+      "Estimates the amount of work that can be completed within a multi-day period using current workload and available time.",
+      "Breaks complex tasks or projects into smaller parts and breaks parts into steps",
+      "Breaks a long-term goal into sequenced milestones.",
+      "Identifies a likely obstacle before beginning a task and arranges an available support or alternative.",
+      "Remembers to complete tasks after delays of days, weeks, or months."
+    ],
+    "B": [
+      "Initiates complex assigned tasks after reviewing available instructions.",
+      "Sustains attention to task 30-60 minutes across a variety of task types",
+      "Following distraction, reorients to the current task without an external prompt.",
+      "Selects and uses an effective strategy for monitoring elapsed or remaining time.",
+      "Coordinates schedules and deadlines across systems, classes, and settings"
+    ],
+    "C": [
+      "Uses time management tools (Pomodoro, time-blocking apps) proactively and adjusts as needed",
+      "Uses organizational systems to track stopping points and next steps across multiple projects",
+      "Resumes task performance following naturally occurring interruptions.",
+      "Consistently returns materials to designated locations across settings (personal, work, etc)",
+      "Changes the current plan when environmental conditions make the original plan ineffective."
+    ],
+    "D": [
+      "Selects an organizational system based on the demands of the task and changes systems when the current one is ineffective.",
+      "Organizes academic materials, work spaces, personal belongings, and digital files simultaneously",
+      "Maintains organization throughout academic year despite changing demands and stressors",
+      "Anticipates memory demands; creates systems before problems arise (checklists, reminders)",
+      "Maintains established organizational routines without recurring external prompts."
+    ],
+    "E": [
+      "Identifies early warning signs of academic, social, or personal challenges before they escalate",
+      "Uses structured decision-making frameworks (pros/cons, cost-benefit, consultation with experts)",
+      "Independently selects and applies a problem-solving strategy to a novel challenge.",
+      "Reviews prior problem-solving outcomes and identifies a strategy to retain or change for a future situation.",
+      "Adjusts strategies based on feedback, data, or changed circumstances"
+    ],
+    "F": [
+      "Independently arranges supports or accommodations before beginning a task when those supports are likely to improve performance.",
+      "Sustains motivation through a variety of setbacks across a variety of settings",
+      "Self-manages engagement during difficult tasks across a variety of classes and settings",
+      "Following an error or setback, uses self-directed verbal behavior that supports continued task engagement.",
+      "Uses self-generated verbal or environmental supports to persist with a difficult task."
+    ],
+    "G": [
+      "Monitors and manages emotional patterns and triggers across a variety of settings",
+      "Selects and independently implements a regulation strategy when relevant.",
+      "Anticipates emotional demands across a variety of settings and has a plan",
+      "Anticipates emotional needs of self and others across a variety of settings",
+      "Independently selects and uses movement or another available regulation support when needed."
+    ],
+    "H": [
+      "Takes responsibility for behavior and how it impacts others",
+      "Following a significant setback, resumes goal-directed behavior or selects a revised goal.",
+      "Applies social lessons learned across people and to future situations",
+      "Persists through conflict and maintains long-term relationships",
+      "Following a significant error or setback, initiates a repair or recovery response and returns to goal-directed activity."
+    ],
+    "I": [
+      "Plans for long-term purchases from months to years",
+      "Manages multiple income streams (e.g., job, allowance, gifts, scholarship, etc)",
+      "Uses information about credit, debt, fees, or repayment terms when making a financial decision.",
+      "Tracks spending relative to an established budget and changes spending when needed to remain within it.",
+      "Evaluates complex financial decisions using cost-benefit analysis"
+    ],
+    "J": [
+      "Manages emotional complexity across multiple relationship types (peer, romantic, familial)",
+      "When a relationship repeatedly violates stated boundaries or creates an identified safety concern, seeks support, changes participation, or ends the interaction.",
+      "Maintains digital privacy and emotional safety across platforms",
+      "Sustains meaningful relationships across distance and life changes",
+      "Communicates and maintains boundaries consistent with previously stated preferences or limits."
+    ],
+    "K": [
+      "Coordinates task responsibilities and deadlines when completing a shared project.",
+      "Balances overlapping timelines for major projects (papers, applications, work commitments)",
+      "Maintains involvement in activities (teams, clubs, jobs, volunteer) despite changing motivation",
+      "When deadlines compete, selects an order of completion using identified task priorities.",
+      "Assigns or negotiates shared-task responsibilities and checks completion status before the final deadline."
+    ],
+    "L": [
+      "Maintains consistent routines independently without external prompting or supervision",
+      "Modifies environmental cues or routines to increase the likelihood of completing a recurring behavior.",
+      "Reviews routine performance and changes one or more environmental or behavioral components when the routine is not producing the intended result.",
+      "Models transparent self-reflection about what works and what doesn't in maintaining consistency",
+      "Continues actions toward a delayed goal across repeated opportunities despite competing activities or setbacks."
+    ],
+    "M": [
+      "Uses an available self-advocacy response following rejection or denial when further advocacy is appropriate.",
+      "Following rejection or a significant setback, resumes goal-directed activity or selects an alternative.",
+      "Persists toward a personal goal while discontinuing social approaches when another person communicates a boundary.",
+      "Following rejection, refrains from repeatedly seeking reassurance or reinitiating the rejected request and engages in another available activity.",
+      "Receives corrective feedback and identifies or implements a next action based on the relevant information."
+    ],
+    "N": [
+      "Navigates complex social dynamics and cliques while maintaining authentic relationships",
+      "Declines or exits an activity that conflicts with a stated personal limit, safety rule, or established goal when peers encourage participation.",
+      "Maintains a previously stated decision when peers encourage a different choice.",
+      "Communicates and maintains personal boundaries in close peer or romantic relationships when such relationships are present.",
+      "Seeks support or changes the social context when peer pressure continues after a boundary has been communicated."
+    ],
+    "O": [
+      "Actively maintains relationships by soliciting feedback and diverse perspectives",
+      "Facilitates productive group discussions and mediates conflicts constructively",
+      "Adapts communication style strategically to audience, context, and purpose",
+      "Teaches communication and social skills to others through mentoring or leadership",
+      "Delivers compelling, well-structured presentations and engages in public speaking"
+    ],
+    "P": [
+      "Actively listens in group settings; employs repair strategies when communication breaks down",
+      "Synthesizes and builds constructively on others' ideas during collaboration",
+      "Integrates and analyzes information from multiple speakers or sources",
+      "Actively facilitates others' communication and ensures equitable participation",
+      "Maintains accountability for listening commitments and follow-through actions"
+    ]
+  }
+}
