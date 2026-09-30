@@ -18,7 +18,7 @@ function ensureWelcomeVideoPanel() {
       </div>
     </div>
     <div class="welcome-video-body">
-      <div class="welcome-video-frame"><iframe title="Welcome to your client portal" src="https://www.youtube-nocookie.com/embed/${WELCOME_VIDEO_ID}?rel=0&modestbranding=1&playsinline=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>
+      <div class="welcome-video-frame"><iframe title="How to set up your client portal account" src="https://www.youtube-nocookie.com/embed/${WELCOME_VIDEO_ID}?rel=0&modestbranding=1&playsinline=1&autoplay=1&mute=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div>
       <div class="welcome-video-copy"><span>Move or resize this guide while you explore.</span><button onclick="closeWelcomeVideo(true)"><i class="bi bi-check2-circle"></i> Got it</button></div>
     </div>`;
   document.body.appendChild(panel);
@@ -28,7 +28,9 @@ function ensureWelcomeVideoPanel() {
 
 function openWelcomeVideo(autoOpen) {
   const panel = ensureWelcomeVideoPanel();
-  if (panel.parentElement?.id === "minimized-panel-dock" && typeof undockMinimizedPanel === "function") undockMinimizedPanel(panel);
+  if (["minimized-panel-dock","welcome-video-dock"].includes(panel.parentElement?.id)) {
+    if (typeof undockMinimizedPanel === "function") undockMinimizedPanel(panel); else document.body.appendChild(panel);
+  }
   panel.classList.remove("minimized");
   panel.classList.add("open");
   if (autoOpen) panel.classList.add("welcome-arrive");
@@ -40,21 +42,27 @@ function minimizeWelcomeVideo() {
   const panel = ensureWelcomeVideoPanel();
   const minimizing = !panel.classList.contains("minimized");
   panel.classList.toggle("minimized", minimizing);
-  if (minimizing && typeof dockMinimizedPanel === "function") dockMinimizedPanel(panel);
-  else if (!minimizing && typeof undockMinimizedPanel === "function") undockMinimizedPanel(panel);
+  if (minimizing) {
+    if (typeof dockMinimizedPanel === "function") dockMinimizedPanel(panel);
+    else {
+      let dock=document.getElementById("welcome-video-dock");
+      if(!dock){dock=document.createElement("div");dock.id="welcome-video-dock";dock.className="minimized-panel-dock no-print";document.body.appendChild(dock);}
+      dock.appendChild(panel);
+    }
+  } else if (typeof undockMinimizedPanel === "function") undockMinimizedPanel(panel); else document.body.appendChild(panel);
 }
 
 async function closeWelcomeVideo(markSeen) {
   const panel = document.getElementById("welcome-video-pip");
   if (panel) {
-    if (typeof undockMinimizedPanel === "function") undockMinimizedPanel(panel);
+    if (typeof undockMinimizedPanel === "function") undockMinimizedPanel(panel); else if(panel.parentElement?.id==="welcome-video-dock")document.body.appendChild(panel);
     panel.classList.remove("open", "minimized");
     panel.setAttribute("aria-hidden", "true");
     const frame = panel.querySelector("iframe");
     if (frame) frame.src = frame.src;
   }
   sessionStorage.removeItem("showWelcomeVideo");
-  if (markSeen && typeof apiCall === "function") {
+  if (markSeen && !document.body.classList.contains("login-page") && typeof apiCall === "function") {
     try { await apiCall("markWelcomeVideoSeen", {}); } catch (_) {}
   }
 }
@@ -79,6 +87,13 @@ function initWelcomeVideoDrag(panel) {
 }
 
 function initWelcomeVideo() {
+  if (document.body.classList.contains("login-page")) {
+    setTimeout(() => openWelcomeVideo(true), 900);
+    return;
+  }
   if (typeof getRole === "function" && getRole() === "provider") return;
   if (sessionStorage.getItem("showWelcomeVideo") === "1") setTimeout(() => openWelcomeVideo(true), 650);
 }
+
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initWelcomeVideo, {once:true});
+else initWelcomeVideo();
