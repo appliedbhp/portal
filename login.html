@@ -308,6 +308,7 @@ async function login() {
       effectiveClientId: res.linkedClientId || clientId,
       password, assessorName, role: res.role
     });
+    if (!res.welcomeVideoSeen) sessionStorage.setItem("showWelcomeVideo", "1");
     await openPortalWithTransition();
   } catch (e) {
     setStatus("status", e.message, "error");
@@ -340,6 +341,7 @@ async function setupPassword() {
       effectiveClientId: res.linkedClientId || clientId,
       password: newPassword, assessorName, role: res.role
     });
+    sessionStorage.setItem("showWelcomeVideo", "1");
     await openPortalWithTransition();
   } catch (e) {
     setStatus("status", e.message, "error");
