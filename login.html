@@ -44,6 +44,9 @@
       <button id="mode-client" onclick="setMode('client')">I'm a Client</button>
       <button id="mode-provider" class="secondary" onclick="setMode('provider')">I'm a Provider</button>
     </div>
+    <button id="loginWelcomeVideoBtn" class="secondary" type="button" onclick="openWelcomeVideo(false)" style="width:100%;margin:-8px 0 18px;justify-content:center;">
+      <i class="bi bi-play-btn-fill"></i> Watch the account setup guide
+    </button>
 
     <div class="checkbox-row" style="margin-bottom:20px;">
       <input type="checkbox" id="privacyAck">
@@ -227,6 +230,7 @@
 
 <script src="js/common.js"></script>
 <script src="js/api.js"></script>
+<script src="js/welcome-video.js"></script>
 <script>
 let statusKnown = false;
 let loginTickerItems = [], loginTickerIndex = 0, loginTickerTimer = null;
@@ -243,6 +247,8 @@ function setMode(mode) {
   document.getElementById("clientPicker").style.display = "none";
   document.getElementById("mode-client").className = mode === "client" ? "" : "secondary";
   document.getElementById("mode-provider").className = mode === "provider" ? "" : "secondary";
+  document.getElementById("loginWelcomeVideoBtn").style.display = mode === "client" ? "flex" : "none";
+  if (mode === "provider") closeWelcomeVideo(false);
   setStatus("status", "", null);
 }
 
@@ -308,7 +314,6 @@ async function login() {
       effectiveClientId: res.linkedClientId || clientId,
       password, assessorName, role: res.role
     });
-    if (!res.welcomeVideoSeen) sessionStorage.setItem("showWelcomeVideo", "1");
     await openPortalWithTransition();
   } catch (e) {
     setStatus("status", e.message, "error");
@@ -341,7 +346,6 @@ async function setupPassword() {
       effectiveClientId: res.linkedClientId || clientId,
       password: newPassword, assessorName, role: res.role
     });
-    sessionStorage.setItem("showWelcomeVideo", "1");
     await openPortalWithTransition();
   } catch (e) {
     setStatus("status", e.message, "error");

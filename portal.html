@@ -35,9 +35,6 @@
     <button class="secondary header-action-btn" id="header-progress-btn" onclick="sessOpenProgressPip()" data-label="Progress" aria-label="Open progress picture-in-picture">
       <i class="bi bi-graph-up-arrow"></i>
     </button>
-    <button class="header-plain-icon header-action-btn" id="welcomeVideoBtn" onclick="openWelcomeVideo(false)" data-label="Portal Tour" aria-label="Open portal welcome video" style="display:none;">
-      <i class="bi bi-question-circle-fill"></i>
-    </button>
     <button id="switchClientBtn" class="secondary header-action-btn" onclick="switchClient()" data-label="Switch Client" aria-label="Switch client" style="display:none;"><i class="bi bi-arrow-left-right"></i></button>
     <button class="secondary header-action-btn" onclick="logout()" data-label="Log Out" aria-label="Log out"><i class="bi bi-box-arrow-right"></i></button>
     <button id="header-settings-btn" class="header-plain-icon header-action-btn" onclick="showSection('settings')" data-label="Settings" aria-label="Open settings" style="display:none;">
@@ -233,7 +230,6 @@
 <script src="js/intake.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/pipeline.js"></script>
-<script src="js/welcome-video.js"></script>
 <script src="js/provider-billing.js"></script>
 <script src="js/superbill.js"></script>
 <script src="js/notifications.js"></script>
@@ -293,7 +289,6 @@ if (_role === "provider") document.getElementById("remindersNavBtn").style.displ
 if (_role !== "provider") {
   document.getElementById("settingsNavBtn").style.display = "block";
   document.getElementById("header-settings-btn").style.display = "inline-flex";
-  document.getElementById("welcomeVideoBtn").style.display = "inline-flex";
 }
 if (_role !== "provider") document.getElementById("notificationsNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("broadcastsNavBtn").style.display = "block";
@@ -513,7 +508,6 @@ if (_role === "provider") checkProgressReportDue();
 checkGradesAlert();
 startTimeoutWatcher();
 initTodayVideoSessionButton();
-initWelcomeVideo();
 </script>
 </body>
 </html>
