@@ -51,6 +51,7 @@
   <aside class="sidebar no-print" id="sidebar">
     <button class="sidebar-link" data-section="home" onclick="showSection('home')"><i class="bi bi-house-fill"></i> Home</button>
     <button class="sidebar-link" data-section="dashboard" onclick="showSection('dashboard')" id="dashboardNavBtn" style="display:none;"><i class="bi bi-speedometer2"></i> Dashboard</button>
+    <button class="sidebar-link" data-section="pipeline" onclick="showSection('pipeline')" id="pipelineNavBtn" style="display:none;"><i class="bi bi-funnel-fill"></i> Client Journey</button>
 
     <div class="sidebar-group">
       <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Assessments<i class="bi bi-chevron-down sg-chevron"></i></div>
@@ -157,6 +158,7 @@
       </style>
     </div>
     <div id="section-dashboard" class="section"></div>
+      <div id="section-pipeline" class="section"></div>
       <div id="section-home" class="section"></div>
       <div id="section-roadmap" class="section"></div>
       <div id="section-win" class="section"></div>
@@ -227,6 +229,7 @@
 <script src="js/grades.js"></script>
 <script src="js/intake.js"></script>
 <script src="js/dashboard.js"></script>
+<script src="js/pipeline.js"></script>
 <script src="js/provider-billing.js"></script>
 <script src="js/superbill.js"></script>
 <script src="js/notifications.js"></script>
@@ -276,6 +279,7 @@ if (_role !== "provider") {
   document.getElementById("clientVizNavBtn").style.display = "none";
 }
 if (_role === "provider") document.getElementById("dashboardNavBtn").style.display = "block";
+if (_role === "provider") document.getElementById("pipelineNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("providerBillingNavBtn").style.display = "block";
 if (_role === "provider") document.getElementById("superbillNavBtn").style.display = "block";
 if (_role !== "provider") document.getElementById("clientBillingNavBtn").style.display = "block";
@@ -432,6 +436,7 @@ document.querySelectorAll(".sidebar-group-title").forEach(titleEl => {
 
 const SECTION_INIT = {
   dashboard: initDashboardSection,
+  pipeline: initPipelineSection,
   "provider-billing": initProviderBillingSection,
   superbill: initSuperbillSection,
   home: initHomeSection,
