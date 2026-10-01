@@ -8,10 +8,11 @@ const CONSENT_STATUSES = {
   draft:             { label: "Draft",              color: "#6b7280", bg: "#f3f4f6" }
 };
 
-const CONSENT_SIGNATURE_FONTS = ["EDU QLD Hand","Dancing Script","Caveat","Zeyada","Ingrid Darling","Lacquer"];
+const CONSENT_SIGNATURE_FONTS = ["WindSong","Qwitcher Grypen","Stalemate","Yuyu Short","Mynerve","Caveat","Square Peg","Allura","Rock Salt"];
 let _consentSigningDoc = null;
 let _consentChallengeId = "";
 let _consentSchemaDraft = [];
+let _newConsentFields = [];
 
 async function initConsentFormsSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading consent forms…</p></div>`;
@@ -65,17 +66,20 @@ function renderClientConsentForms(root, docs) {
 
 function consentSigningStyles(){return `<style>
   .cs-hero{display:flex;justify-content:space-between;gap:24px;align-items:center;background:linear-gradient(135deg,#fff,#eef5ff);border-color:#cfe1ff}.cs-kicker,.cs-eyebrow{font-size:10px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:#3185fc}.cs-hero h1{margin:8px 0}.cs-hero p{max-width:720px;color:var(--muted);line-height:1.6}.cs-count{min-width:110px;aspect-ratio:1;border-radius:50%;display:grid;place-content:center;text-align:center;background:linear-gradient(135deg,#3185fc,#6957e8);color:#fff;box-shadow:0 14px 30px rgba(49,133,252,.25)}.cs-count b{font-size:30px}.cs-count span{font-size:10px}.cs-section-title{display:flex;justify-content:space-between;align-items:center;margin:22px 2px 10px}.cs-section-title h2{margin:0}.cs-section-title span{font-size:11px;color:var(--muted)}.cs-doc{display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:18px;margin-bottom:10px;border:1.5px solid #cfe1ff;border-radius:15px;background:#fff;box-shadow:0 8px 24px rgba(49,133,252,.07)}.cs-doc.is-signed{border-color:#bbf7d0}.cs-doc-icon{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#3185fc,#6957e8);font-size:21px}.is-signed .cs-doc-icon{background:linear-gradient(135deg,#10b981,#059669)}.cs-doc h2{font-size:16px;margin:4px 0}.cs-doc p{font-size:12px;color:var(--muted);margin:0 0 8px}.cs-meta{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:10px}.cs-doc-actions{display:flex;gap:7px;flex-wrap:wrap}.cs-button{display:inline-flex;align-items:center;gap:6px;text-decoration:none;padding:8px 12px;border-radius:8px}.cs-empty{text-align:center;padding:38px}.cs-empty>i{font-size:42px;color:#10b981}.cs-modal-backdrop{position:fixed;inset:0;z-index:1300;background:rgba(3,15,35,.68);backdrop-filter:blur(8px);display:grid;place-items:center;padding:16px}.cs-modal-card{width:min(760px,100%);max-height:94vh;overflow:auto;background:#fff;border-radius:22px;box-shadow:0 30px 100px rgba(0,0,0,.35)}.cs-modal-head{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border);background:rgba(255,255,255,.94);backdrop-filter:blur(10px)}.cs-modal-body{padding:22px}.cs-disclosure{padding:15px;border-radius:13px;background:#f0f6ff;border:1px solid #cfe1ff;font-size:12px;line-height:1.55}.cs-response-form{margin:16px 0;padding:16px;border:1px solid #cfe1ff;border-radius:14px;background:#fbfdff}.cs-response-form h3{margin:0}.cs-response-field{display:grid;gap:6px;margin:12px 0;font-size:12px;font-weight:700}.cs-response-field small{font-weight:400;color:var(--muted)}.cs-response-field input:not([type=checkbox]),.cs-response-field select,.cs-response-field textarea{width:100%;max-width:none}.cs-response-field.cs-choice,.cs-choice{display:grid!important;grid-template-columns:18px minmax(0,1fr)!important;align-items:start!important;gap:9px!important}.cs-choice input{width:18px!important;height:18px!important;margin:1px 0 0!important}.cs-response-field legend{font-size:12px;font-weight:700;margin-bottom:7px}.cs-checks{display:grid;gap:9px;margin:17px 0;min-width:0}.cs-checks label{display:grid!important;grid-template-columns:18px minmax(0,1fr)!important;align-items:start!important;gap:10px!important;width:100%;min-width:0;padding:11px 12px;border:1px solid var(--border);border-radius:10px;font-size:12px;line-height:1.48;font-weight:500;white-space:normal;overflow:visible}.cs-checks input[type=checkbox]{appearance:auto!important;display:block!important;position:static!important;flex:none!important;width:18px!important;min-width:18px!important;max-width:18px!important;height:18px!important;min-height:18px!important;margin:1px 0 0!important;padding:0!important}.cs-check-text{display:block;min-width:0;white-space:normal;overflow-wrap:anywhere;word-break:normal}.cs-sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.cs-sign-grid label{display:grid;gap:6px;font-size:11px;font-weight:800}.cs-sign-grid .wide{grid-column:1/-1}.cs-fonts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.cs-font-option{position:relative;display:grid!important;place-items:center;min-height:62px;border:1.5px solid var(--border)!important;border-radius:11px;cursor:pointer;font-size:24px!important;font-weight:400!important}.cs-font-option:has(input:checked){border-color:#3185fc!important;background:#eef5ff;box-shadow:0 0 0 3px rgba(49,133,252,.1)}.cs-font-option input{position:absolute;opacity:0}.cs-preview{position:relative;min-height:105px;display:grid;place-items:center;overflow:hidden;border-radius:14px;background:linear-gradient(135deg,#f8fbff,#eef5ff);border:1px dashed #9fc3ff;color:#173f76}.cs-preview-name{font-size:42px;line-height:1;padding:12px;text-align:center}.cs-success{text-align:center;padding:28px}.cs-success i{font-size:48px;color:#10b981}@media(max-width:700px){.cs-hero,.cs-doc{grid-template-columns:1fr;display:grid}.cs-count{display:none}.cs-sign-grid{grid-template-columns:1fr}.cs-sign-grid .wide{grid-column:auto}.cs-fonts{grid-template-columns:1fr 1fr}.cs-doc-actions{justify-content:flex-start}}
+  .cs-document-review{margin:16px 0;padding:14px;border:1px solid #cfe1ff;border-radius:14px;background:#f8fbff}.cs-document-review h3{margin:0 0 10px;font-size:14px}.cs-document-viewer{min-height:180px;display:grid;place-items:center;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--muted);overflow:hidden}.cs-document-viewer>iframe{display:block;width:100%;height:520px;border:0;background:#fff}.cs-document-actions{width:100%;display:flex;justify-content:space-between;gap:12px;padding:9px 11px;border-top:1px solid var(--border);font-size:11px;background:#fff}.cs-document-actions span{color:var(--muted)}@media(max-width:700px){.cs-document-viewer>iframe{height:390px}}
   </style>`;}
 
 function consentResponseFieldsHtml(doc){const fields=doc.formSchema?.fields||[];if(!fields.length)return "";return `<section class="cs-response-form"><h3><i class="bi bi-ui-checks-grid"></i> Your responses</h3><p style="font-size:12px;color:var(--muted)">Complete these fields before signing. Your responses will be included in the completed document.</p>${fields.map(f=>{const id=`cs-response-${f.id}`;const req=f.required?` <span style="color:#dc2626">*</span>`:"";const label=`<span>${escapeHtml(f.label)}${req}</span>${f.helpText?`<small>${escapeHtml(f.helpText)}</small>`:""}`;if(f.type==="textarea")return `<label class="cs-response-field">${label}<textarea id="${escapeAttr(id)}" rows="4"></textarea></label>`;if(f.type==="select")return `<label class="cs-response-field">${label}<select id="${escapeAttr(id)}"><option value="">Choose…</option>${(f.options||[]).map(o=>`<option>${escapeHtml(o)}</option>`).join("")}</select></label>`;if(f.type==="radio")return `<fieldset class="cs-response-field"><legend>${label}</legend>${(f.options||[]).map(o=>`<label class="cs-choice"><input type="radio" name="${escapeAttr(id)}" value="${escapeAttr(o)}"> <span>${escapeHtml(o)}</span></label>`).join("")}</fieldset>`;if(f.type==="checkbox")return `<label class="cs-response-field cs-choice"><input id="${escapeAttr(id)}" type="checkbox"><span>${escapeHtml(f.label)}${req}</span></label>`;const type=["date","email","number"].includes(f.type)?f.type:(f.type==="phone"?"tel":"text");return `<label class="cs-response-field">${label}<input id="${escapeAttr(id)}" type="${type}"></label>`;}).join("")}</section>`;}
 function collectConsentResponses(){const responses={};(_consentSigningDoc?.formSchema?.fields||[]).forEach(f=>{const id=`cs-response-${f.id}`;if(f.type==="radio")responses[f.id]=document.querySelector(`input[name="${CSS.escape(id)}"]:checked`)?.value||"";else{const el=document.getElementById(id);responses[f.id]=f.type==="checkbox"?!!el?.checked:(el?.value||"").trim();}});return responses;}
 
-function openConsentSigning(doc){_consentSigningDoc=doc;_consentChallengeId="";const modal=document.getElementById("cs-modal");modal.innerHTML=`<div class="cs-modal-backdrop"><div class="cs-modal-card"><div class="cs-modal-head"><div><span class="cs-eyebrow">Electronic signature</span><h2 style="margin:3px 0">${escapeHtml(doc.title)}</h2></div><button class="secondary icon-btn" onclick="closeConsentSigning()"><i class="bi bi-x-lg"></i></button></div><div class="cs-modal-body"><div class="cs-disclosure"><strong>Electronic records disclosure</strong><br>By continuing, you agree to receive and sign this record electronically. You may request a paper copy or withdraw consent by contacting your provider. You need a current browser and access to email to complete this process. You will receive a PDF copy that you can download and retain.</div>${doc.docUrl?`<p><a href="${escapeAttr(doc.docUrl)}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Open and review the complete document</a></p>`:""}${consentResponseFieldsHtml(doc)}<div class="cs-checks">
-  <label><input id="cs-consentElectronic" type="checkbox"><span class="cs-check-text">I consent to electronic records and electronic signatures and understand a paper option is available.</span></label><label><input id="cs-reviewed" type="checkbox"><span class="cs-check-text">I have reviewed the complete document.</span></label><label><input id="cs-intent" type="checkbox"><span class="cs-check-text">I intend to sign this document; typing my name and clicking <strong>Sign and submit</strong> constitutes my electronic signature.</span></label><label><input id="cs-authority" type="checkbox"><span class="cs-check-text">I certify that I am authorized to sign in the capacity selected below.</span></label><label><input id="cs-retainCopy" type="checkbox"><span class="cs-check-text">I can access, download and retain electronic records and understand how to request a paper copy.</span></label></div><div class="cs-sign-grid"><label>Signing capacity<select id="cs-role"><option>Parent/legal guardian</option><option>Adult client/self</option><option>Authorized representative</option></select></label><label>Full legal name<input id="cs-name" autocomplete="name" oninput="updateConsentSignaturePreview()"></label><div class="wide"><span style="display:block;font-size:11px;font-weight:800;margin-bottom:7px">Choose a signature style</span><div class="cs-fonts">${CONSENT_SIGNATURE_FONTS.map((f,i)=>`<label class="cs-font-option" style="font-family:'${f}',cursive"><input type="radio" name="cs-font" value="${f}" ${i===2?"checked":""} onchange="updateConsentSignaturePreview()"><span>${escapeHtml(f)}</span></label>`).join("")}</div></div><div class="wide cs-preview"><div id="cs-preview-name" class="cs-preview-name" style="font-family:'Caveat',cursive">Your name</div></div><div class="wide"><button id="cs-code-btn" class="secondary" onclick="requestConsentCode()"><i class="bi bi-envelope-lock-fill"></i> Email my verification code</button><span id="cs-code-help" style="font-size:11px;color:var(--muted);margin-left:8px"></span></div><label class="wide">6-digit verification code<input id="cs-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></label></div><div id="cs-sign-status" style="margin:12px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button class="secondary" onclick="closeConsentSigning()">Cancel</button><button onclick="submitConsentSignature()"><i class="bi bi-pen-fill"></i> Sign and submit</button></div></div></div></div>`;}
+function openConsentSigning(doc){_consentSigningDoc=doc;_consentChallengeId="";const modal=document.getElementById("cs-modal");modal.innerHTML=`<div class="cs-modal-backdrop"><div class="cs-modal-card"><div class="cs-modal-head"><div><span class="cs-eyebrow">Electronic signature</span><h2 style="margin:3px 0">${escapeHtml(doc.title)}</h2></div><button class="secondary icon-btn" onclick="closeConsentSigning()"><i class="bi bi-x-lg"></i></button></div><div class="cs-modal-body"><div class="cs-disclosure"><strong>Electronic records disclosure</strong><br>By continuing, you agree to receive and sign this record electronically. You may request a paper copy or withdraw consent by contacting your provider. You need a current browser and access to email to complete this process. You will receive a PDF copy that you can download and retain.</div><section class="cs-document-review"><h3><i class="bi bi-file-earmark-text-fill"></i> Review the complete document</h3><div id="cs-document-viewer" class="cs-document-viewer"><i class="bi bi-arrow-repeat"></i> Loading secure document preview…</div></section>${consentResponseFieldsHtml(doc)}<div class="cs-checks">
+  <label><input id="cs-consentElectronic" type="checkbox"><span class="cs-check-text">I consent to electronic records and electronic signatures and understand a paper option is available.</span></label><label><input id="cs-reviewed" type="checkbox"><span class="cs-check-text">I have reviewed the complete document.</span></label><label><input id="cs-intent" type="checkbox"><span class="cs-check-text">I intend to sign this document; typing my name and clicking <strong>Sign and submit</strong> constitutes my electronic signature.</span></label><label><input id="cs-authority" type="checkbox"><span class="cs-check-text">I certify that I am authorized to sign in the capacity selected below.</span></label><label><input id="cs-retainCopy" type="checkbox"><span class="cs-check-text">I can access, download and retain electronic records and understand how to request a paper copy.</span></label></div><div class="cs-sign-grid"><label>Signing capacity<select id="cs-role"><option>Parent/legal guardian</option><option>Adult client/self</option><option>Authorized representative</option></select></label><label>Full legal name<input id="cs-name" autocomplete="name" oninput="updateConsentSignaturePreview()"></label><div class="wide"><span style="display:block;font-size:11px;font-weight:800;margin-bottom:7px">Choose a signature style</span><div class="cs-fonts">${CONSENT_SIGNATURE_FONTS.map((f,i)=>`<label class="cs-font-option" style="font-family:'${f}',cursive" title="${escapeAttr(f)}"><input type="radio" name="cs-font" value="${f}" ${f==="Caveat"?"checked":""} onchange="updateConsentSignaturePreview()"><span class="cs-font-sample">Your name</span></label>`).join("")}</div></div><div class="wide cs-preview"><div id="cs-preview-name" class="cs-preview-name" style="font-family:'Caveat',cursive">Your name</div></div><div class="wide"><button id="cs-code-btn" class="secondary" onclick="requestConsentCode()"><i class="bi bi-envelope-lock-fill"></i> Email my verification code</button><span id="cs-code-help" style="font-size:11px;color:var(--muted);margin-left:8px"></span></div><label class="wide">6-digit verification code<input id="cs-code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"></label></div><div id="cs-sign-status" style="margin:12px 0"></div><div style="display:flex;justify-content:flex-end;gap:8px"><button class="secondary" onclick="closeConsentSigning()">Cancel</button><button onclick="submitConsentSignature()"><i class="bi bi-pen-fill"></i> Sign and submit</button></div></div></div></div>`;loadConsentDocumentReview(doc.docId);}
 
-function closeConsentSigning(){const modal=document.getElementById("cs-modal");if(modal)modal.innerHTML="";_consentSigningDoc=null;_consentChallengeId="";}
+async function loadConsentDocumentReview(docId){const host=document.getElementById("cs-document-viewer");if(!host)return;try{const res=await apiCall("prepareConsentDocumentReview",{docId});let src=res.previewUrl||"";if(res.pdfBase64){const binary=atob(res.pdfBase64),bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);const blobUrl=URL.createObjectURL(new Blob([bytes],{type:"application/pdf"}));host.dataset.blobUrl=blobUrl;src=blobUrl+"#toolbar=1&navpanes=0&view=FitH";}if(!src)throw new Error("The document preview is unavailable.");host.innerHTML=`<iframe title="${escapeAttr(_consentSigningDoc?.title||"Document preview")}" src="${escapeAttr(src)}"></iframe><div class="cs-document-actions"><span><i class="bi bi-shield-lock-fill"></i> Secure, read-only preview</span>${res.previewUrl?`<a href="${escapeAttr(res.previewUrl)}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Open larger</a>`:""}</div>`;}catch(e){host.innerHTML=`<div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>${escapeHtml(e.message)}</span></div>`;}}
+
+function closeConsentSigning(){const viewer=document.getElementById("cs-document-viewer");if(viewer?.dataset.blobUrl)URL.revokeObjectURL(viewer.dataset.blobUrl);const modal=document.getElementById("cs-modal");if(modal)modal.innerHTML="";_consentSigningDoc=null;_consentChallengeId="";}
 function selectedConsentFont(){return document.querySelector('input[name="cs-font"]:checked')?.value||"Caveat";}
-function updateConsentSignaturePreview(){const el=document.getElementById("cs-preview-name");if(!el)return;el.textContent=document.getElementById("cs-name")?.value.trim()||"Your name";el.style.fontFamily=`'${selectedConsentFont()}',cursive`;}
+function updateConsentSignaturePreview(){const name=document.getElementById("cs-name")?.value.trim()||"Your name";document.querySelectorAll(".cs-font-sample").forEach(el=>{el.textContent=name;});const el=document.getElementById("cs-preview-name");if(!el)return;el.textContent=name;el.style.fontFamily=`'${selectedConsentFont()}',cursive`;}
 async function requestConsentCode(){if(!_consentSigningDoc)return;setStatus("cs-sign-status","Sending a fresh verification code…","loading");try{const res=await apiCall("requestConsentSignatureCode",{docId:_consentSigningDoc.docId});_consentChallengeId=res.challengeId;document.getElementById("cs-code-help").textContent=`Sent to ${res.maskedEmail}; expires in ${res.expiresMinutes} minutes.`;setStatus("cs-sign-status","Verification code sent.","success");}catch(e){setStatus("cs-sign-status",e.message,"error");}}
 
 async function submitConsentSignature(){if(!_consentSigningDoc)return;const checks=["consentElectronic","reviewed","intent","authority","retainCopy"];if(!checks.every(k=>document.getElementById("cs-"+k)?.checked)){setStatus("cs-sign-status","Please accept every required statement.","error");return;}if(!_consentChallengeId){setStatus("cs-sign-status","Email and enter a fresh verification code first.","error");return;}const signerName=document.getElementById("cs-name").value.trim();const code=document.getElementById("cs-code").value.trim();if(signerName.length<2||!/^[0-9]{6}$/.test(code)){setStatus("cs-sign-status","Enter your full legal name and the 6-digit code.","error");return;}const responses=collectConsentResponses();for(const field of (_consentSigningDoc.formSchema?.fields||[])){const value=responses[field.id];const blank=value===undefined||value===null||value===""||value===false||(Array.isArray(value)&&!value.length);if(field.required&&blank){setStatus("cs-sign-status",`Please complete: ${field.label}`,"error");return;}}setStatus("cs-sign-status","Verifying and sealing the document…","loading");try{const font=selectedConsentFont();const res=await apiCall("signConsentDocument",{docId:_consentSigningDoc.docId,challengeId:_consentChallengeId,code,signerName,signerRole:document.getElementById("cs-role").value,font,responses,consentElectronic:true,reviewed:true,intent:true,authority:true,retainCopy:true,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone,userAgent:navigator.userAgent});document.querySelector(".cs-modal-body").innerHTML=`<div class="cs-success"><i class="bi bi-patch-check-fill"></i><h2>Signed securely</h2><p>Your verification ID is <strong>${escapeHtml(res.verificationId)}</strong>.</p><p>A completed PDF has been emailed to you for your records.</p><button onclick="closeConsentSigning();initConsentFormsSection(document.getElementById('section-consent-forms'))">Done</button></div>`;}catch(e){setStatus("cs-sign-status",e.message,"error");}}
@@ -130,7 +134,7 @@ function renderConsentForms(root, docs, templates, templateError, folderFiles, f
     <div class="card">
       <h1><i class="bi bi-pen-fill"></i> Consent Forms</h1>
       <p style="color:var(--muted);font-size:14px;margin:0;">
-        Select templates from the practice library to copy to this client's folder, or link individual Google Docs manually.
+        Build reusable online forms from your letterhead, then assign one clear form request to this client.
       </p>
     </div>
 
@@ -157,38 +161,39 @@ function renderConsentForms(root, docs, templates, templateError, folderFiles, f
     <!-- Template picker -->
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
-        <h2 style="margin:0;"><i class="bi bi-files"></i> Send Forms from Template Library</h2>
+        <h2 style="margin:0;"><i class="bi bi-files"></i> Assign a Reusable Form</h2>
       </div>
       <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">
-        Check the forms needed for this client. Copies will be saved to their Drive folder and they'll receive an email notification.
+        Choose one form. It will be copied to the client folder, opened as an online form in the portal, and announced in one email.
       </p>
       <div id="cf-template-list">${templatePickerHtml}</div>
       <div id="cf-copy-status" style="margin:10px 0;"></div>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px;">
         <button onclick="copySelectedConsentForms()">
-          <i class="bi bi-files"></i> Copy Selected &amp; Email Client
+          <i class="bi bi-send-check-fill"></i> Assign Form to Client
         </button>
-        <button class="secondary" onclick="toggleAllConsentTemplates(true)" style="font-size:12px;">Select All</button>
-        <button class="secondary" onclick="toggleAllConsentTemplates(false)" style="font-size:12px;">Deselect All</button>
       </div>
     </div>
 
     <!-- Create a signature-ready form -->
     <div class="card">
       <h2><i class="bi bi-file-earmark-plus-fill"></i> Create a New Signature Form</h2>
-      <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Write a form for this client. The portal will create a Google Doc, place it in the client's Consent Forms folder, register it for secure signing, and notify all linked family email addresses.</p>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Build the client-facing online form and its Google Doc together. Select a Google Doc template to preserve its letterhead, header, footer, and styling.</p>
       <div class="cf-builder-grid">
         <label>Form title<input id="cfb-title" placeholder="e.g. Telehealth Consent"></label>
         <label>Form category<select id="cfb-category"><option>Consent</option><option>Authorization</option><option>Release of Information</option><option>Service Agreement</option><option>Policy Acknowledgment</option><option>Other</option></select></label>
+        <label class="wide">Letterhead / Google Doc template<select id="cfb-base-template"><option value="">Start with a new Google Doc</option>${templates.filter(t=>t.mimeType==="application/vnd.google-apps.document").map(t=>`<option value="${escapeAttr(t.fileId)}">${escapeHtml(t.name)}</option>`).join("")}</select></label>
         <label class="wide">Introductory statement<textarea id="cfb-intro" rows="3" placeholder="Explain what the form covers and why the signature is requested."></textarea></label>
         <label class="wide">Form content<textarea id="cfb-content" rows="12" placeholder="Enter the complete form language. Use blank lines to separate paragraphs and start a heading with #."></textarea></label>
         <label class="wide">Additional acknowledgments — one per line<textarea id="cfb-ack" rows="5" placeholder="I understand…&#10;I authorize…&#10;I received…"></textarea></label>
         <label>Response due date<input id="cfb-due" type="date"></label>
         <label>Intended signer<select id="cfb-signer"><option>Parent/legal guardian</option><option>Adult client/self</option><option>Authorized representative</option></select></label>
+        <div class="wide"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font-size:12px;font-weight:700">Online response fields</span><button type="button" class="secondary" onclick="addNewConsentField()"><i class="bi bi-plus-lg"></i> Add question</button></div><p style="font-size:11px;color:var(--muted);margin:5px 0 10px">These are the fields the client will actually complete in the portal. Their answers are added to the signed document.</p><div id="cfb-fields">${renderNewConsentFields()}</div></div>
+        <label class="wide" style="display:flex;grid-template-columns:18px 1fr;align-items:start"><input id="cfb-save-template" type="checkbox" style="width:18px;margin-top:2px"><span>Save this finished form in the reusable template library for other clients</span></label>
       </div>
       <div class="alert" style="margin-top:14px"><i class="bi bi-info-circle-fill"></i><span>The standard electronic-record disclosure, identity verification, intent statements, document hashing, and audit certificate will be added automatically.</span></div>
       <div id="cfb-status" style="margin:10px 0"></div>
-      <button onclick="createConsentSignatureForm()"><i class="bi bi-send-check-fill"></i> Create Form &amp; Request Signature</button>
+      <button onclick="createConsentSignatureForm()"><i class="bi bi-send-check-fill"></i> Create, Assign &amp; Send One Notification</button>
     </div>
 
     <!-- Add new manually -->
@@ -230,7 +235,7 @@ function renderConsentForms(root, docs, templates, templateError, folderFiles, f
         border: 1.5px solid var(--border); border-radius: 8px; margin-bottom: 6px;
         cursor: pointer; transition: border-color .15s, background .15s; }
       .cf-template-item:hover { border-color: var(--primary); background: #f0f4ff; }
-      .cf-template-item input[type=checkbox] { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+      .cf-template-item input[type=checkbox],.cf-template-item input[type=radio] { width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
       .cf-template-item-name { font-size: 13px; flex: 1; }
       .cf-template-item a { font-size: 11px; color: var(--primary); text-decoration: none; flex-shrink: 0; }
       .cf-folder-file { display:flex;align-items:center;gap:10px;padding:10px 12px;
@@ -247,19 +252,30 @@ function renderConsentForms(root, docs, templates, templateError, folderFiles, f
     </style>`;
 }
 
+function renderNewConsentFields(){if(!_newConsentFields.length)return `<div style="padding:14px;border:1px dashed var(--border);border-radius:10px;color:var(--muted);font-size:12px">No online questions yet. Add each field the client must complete.</div>`;return _newConsentFields.map((f,i)=>consentSchemaRow(f,i).replace(/cf-schema-row/g,"cf-new-schema-row").replace(/consentRemoveSchemaField\(/g,"removeNewConsentField(")).join("");}
+function syncNewConsentFields(){document.querySelectorAll(".cf-new-schema-row").forEach(row=>{const i=+row.dataset.index;if(!_newConsentFields[i])return;_newConsentFields[i].label=row.querySelector('[data-key="label"]').value.trim();_newConsentFields[i].type=row.querySelector('[data-key="type"]').value;_newConsentFields[i].options=row.querySelector('[data-key="options"]').value.split("|").map(v=>v.trim()).filter(Boolean);_newConsentFields[i].required=row.querySelector('[data-key="required"]').checked;});}
+function addNewConsentField(){syncNewConsentFields();_newConsentFields.push({id:"field_"+Date.now(),label:"",type:"text",required:false,options:[]});const el=document.getElementById("cfb-fields");if(el)el.innerHTML=renderNewConsentFields();}
+function removeNewConsentField(i){syncNewConsentFields();_newConsentFields.splice(i,1);const el=document.getElementById("cfb-fields");if(el)el.innerHTML=renderNewConsentFields();}
+
 async function createConsentSignatureForm() {
   const title=(document.getElementById("cfb-title")?.value||"").trim();
   const content=(document.getElementById("cfb-content")?.value||"").trim();
-  if(!title||!content){setStatus("cfb-status","Form title and content are required.","error");return;}
+  const baseTemplateId=document.getElementById("cfb-base-template")?.value||"";
+  if(!title||(!content&&!baseTemplateId)){setStatus("cfb-status","Enter a title and either form content or a Google Doc template.","error");return;}
   const acknowledgments=(document.getElementById("cfb-ack")?.value||"").split(/\n+/).map(v=>v.trim()).filter(Boolean);
   setStatus("cfb-status","Creating the form and notifying family recipients…","loading");
   try{
+    syncNewConsentFields();
+    if(_newConsentFields.some(f=>!f.label)){setStatus("cfb-status","Every online response field needs a label.","error");return;}
     const res=await apiCall("createConsentSignatureForm",{title,content,
       category:document.getElementById("cfb-category")?.value||"Consent",
       intro:(document.getElementById("cfb-intro")?.value||"").trim(),
       acknowledgments,dueDate:document.getElementById("cfb-due")?.value||"",
-      intendedSigner:document.getElementById("cfb-signer")?.value||"Parent/legal guardian"});
-    setStatus("cfb-status",`Form created. Signature request emailed to ${res.recipientCount||0} recipient${res.recipientCount===1?"":"s"}.`,"success");
+      intendedSigner:document.getElementById("cfb-signer")?.value||"Parent/legal guardian",
+      baseTemplateId,
+      saveAsTemplate:!!document.getElementById("cfb-save-template")?.checked,fields:_newConsentFields});
+    setStatus("cfb-status",`Form created${res.savedTemplateId?" and saved for reuse":""}. One signature request was emailed to each of ${res.recipientCount||0} recipient${res.recipientCount===1?"":"s"}.`,"success");
+    _newConsentFields=[];
     ["cfb-title","cfb-intro","cfb-content","cfb-ack","cfb-due"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});
     setTimeout(()=>initConsentFormsSection(document.getElementById("section-consent-forms")),900);
   }catch(e){setStatus("cfb-status","Error: "+e.message,"error");}
@@ -337,7 +353,7 @@ function buildTemplatePickerHtml(templates) {
     const label = groupKey === "__root__" ? "General" : groupKey;
     const items = files.map(t => `
       <label class="cf-template-item">
-        <input type="checkbox" class="cf-template-chk" value="${escapeAttr(t.fileId)}">
+        <input type="radio" name="cf-template-choice" class="cf-template-chk" value="${escapeAttr(t.fileId)}">
         <span class="cf-template-item-name">${escapeHtml(t.name)}</span>
         <a href="${escapeHtml(t.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
           <i class="bi bi-box-arrow-up-right"></i> Preview
@@ -351,23 +367,23 @@ function buildTemplatePickerHtml(templates) {
 }
 
 function toggleAllConsentTemplates(checked) {
-  document.querySelectorAll(".cf-template-chk").forEach(cb => { cb.checked = checked; });
+  if(!checked)document.querySelectorAll(".cf-template-chk").forEach(cb => { cb.checked = false; });
 }
 
 async function copySelectedConsentForms() {
   const checked = [...document.querySelectorAll(".cf-template-chk:checked")];
-  if (!checked.length) { setStatus("cf-copy-status", "Please select at least one form.", "error"); return; }
+  if (!checked.length) { setStatus("cf-copy-status", "Please choose a form to assign.", "error"); return; }
   const fileIds = checked.map(cb => cb.value);
-  setStatus("cf-copy-status", `Copying ${fileIds.length} form${fileIds.length !== 1 ? "s" : ""} and sending email…`, "loading");
+  setStatus("cf-copy-status", "Assigning the online form and sending one notification…", "loading");
   try {
     const res = await apiCall("copyConsentForms", { fileIds });
     const emailNote = res.emailed
-      ? `Email sent to ${escapeHtml(res.clientEmail)}.`
-      : res.clientEmail ? "Email could not be sent — check GmailApp permissions." : "No client email on file.";
+      ? `Notification sent to ${res.recipientCount||0} family recipient${res.recipientCount===1?"":"s"}.`
+      : "No notification could be sent; check family email addresses and Gmail permissions.";
     document.getElementById("cf-copy-status").innerHTML = `
       <div class="alert" style="border-color:#059669;color:#065f46;background:#d1fae5;">
         <i class="bi bi-check-circle-fill"></i>
-        <span>${res.copied} form${res.copied !== 1 ? "s" : ""} copied. ${emailNote}
+        <span>Form assigned. ${emailNote}
           ${res.folderUrl ? `&nbsp;<a href="${escapeHtml(res.folderUrl)}" target="_blank"
             style="color:var(--primary);font-weight:700;text-decoration:none;">
             Open Folder <i class="bi bi-box-arrow-up-right"></i></a>` : ""}
