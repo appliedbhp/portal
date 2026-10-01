@@ -1,0 +1,481 @@
+// Shared helpers used across Roadmap / WIN / Plan / Progress / Scores sections:
+// status banners, domain colors, Chart.js setup, and the assessment-history carousel.
+
+const STATUS_ICONS = { error: "exclamation-triangle-fill", success: "check-circle-fill", info: "info-circle-fill", loading: "arrow-repeat" };
+
+// Shared branded transitions. These deliberately use a single calm motion
+// language so login, data loading, and page entry feel related.
+function playPortalEntry(label = "Preparing your space…") {
+  try { sessionStorage.setItem("portalEntryLabel", label); } catch (_) {}
+  document.body.classList.add("is-leaving");
+  let curtain = document.getElementById("portal-transition");
+  if (!curtain) {
+    curtain = document.createElement("div");
+    curtain.id = "portal-transition";
+    curtain.className = "portal-transition";
+    curtain.setAttribute("role", "status");
+    curtain.setAttribute("aria-live", "polite");
+    curtain.innerHTML = `<div class="brand-motion" aria-hidden="true"><span></span><span></span><span></span></div><strong>${escapeHtml(label)}</strong>`;
+    document.body.appendChild(curtain);
+  }
+  requestAnimationFrame(() => curtain.classList.add("visible"));
+  return new Promise(resolve => setTimeout(resolve, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 650));
+}
+
+function finishPortalEntry() {
+  const curtain = document.getElementById("portal-transition");
+  if (!curtain) return;
+  requestAnimationFrame(() => curtain.classList.add("departing"));
+  setTimeout(() => curtain.remove(), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 650);
+}
+
+function dismissSplash() {
+  const splash = document.getElementById("login-splash");
+  if (!splash) return;
+  splash.classList.add("is-complete");
+  setTimeout(() => splash.remove(), window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 40 : 700);
+}
+function setStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (!msg) { el.innerHTML = ""; return; }
+  if (type === "loading") {
+    el.innerHTML = `<div class="portal-loading-status">
+      <div class="pls-spinner"></div>
+      <span style="flex:0 0 auto">${msg}</span>
+      <div class="pls-bar-wrap"><div class="pls-bar" style="width:60%"></div></div>
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="alert alert-${type}"><i class="bi bi-${STATUS_ICONS[type] || "info-circle-fill"}"></i><span>${msg}</span></div>`;
+  }
+}
+
+// ── Top loading bar ───────────────────────────────────────────────────────────
+// Stays visible (indeterminate shimmer) for the full duration of any API call.
+// Counts concurrent calls so it stays up until every one finishes.
+const portalProgress = (function() {
+  let count = 0, bar = null, finishTimer = null, startedAt = 0, busyTimer = null;
+  const MIN_MS = 600; // always visible for at least this long
+  function getBar() {
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "portal-topbar";
+      // Live inside the header so z-index never fights with it
+      const header = document.querySelector(".portal-header") || document.body;
+      header.appendChild(bar);
+    }
+    return bar;
+  }
+  function hide() {
+    const b = getBar();
+    b.classList.remove("running");
+    b.classList.add("finishing");
+    finishTimer = setTimeout(() => { b.classList.remove("finishing"); }, 450);
+    clearTimeout(busyTimer);
+    document.body.classList.remove("data-is-loading");
+  }
+  return {
+    start() {
+      count++;
+      if (finishTimer) { clearTimeout(finishTimer); finishTimer = null; }
+      if (count === 1) startedAt = Date.now();
+      const b = getBar();
+      b.classList.remove("finishing");
+      b.classList.add("running");
+      clearTimeout(busyTimer);
+      busyTimer = setTimeout(() => document.body.classList.add("data-is-loading"), 320);
+    },
+    done() {
+      count = Math.max(0, count - 1);
+      if (count === 0) {
+        const elapsed = Date.now() - startedAt;
+        const delay = Math.max(0, MIN_MS - elapsed);
+        finishTimer = setTimeout(hide, delay);
+      }
+    }
+  };
+})();
+
+// ── Skeleton helpers ──────────────────────────────────────────────────────────
+function skeletonCards(n = 3) {
+  return Array.from({ length: n }, () => `
+    <div class="skeleton skeleton-card">
+      <div class="skeleton skeleton-title" style="width:55%"></div>
+      <div class="skeleton skeleton-text" style="width:80%"></div>
+      <div class="skeleton skeleton-text" style="width:45%"></div>
+    </div>`).join("");
+}
+function skeletonRows(n = 4) {
+  return `<div style="padding:8px 0">${Array.from({ length: n }, (_, i) => `
+    <div class="skeleton-row">
+      <div class="skeleton skeleton-text" style="width:${28 + (i % 3) * 12}%"></div>
+      <div class="skeleton skeleton-text" style="width:${18 + (i % 2) * 10}%"></div>
+    </div>`).join("")}</div>`;
+}
+
+const DOMAIN_PALETTE = ["#3185fc", "#06b6d4", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#14b8a6", "#ec4899"];
+const domainColorMap = {};
+function colorForDomain(domain) {
+  if (!domainColorMap[domain]) {
+    domainColorMap[domain] = DOMAIN_PALETTE[Object.keys(domainColorMap).length % DOMAIN_PALETTE.length];
+  }
+  return domainColorMap[domain];
+}
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+function escapeHtml(s) {
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+function escapeAttr(s) {
+  return String(s == null ? "" : s).replace(/'/g, "\\'").replace(/"/g, "&quot;");
+}
+
+if (typeof Chart !== "undefined") {
+  Chart.defaults.font.family = "-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = "#4b5168";
+  Chart.defaults.borderColor = "#e7e9f0";
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.boxWidth = 8;
+}
+
+const chartInstances = {};
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+window.addEventListener("beforeprint", () => {
+  Object.values(chartInstances).forEach(c => { c.resize(); c.update(); });
+});
+
+function statCard(icon, label, value) {
+  return `<div class="stat-card"><i class="bi bi-${icon}"></i><div><div class="stat-label">${label}</div><div class="stat-value">${escapeHtml(value)}</div></div></div>`;
+}
+
+// ---- Carousel: click through prior assessment snapshots, re-rendering
+// whichever wheel/bar chart functions the caller supplies. ----
+const carouselState = {};
+function setupCarousel(prefix, snapshots, startIndex, renderFns) {
+  carouselState[prefix] = { snapshots, index: startIndex, renderFns };
+  renderCarouselNav(prefix);
+  updateCarouselCharts(prefix);
+}
+function renderCarouselNav(prefix) {
+  const state = carouselState[prefix];
+  const nav = document.getElementById(prefix + "Nav");
+  if (!nav) return;
+  const snap = state.snapshots[state.index];
+  nav.innerHTML = `
+    <button class="secondary icon-btn" onclick="carouselStep('${prefix}', -1)" ${state.index <= 0 ? "disabled" : ""} title="Previous"><i class="bi bi-chevron-left"></i></button>
+    <span style="font-weight:600;"><i class="bi bi-calendar-event"></i> ${snap.date || "—"} ${snap.level ? "— " + escapeHtml(snap.level) : ""} (${state.index + 1} of ${state.snapshots.length})</span>
+    <button class="secondary icon-btn" onclick="carouselStep('${prefix}', 1)" ${state.index >= state.snapshots.length - 1 ? "disabled" : ""} title="Next"><i class="bi bi-chevron-right"></i></button>
+  `;
+}
+function carouselStep(prefix, dir) {
+  const state = carouselState[prefix];
+  const next = state.index + dir;
+  if (next < 0 || next >= state.snapshots.length) return;
+  state.index = next;
+  renderCarouselNav(prefix);
+  updateCarouselCharts(prefix);
+}
+function updateCarouselCharts(prefix) {
+  const state = carouselState[prefix];
+  const snap = state.snapshots[state.index];
+  state.renderFns.wheel(prefix + "Wheel", prefix + "WheelLegend", snap.summary, snap);
+  state.renderFns.bar(prefix + "Bar", snap.summary, snap);
+}
+
+// ── Toast notifications ───────────────────────────────────────────────────────
+function showToast(msg, type = "success", durationMs = 3000) {
+  let container = document.getElementById("portal-toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "portal-toast-container";
+    document.body.appendChild(container);
+  }
+  const toast = document.createElement("div");
+  const icons = { success: "check-circle-fill", error: "exclamation-triangle-fill", info: "info-circle-fill", warning: "exclamation-circle-fill" };
+  toast.className = `portal-toast toast-${type}`;
+  toast.innerHTML = `<i class="bi bi-${icons[type] || "info-circle-fill"}"></i><span>${msg}</span>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.classList.add("hiding");
+    setTimeout(() => toast.remove(), 230);
+  }, durationMs);
+}
+
+// ── Ripple effect on buttons ──────────────────────────────────────────────────
+function initRippleEffect() {
+  document.addEventListener("click", function(e) {
+    const btn = e.target.closest("button:not(:disabled)");
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement("span");
+    ripple.className = "portal-ripple";
+    ripple.style.left = (e.clientX - rect.left) + "px";
+    ripple.style.top  = (e.clientY - rect.top)  + "px";
+    btn.appendChild(ripple);
+    ripple.addEventListener("animationend", () => ripple.remove());
+  }, true);
+}
+
+// ── Scroll-reveal (stretch cards into view) ───────────────────────────────────
+function initScrollReveal() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        const el = entry.target;
+        const delay = parseFloat(el.dataset.revealDelay || 0);
+        setTimeout(() => el.classList.add("revealed"), delay);
+        observer.unobserve(el);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: "0px 0px -20px 0px" });
+
+  function observeCards(root) {
+    const sel = ".card, .stat-card, .activity-card, .step-card";
+    root.querySelectorAll(sel).forEach((el, i) => {
+      if (el.classList.contains("scroll-reveal")) return;
+      el.classList.add("scroll-reveal");
+      el.dataset.revealDelay = Math.min(i * 55, 300);
+      observer.observe(el);
+    });
+  }
+
+  // Observe existing cards
+  observeCards(document);
+
+  // Re-observe when new sections load (MutationObserver on body)
+  const mo = new MutationObserver(mutations => {
+    mutations.forEach(m => m.addedNodes.forEach(node => {
+      if (node.nodeType === 1) observeCards(node);
+    }));
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+}
+
+// ── Gradient headings ─────────────────────────────────────────────────────────
+// Call after a section's HTML is rendered to apply gradient to its h2 elements.
+function applyGradientHeadings(container) {
+  const root = container || document;
+  root.querySelectorAll("h2, h3, .page-title, .section-title").forEach(el => {
+    // Skip if it already has inline color or is inside a button/badge
+    if (el.closest("button, .badge, .alert, .stat-value, [style*='color']")) return;
+    if (!el.classList.contains("auto-gradient")) {
+      el.classList.add("auto-gradient");
+    }
+  });
+}
+
+// ── Count-up animation for stat values ───────────────────────────────────────
+function animateCountUp(el, targetText) {
+  const num = parseFloat(targetText.replace(/[^0-9.]/g, ""));
+  if (isNaN(num) || num === 0) { el.textContent = targetText; return; }
+  const suffix = targetText.replace(/[0-9.]/g, "");
+  const start = performance.now();
+  const dur = 600;
+  function step(now) {
+    const t = Math.min((now - start) / dur, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = (Math.round(eased * num * 10) / 10) + suffix;
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = targetText;
+  }
+  el.classList.add("counting");
+  requestAnimationFrame(step);
+}
+
+// ── Avatar rendering ──────────────────────────────────────────────────────────
+// Renders a client avatar from saved avatarJson. Returns an SVG string via a
+// promise, or resolves to null if the json is empty / DiceBear fails to load.
+let _dicebearPromise = null;
+function _loadDicebear() {
+  if (!_dicebearPromise) {
+    _dicebearPromise = Promise.all([
+      import("https://esm.sh/@dicebear/core@10"),
+      import("https://esm.sh/@dicebear/styles@10")
+    ]);
+  }
+  return _dicebearPromise;
+}
+
+async function renderAvatarSvg(avatarJson) {
+  if (!avatarJson) return null;
+  let state;
+  try { state = typeof avatarJson === "string" ? JSON.parse(avatarJson) : avatarJson; } catch (_) { return null; }
+  try {
+    const [{ createAvatar }, styles] = await _loadDicebear();
+    const seededStyles={dylan:styles.dylan,cutouts:styles.cutouts,adventurer:styles.adventurer,micah:styles.micah};
+    if(seededStyles[state.style]) return createAvatar(seededStyles[state.style],{seed:[state.seed||"avatar"],randomizeIds:true}).toString();
+    const openPeeps=styles.openPeeps;
+    return createAvatar(openPeeps, {
+      seed: state.seed || "peep",
+      randomizeIds: true,
+      head: [state.head], headContrastColor: [state.headContrastColor],
+      face: [state.face],
+      facialHair: [state.facialHair || "chin"],
+      facialHairProbability: state.facialHair ? 100 : 0,
+      accessories: [state.accessories || "glasses"],
+      accessoriesProbability: state.accessories ? 100 : 0,
+      mask: [state.mask || "medicalMask"],
+      maskProbability: state.mask ? 100 : 0,
+      skinColor: [state.skinColor],
+      clothingColor: [state.clothingColor],
+      backgroundType: ["solid"],
+      backgroundColor: ["transparent"]
+    }).toString();
+  } catch (_) {
+    if(["dylan","cutouts","adventurer","micah"].includes(state.style)){
+      try{const raw=new TextEncoder().encode(String(state.seed||"avatar")),digest=await crypto.subtle.digest("SHA-256",raw),seed=[...new Uint8Array(digest)].slice(0,12).map(b=>b.toString(16).padStart(2,"0")).join(""),response=await fetch(`https://api.dicebear.com/10.x/${state.style}/svg?seed=${seed}`);if(response.ok)return await response.text();}catch(__){}
+    }
+    return null;
+  }
+}
+
+// Builds a circular avatar <div> element. Pass size in px (default 36).
+// If avatarJson is falsy, falls back to initials from the label string.
+async function buildAvatarEl(avatarJson, label, size = 36) {
+  const el = document.createElement("div");
+  const initials = (label || "?").split(" ").map(w => w[0]).join("").toUpperCase().substring(0, 2);
+  el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;flex-shrink:0;` +
+    `display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${Math.round(size * 0.38)}px;` +
+    `background:var(--primary,#6366f1);color:#fff;`;
+  el.textContent = initials;
+  if (avatarJson) {
+    const svg = await renderAvatarSvg(avatarJson);
+    if (svg) {
+      el.textContent = "";
+      el.style.background = "var(--surface,#f3f4f8)";
+      el.innerHTML = svg;
+      el.querySelector("svg").style.cssText = "width:100%;height:100%;display:block;";
+    }
+  }
+  return el;
+}
+
+// ── Auto-init on DOM ready ────────────────────────────────────────────────────
+(function() {
+  function boot() {
+    initRippleEffect();
+    initScrollReveal();
+    document.querySelectorAll(".sidebar-group-title").forEach(title => {
+      title.setAttribute("role", "button");
+      title.setAttribute("tabindex", "0");
+      title.setAttribute("aria-expanded", String(!title.closest(".sidebar-group")?.classList.contains("collapsed")));
+      title.addEventListener("keydown", event => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          title.click();
+        }
+      });
+    });
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot);
+  } else {
+    boot();
+  }
+})();
+
+// ── Shared tooltip ────────────────────────────────────────────────────────────
+// Use data-tooltip="text" on any element. The tooltip follows the cursor
+// and works inside grid/flex containers where CSS ::after fails.
+(function() {
+  let tip = null;
+  function getTip() {
+    if (!tip) {
+      tip = document.createElement("div");
+      tip.id = "portal-tooltip";
+      document.body.appendChild(tip);
+    }
+    return tip;
+  }
+  document.addEventListener("mouseover", function(e) {
+    const el = e.target.closest("[data-tooltip]");
+    if (!el) return;
+    const t = getTip();
+    t.textContent = el.dataset.tooltip;
+    t.style.display = "block";
+  });
+  document.addEventListener("mousemove", function(e) {
+    if (!tip || tip.style.display === "none") return;
+    tip.style.left = (e.clientX + 12) + "px";
+    tip.style.top  = (e.clientY - 28) + "px";
+  });
+  document.addEventListener("mouseout", function(e) {
+    const el = e.target.closest("[data-tooltip]");
+    if (el && !el.contains(e.relatedTarget)) {
+      if (tip) tip.style.display = "none";
+    }
+  });
+})();
+
+// Renders saved FBA scores (stored in the legacy bfa_scores_json field) into HTML — used by both
+// programs.js (parent completed view) and program-admin.js (provider review).
+function renderBfaScores(scoresJson) {
+  const FN_COLORS = { att: "#6366f1", esc: "#d97706", tan: "#059669", aut: "#db2777" };
+  const FN_ORDER  = ["att", "esc", "tan", "aut"];
+  const FN_LABELS = { att: "Attention", esc: "Escape", tan: "Tangible", aut: "Automatic / Sensory" };
+
+  let data;
+  try { data = typeof scoresJson === "string" ? JSON.parse(scoresJson) : scoresJson; }
+  catch (_) { return `<p style="color:var(--muted);font-size:13px;">Score data unavailable.</p>`; }
+
+  let html = `<div style="font-weight:700;font-size:14px;margin-bottom:14px;"><i class="bi bi-bar-chart-fill"></i> Function Score Summary</div>`;
+
+  Object.values(data).forEach(entry => {
+    const label  = entry.label || "Behavior";
+    const scores = entry.scores || {};
+    const sorted = FN_ORDER.map(fn => ({ fn, label: FN_LABELS[fn], score: scores[fn] || 0 }))
+                            .sort((a, b) => b.score - a.score);
+    const top = sorted[0];
+
+    const antecedents = entry.antecedents || [];
+    const antNotes    = entry.antNotes || "";
+
+    html += `<div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border);">`;
+    html += `<div style="font-weight:700;font-size:14px;margin-bottom:10px;">${escapeHtml(label)}</div>`;
+
+    if (antecedents.length || antNotes) {
+      html += `<div style="margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:8px;border-left:3px solid #6366f1;">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#3730a3;margin-bottom:6px;">
+          <i class="bi bi-arrow-right-circle-fill"></i> Identified Antecedents
+        </div>`;
+      if (antecedents.length) {
+        const byCat = {};
+        antecedents.forEach(a => { (byCat[a.cat] = byCat[a.cat] || []).push(a.label); });
+        Object.entries(byCat).forEach(([cat, items]) => {
+          html += `<div style="font-size:12px;font-weight:600;color:#1e3a8a;margin:6px 0 3px;">${escapeHtml(cat)}</div>`;
+          html += `<ul style="margin:0 0 4px;padding-left:18px;">${items.map(i => `<li style="font-size:13px;margin-bottom:2px;">${escapeHtml(i)}</li>`).join("")}</ul>`;
+        });
+      }
+      if (antNotes) html += `<p style="font-size:13px;margin:6px 0 0;font-style:italic;">${escapeHtml(antNotes)}</p>`;
+      html += `</div>`;
+    }
+
+    sorted.forEach(item => {
+      const pct    = Math.round((item.score / 20) * 100);
+      const isTop  = item.fn === top.fn && item.score >= 8;
+      const isSig  = item.score >= 8 && item.fn !== top.fn;
+      const badge  = isTop ? ` <span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:700;">Primary</span>`
+                   : isSig ? ` <span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:1px 6px;border-radius:4px;font-weight:700;">Significant</span>` : "";
+      html += `<div style="margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:600;display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span>${escapeHtml(item.label)}${badge}</span><span>${item.score}/20</span>
+        </div>
+        <div style="background:#f0f1f5;border-radius:4px;height:20px;overflow:hidden;">
+          <div class="fba-score-fill" style="height:100%;width:${pct}%;background:${FN_COLORS[item.fn]};border-radius:4px;min-width:${pct > 0 ? "22px" : "0"};display:flex;align-items:center;padding-left:6px;color:white;font-size:12px;font-weight:700;animation-delay:${sorted.indexOf(item) * 90}ms;">${pct > 15 ? item.score : ""}</div>
+        </div>
+      </div>`;
+    });
+
+    if (top.score < 8) {
+      html += `<p style="font-size:12px;color:var(--muted);margin:4px 0 0;">No subscale reached the significant threshold (≥8).</p>`;
+    }
+    html += `</div>`;
+  });
+
+  return html;
+}

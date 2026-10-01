@@ -1,21 +1,25 @@
 // Client/parent Settings section — SMS consent, contact preferences, avatar
+const SETTINGS_AVATAR_CHOICES={explorer:[["dylan","Dylan","Bold, playful portrait"],["cutouts","Cutouts","Colorful paper collage"]],teen:[["adventurer","Adventurer","Friendly illustrated character"],["micah","Micah","Clean, colorful portrait"]],classic:[["openPeeps","Open Peeps","Hand-drawn classic character"]]};
 
 async function initSettingsSection(root) {
   root.innerHTML = `<div class="card"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>`;
   try {
-    const [phoneRes, avatarRes, timeZoneRes] = await Promise.all([
+    const [phoneRes, avatarRes, timeZoneRes, youthRes] = await Promise.all([
       apiCall("getClientPhone", {}).catch(() => ({ phone: "", smsConsent: false })),
       apiCall("getAvatar", {}).catch(() => ({ avatarJson: null })),
-      apiCall("getClientTimeZone", {}).catch(() => ({ timeZone: "America/Los_Angeles" }))
+      apiCall("getClientTimeZone", {}).catch(() => ({ timeZone: "America/Los_Angeles" })),
+      apiCall("getYouthPreferences", {}).catch(() => ({ preferences: typeof getYouthPreferences === "function" ? getYouthPreferences() : {} }))
     ]);
     const avatarJson = avatarRes.avatarJson || null;
     renderSettingsSection(root, {
       phone:      phoneRes.phone      || "",
       smsConsent: phoneRes.smsConsent || false,
       avatarJson,
-      timeZone: timeZoneRes.timeZone || "America/Los_Angeles"
+      timeZone: timeZoneRes.timeZone || "America/Los_Angeles",
+      youth: youthRes.preferences || {}
     });
     if (avatarJson) restoreAvatarCreator(avatarJson);
+    else updateSeededAvatarPreview();
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
@@ -24,7 +28,16 @@ async function initSettingsSection(root) {
   }
 }
 
-function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone }) {
+function avatarChoiceButtonsHtml(choices,selected){return choices.map(([value,label,copy])=>`<button type="button" class="avatar-style-choice ${selected===value?"selected":""}" data-avatar-style="${value}" data-avatar-label="${label}" onclick="selectAvatarStyle('${value}')"><i class="bi ${value==="openPeeps"?"bi-person-arms-up":"bi-person-circle"}"></i><span><strong>${label}</strong><small>${copy}</small></span></button>`).join("");}
+
+function updateAvatarChoicesForMode(mode){const choices=SETTINGS_AVATAR_CHOICES[mode]||SETTINGS_AVATAR_CHOICES.teen,picker=document.getElementById("avatar-style-picker"),label=document.getElementById("avatar-experience-label");if(label)label.textContent=mode[0].toUpperCase()+mode.slice(1);if(picker)picker.innerHTML=avatarChoiceButtonsHtml(choices,choices[0][0]);selectAvatarStyle(choices[0][0]);}
+
+function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone, youth }) {
+  let savedAvatar={};try{savedAvatar=avatarJson?JSON.parse(avatarJson):{};}catch(_){}
+  const availableAvatars=SETTINGS_AVATAR_CHOICES[youth.mode]||SETTINGS_AVATAR_CHOICES.teen;
+  const avatarStyle=availableAvatars.some(x=>x[0]===savedAvatar.style)?savedAvatar.style:availableAvatars[0][0];
+  const avatarSeed=savedAvatar.style===avatarStyle&&savedAvatar.seed?savedAvatar.seed:"avatar-"+Math.random().toString(36).slice(2,10);
+  youth = Object.assign({ mode:"teen", accent:"#6366f1", goalLabel:"Goals", reducedMotion:false, celebrations:true }, youth || {});
   const timeZones = [
     ["America/Los_Angeles", "Pacific Time"], ["America/Denver", "Mountain Time"],
     ["America/Phoenix", "Arizona Time"], ["America/Chicago", "Central Time"],
@@ -43,17 +56,37 @@ function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone }
       </p>
     </div>
 
+    <div class="card youth-settings-card">
+      <div class="youth-settings-heading"><div><h2><i class="bi bi-palette2"></i> My Experience</h2><p>Choose how the portal looks and talks to you. This never changes your care plan or scores.</p></div><span class="youth-safe-badge"><i class="bi bi-shield-check"></i> Just appearance</span></div>
+      <div class="youth-mode-grid">
+        ${[["explorer","bi-rocket-takeoff-fill","Explorer","Playful, larger, and guided"],["teen","bi-lightning-charge-fill","Teen","Clean, energetic, and independent"],["classic","bi-grid-fill","Classic","Simple and familiar"]].map(([value,icon,title,copy])=>`<label class="youth-mode-option"><input type="radio" name="st-youth-mode" value="${value}" ${youth.mode===value?"checked":""} onchange="updateAvatarChoicesForMode('${value}')"><span><i class="bi ${icon}"></i><b>${title}</b><small>${copy}</small></span></label>`).join("")}
+      </div>
+      <div class="youth-pref-grid">
+        <label>What should we call them?<select id="st-goal-label">${["Goals","Plans","Quests"].map(x=>`<option ${youth.goalLabel===x?"selected":""}>${x}</option>`).join("")}</select></label>
+        <label>Accent color<div class="youth-color-row">${["#6366f1","#2563eb","#0891b2","#059669","#db2777","#7c3aed"].map(c=>`<button type="button" class="youth-color ${youth.accent===c?"selected":""}" style="--swatch:${c}" data-color="${c}" onclick="document.querySelectorAll('.youth-color').forEach(x=>x.classList.remove('selected'));this.classList.add('selected')" aria-label="Choose ${c}"></button>`).join("")}</div></label>
+      </div>
+      <div class="youth-toggle-row"><label><input id="st-celebrations" type="checkbox" ${youth.celebrations?"checked":""}> Show gentle celebrations</label><label><input id="st-reduced-motion" type="checkbox" ${youth.reducedMotion?"checked":""}> Reduce motion</label></div>
+      <div class="youth-settings-actions"><button onclick="saveYouthExperienceSettings()"><i class="bi bi-check-circle-fill"></i> Save My Experience</button><div id="st-youth-status"></div></div>
+    </div>
+
     <!-- Avatar -->
     <div class="card">
       <h2><i class="bi bi-person-bounding-box"></i> My Avatar</h2>
       <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
         Design your character — it appears next to your name in the portal.
       </p>
-      <open-peeps-creator id="settings-avatar-creator" seed="${escapeHtml(getClientId() || 'peep')}"></open-peeps-creator>
+      <p style="color:var(--muted);font-size:12px;margin:-8px 0 12px">Available for the <strong id="avatar-experience-label">${escapeHtml(youth.mode[0].toUpperCase()+youth.mode.slice(1))}</strong> experience.</p>
+      <div id="avatar-style-picker" class="avatar-style-picker">${avatarChoiceButtonsHtml(availableAvatars,avatarStyle)}</div>
+      <div id="avatar-open-peeps-panel" style="display:${avatarStyle==="openPeeps"?"block":"none"}"><open-peeps-creator id="settings-avatar-creator" seed="${escapeHtml(getClientId() || 'peep')}"></open-peeps-creator></div>
+      <div id="avatar-seeded-panel" class="avatar-micah-panel" style="display:${avatarStyle!=="openPeeps"?"grid":"none"}">
+        <div class="avatar-micah-preview"><img id="avatar-seeded-image" alt="Avatar preview"></div>
+        <div><h3 id="avatar-seeded-title">${escapeHtml(availableAvatars.find(x=>x[0]===avatarStyle)?.[1]||"Avatar")} portrait</h3><p>Generate a few variations until one feels like you. The avatar uses a random, non-identifying seed.</p><input id="avatar-seeded-seed" type="hidden" value="${escapeAttr(avatarSeed)}"><button type="button" class="secondary" onclick="randomizeSeededAvatar()"><i class="bi bi-shuffle"></i> Try another look</button><small style="display:block;margin-top:10px;color:var(--muted)">Avatar styles are provided through <a id="avatar-style-credit" href="https://www.dicebear.com/styles/${avatarStyle.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())}/" target="_blank" rel="noopener">DiceBear</a>; creator and license details are available on the linked style page.</small></div>
+      </div>
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <button onclick="saveAvatarSettings()"><i class="bi bi-check-circle-fill"></i> Save Avatar</button>
         <div id="st-avatar-status"></div>
       </div>
+      <style>.avatar-style-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.avatar-style-choice{display:flex;align-items:center;gap:11px;text-align:left;padding:13px;border:1.5px solid var(--border);border-radius:13px;background:var(--card,#fff);color:var(--text)}.avatar-style-choice>i{font-size:25px;color:var(--primary)}.avatar-style-choice strong,.avatar-style-choice small{display:block}.avatar-style-choice small{margin-top:2px;color:var(--muted);font-weight:400}.avatar-style-choice.selected{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent);background:color-mix(in srgb,var(--primary) 5%,var(--card,#fff))}.avatar-micah-panel{grid-template-columns:220px 1fr;align-items:center;gap:24px;padding:20px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(135deg,#f8faff,#eff6ff)}.avatar-micah-preview{width:200px;height:200px;border-radius:28px;overflow:hidden;background:#dbeafe;box-shadow:0 16px 36px rgba(49,133,252,.15)}.avatar-micah-preview img{width:100%;height:100%;display:block}.avatar-micah-panel label{display:grid;gap:6px;font-size:12px;font-weight:700;margin:12px 0}.avatar-micah-panel input{width:100%}@media(max-width:640px){.avatar-style-picker,.avatar-micah-panel{grid-template-columns:1fr}.avatar-micah-preview{width:160px;height:160px;margin:auto}}</style>
     </div>
 
     <!-- Time Zone -->
@@ -163,6 +196,24 @@ function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone }
     </div>`;
 }
 
+async function saveYouthExperienceSettings() {
+  const payload={
+    mode:document.querySelector('input[name="st-youth-mode"]:checked')?.value||"teen",
+    accent:document.querySelector('.youth-color.selected')?.dataset.color||"#6366f1",
+    goalLabel:document.getElementById('st-goal-label')?.value||"Goals",
+    celebrations:!!document.getElementById('st-celebrations')?.checked,
+    reducedMotion:!!document.getElementById('st-reduced-motion')?.checked
+  };
+  setStatus("st-youth-status","Saving…","loading");
+  try{
+    const result=await apiCall("saveYouthPreferences",payload);
+    if(typeof applyYouthPreferences==="function")applyYouthPreferences(result.preferences||payload);
+    setStatus("st-youth-status","Saved—your portal has been updated.","success");
+    if(typeof showToast==="function")showToast("Your experience is ready.","success");
+    setTimeout(()=>initSettingsSection(document.getElementById("section-settings")),500);
+  }catch(e){setStatus("st-youth-status","Error: "+e.message,"error");}
+}
+
 async function saveSettingsTimeZone() {
   const timeZone = document.getElementById("st-time-zone")?.value;
   if (!timeZone) return;
@@ -193,9 +244,11 @@ async function saveSettingsSmsConsent() {
 }
 
 async function saveAvatarSettings() {
+  const style=document.querySelector(".avatar-style-choice.selected")?.dataset.avatarStyle||"openPeeps";
   const creator = document.getElementById("settings-avatar-creator");
-  if (!creator) { setStatus("st-avatar-status", "Avatar creator not found.", "error"); return; }
-  const state = creator._state;
+  let state;
+  if(style!=="openPeeps") state={style:style,seed:(document.getElementById("avatar-seeded-seed")?.value||("avatar-"+Math.random().toString(36).slice(2,10))).trim()};
+  else {if (!creator) { setStatus("st-avatar-status", "Avatar creator not found.", "error"); return; }state=creator._state;if(state)state=Object.assign({},state,{style:"openPeeps"});}
   if (!state) { setStatus("st-avatar-status", "No avatar data yet — design your character first.", "error"); return; }
   setStatus("st-avatar-status", "Saving…", "loading");
   try {
@@ -213,6 +266,9 @@ function restoreAvatarCreator(savedJson) {
   if (!savedJson) return;
   let state;
   try { state = JSON.parse(savedJson); } catch (_) { return; }
+  const active=document.querySelector(".avatar-style-choice.selected")?.dataset.avatarStyle||"openPeeps",savedStyle=state.style||"openPeeps";
+  if(active!==savedStyle){if(active!=="openPeeps")updateSeededAvatarPreview();return;}
+  if(state.style&&state.style!=="openPeeps"){selectAvatarStyle(state.style);const seed=document.getElementById("avatar-seeded-seed");if(seed)seed.value=state.seed||("avatar-"+Math.random().toString(36).slice(2,10));updateSeededAvatarPreview();return;}
   const tryRestore = (attempts = 0) => {
     const el = document.getElementById("settings-avatar-creator");
     if (el && el._state) {
@@ -224,6 +280,10 @@ function restoreAvatarCreator(savedJson) {
   tryRestore();
 }
 
+function selectAvatarStyle(style){const choice=[...document.querySelectorAll(".avatar-style-choice")].find(btn=>btn.dataset.avatarStyle===style);if(!choice)return;document.querySelectorAll(".avatar-style-choice").forEach(btn=>btn.classList.toggle("selected",btn===choice));const peeps=document.getElementById("avatar-open-peeps-panel"),panel=document.getElementById("avatar-seeded-panel");if(peeps)peeps.style.display=style==="openPeeps"?"block":"none";if(panel)panel.style.display=style!=="openPeeps"?"grid":"none";const title=document.getElementById("avatar-seeded-title"),credit=document.getElementById("avatar-style-credit");if(title)title.textContent=(choice.dataset.avatarLabel||"Avatar")+" portrait";if(credit)credit.href=`https://www.dicebear.com/styles/${style.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())}/`;if(style!=="openPeeps")updateSeededAvatarPreview();}
+async function updateSeededAvatarPreview(){const img=document.getElementById("avatar-seeded-image"),style=document.querySelector(".avatar-style-choice.selected")?.dataset.avatarStyle||"micah",seed=document.getElementById("avatar-seeded-seed")?.value.trim()||("avatar-"+Math.random().toString(36).slice(2,10));if(!img||style==="openPeeps")return;try{const svg=await renderAvatarSvg({style,seed});if(svg)img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);}catch(_){}}
+function randomizeSeededAvatar(){const input=document.getElementById("avatar-seeded-seed");if(!input)return;input.value="avatar-"+Math.random().toString(36).slice(2,10);updateSeededAvatarPreview();}
+
 // Load and display avatar in the portal header
 async function loadHeaderAvatar() {
   try {
@@ -231,28 +291,7 @@ async function loadHeaderAvatar() {
     if (!res.avatarJson) return;
     let state;
     try { state = JSON.parse(res.avatarJson); } catch (_) { return; }
-    // Render a small SVG via DiceBear (same path the creator uses)
-    const [{ createAvatar }, { openPeeps }] = await Promise.all([
-      import("https://esm.sh/@dicebear/core@9"),
-      import("https://esm.sh/@dicebear/collection@9")
-    ]);
-    const opts = {
-      seed: state.seed || "peep",
-      randomizeIds: true,
-      head: [state.head], headContrastColor: [state.headContrastColor],
-      face: [state.face],
-      facialHair: [state.facialHair || "chin"],
-      facialHairProbability: state.facialHair ? 100 : 0,
-      accessories: [state.accessories || "glasses"],
-      accessoriesProbability: state.accessories ? 100 : 0,
-      mask: [state.mask || "medicalMask"],
-      maskProbability: state.mask ? 100 : 0,
-      skinColor: [state.skinColor],
-      clothingColor: [state.clothingColor],
-      backgroundType: ["solid"],
-      backgroundColor: ["transparent"]
-    };
-    const svg = createAvatar(openPeeps, opts).toString();
+    const svg = await renderAvatarSvg(state); if(!svg)return;
     const whoami = document.getElementById("whoami");
     if (!whoami) return;
     let avatarEl = document.getElementById("header-avatar");
