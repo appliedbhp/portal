@@ -6,13 +6,20 @@
 <title>Applied Behavioral Health Practice — Portal</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Allura&family=Caveat:wght@400..700&family=Mynerve&family=Qwitcher+Grypen:wght@400;700&family=Rock+Salt&family=Square+Peg&family=Stalemate&family=WindSong:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Butterfly+Kids&family=Caveat:wght@400..700&family=Fleur+De+Leah&family=Mea+Culpa&family=Mrs+Saint+Delafield&family=Mynerve&family=Rock+Salt&family=Square+Peg&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yuyu+Short&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playwrite+CA:wght@100..400&display=swap">
 <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.js"></script>
 <link rel="stylesheet" href="css/style.css">
 <link rel="stylesheet" href="css/effects.css">
 <script type="module" src="js/open-peeps-creator.js"></script>
+<style>
+@keyframes consentTabPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.18),0 0 10px rgba(239,68,68,.18)}50%{box-shadow:0 0 0 5px rgba(239,68,68,.08),0 0 20px rgba(239,68,68,.48)}}
+.sidebar-link.consent-attention{color:#b91c1c!important;background:linear-gradient(90deg,#fff1f2,#fff7ed)!important;border-color:#fb7185!important;animation:consentTabPulse 1.7s ease-in-out infinite}.consent-nav-count{margin-left:auto;min-width:20px;height:20px;padding:0 6px;align-items:center;justify-content:center;border-radius:999px;background:#dc2626;color:#fff;font-size:10px;font-weight:900}
+.consent-action-notice{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;margin:0 0 16px;padding:15px 17px;text-align:left;border:1px solid #fda4af;border-radius:16px;background:linear-gradient(115deg,#fff1f2,#fff7ed 55%,#eff6ff);color:#7f1d1d;box-shadow:0 10px 28px rgba(225,29,72,.12);animation:consentTabPulse 2.2s ease-in-out infinite}.consent-action-notice:hover{transform:translateY(-1px)}.consent-action-notice strong,.consent-action-notice small{display:block}.consent-action-notice small{margin-top:3px;color:#7c2d12}.consent-action-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,#e11d48,#f97316);color:#fff;font-size:18px}
+@media(prefers-reduced-motion:reduce){.sidebar-link.consent-attention,.consent-action-notice{animation:none}}
+</style>
 </head>
 <body class="portal-page">
 <div id="portal-transition" class="portal-transition visible" role="status" aria-live="polite">
@@ -505,6 +512,8 @@ function showSection(name) {
 }
 
 showSection("home");
+if (_role !== "provider" && typeof refreshConsentAttentionUI === "function") refreshConsentAttentionUI();
+if (_role !== "provider" && typeof refreshConsentAttentionUI === "function") setInterval(refreshConsentAttentionUI, 60000);
 if (_role !== "provider" && typeof loadHeaderAvatar === "function") loadHeaderAvatar();
 if (_role === "provider") checkProgressReportDue();
 checkGradesAlert();
