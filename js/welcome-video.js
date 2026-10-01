@@ -1,4 +1,5 @@
 const WELCOME_VIDEO_ID = "ts4zUgwUxjg";
+const WELCOME_VIDEO_DISMISSED_KEY = "abh_setup_video_dismissed_v1";
 let welcomeVideoDragging = null;
 
 function ensureWelcomeVideoPanel() {
@@ -62,6 +63,9 @@ async function closeWelcomeVideo(markSeen) {
     if (frame) frame.src = frame.src;
   }
   sessionStorage.removeItem("showWelcomeVideo");
+  if (markSeen && document.body.classList.contains("login-page")) {
+    try { localStorage.setItem(WELCOME_VIDEO_DISMISSED_KEY, "1"); } catch (_) {}
+  }
   if (markSeen && !document.body.classList.contains("login-page") && typeof apiCall === "function") {
     try { await apiCall("markWelcomeVideoSeen", {}); } catch (_) {}
   }
@@ -88,7 +92,9 @@ function initWelcomeVideoDrag(panel) {
 
 function initWelcomeVideo() {
   if (document.body.classList.contains("login-page")) {
-    setTimeout(() => openWelcomeVideo(true), 900);
+    let dismissed = false;
+    try { dismissed = localStorage.getItem(WELCOME_VIDEO_DISMISSED_KEY) === "1"; } catch (_) {}
+    if (!dismissed) setTimeout(() => openWelcomeVideo(true), 900);
     return;
   }
   if (typeof getRole === "function" && getRole() === "provider") return;
