@@ -226,7 +226,7 @@
 
 <script src="js/common.js"></script>
 <script src="js/api.js"></script>
-<script src="js/welcome-video.js"></script>
+<script src="js/welcome-video.js?v=20260930-2"></script>
 <script>
 let statusKnown = false;
 let loginTickerItems = [], loginTickerIndex = 0, loginTickerTimer = null;
@@ -1145,7 +1145,7 @@ if (new URLSearchParams(window.location.search).get("reason") === "timeout") {
   setTimeout(() => banner.remove(), 6000);
 }
 
-window.addEventListener("load", () => { setTimeout(dismissSplash, 4000); loadLoginTicker(); }, { once: true });
+window.addEventListener("load", () => { setTimeout(dismissSplash, 520); loadLoginTicker(); }, { once: true });
 </script>
 </body>
 </html>
