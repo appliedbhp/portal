@@ -18,7 +18,7 @@ async function initSettingsSection(root) {
       youth: youthRes.preferences || {}
     });
     if (avatarJson) restoreAvatarCreator(avatarJson);
-    else updateMicahPreview();
+    else updateSeededAvatarPreview();
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
@@ -29,8 +29,10 @@ async function initSettingsSection(root) {
 
 function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone, youth }) {
   let savedAvatar={};try{savedAvatar=avatarJson?JSON.parse(avatarJson):{};}catch(_){}
-  const avatarStyle=savedAvatar.style==="micah"?"micah":"openPeeps";
-  const micahSeed=savedAvatar.style==="micah"&&savedAvatar.seed?savedAvatar.seed:"avatar-"+Math.random().toString(36).slice(2,10);
+  const avatarChoices={explorer:[["dylan","Dylan","Bold, playful portrait"],["cutouts","Cutouts","Colorful paper collage"]],teen:[["adventurer","Adventurer","Friendly illustrated character"],["micah","Micah","Clean, colorful portrait"]],classic:[["openPeeps","Open Peeps","Hand-drawn classic character"]]};
+  const availableAvatars=avatarChoices[youth.mode]||avatarChoices.teen;
+  const avatarStyle=availableAvatars.some(x=>x[0]===savedAvatar.style)?savedAvatar.style:availableAvatars[0][0];
+  const avatarSeed=savedAvatar.style===avatarStyle&&savedAvatar.seed?savedAvatar.seed:"avatar-"+Math.random().toString(36).slice(2,10);
   youth = Object.assign({ mode:"teen", accent:"#6366f1", goalLabel:"Goals", reducedMotion:false, celebrations:true }, youth || {});
   const timeZones = [
     ["America/Los_Angeles", "Pacific Time"], ["America/Denver", "Mountain Time"],
@@ -69,14 +71,12 @@ function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone, 
       <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
         Design your character — it appears next to your name in the portal.
       </p>
-      <div class="avatar-style-picker">
-        <button type="button" class="avatar-style-choice ${avatarStyle==="openPeeps"?"selected":""}" data-avatar-style="openPeeps" onclick="selectAvatarStyle('openPeeps')"><i class="bi bi-person-arms-up"></i><span><strong>Open Peeps</strong><small>Hand-drawn, playful character</small></span></button>
-        <button type="button" class="avatar-style-choice ${avatarStyle==="micah"?"selected":""}" data-avatar-style="micah" onclick="selectAvatarStyle('micah')"><i class="bi bi-person-circle"></i><span><strong>Micah</strong><small>Clean, colorful portrait</small></span></button>
-      </div>
+      <p style="color:var(--muted);font-size:12px;margin:-8px 0 12px">Available for the <strong>${escapeHtml(youth.mode[0].toUpperCase()+youth.mode.slice(1))}</strong> experience.</p>
+      <div class="avatar-style-picker">${availableAvatars.map(([value,label,copy])=>`<button type="button" class="avatar-style-choice ${avatarStyle===value?"selected":""}" data-avatar-style="${value}" data-avatar-label="${label}" onclick="selectAvatarStyle('${value}')"><i class="bi ${value==="openPeeps"?"bi-person-arms-up":"bi-person-circle"}"></i><span><strong>${label}</strong><small>${copy}</small></span></button>`).join("")}</div>
       <div id="avatar-open-peeps-panel" style="display:${avatarStyle==="openPeeps"?"block":"none"}"><open-peeps-creator id="settings-avatar-creator" seed="${escapeHtml(getClientId() || 'peep')}"></open-peeps-creator></div>
-      <div id="avatar-micah-panel" class="avatar-micah-panel" style="display:${avatarStyle==="micah"?"grid":"none"}">
-        <div class="avatar-micah-preview"><img id="avatar-micah-image" alt="Micah avatar preview"></div>
-        <div><h3>Micah portrait</h3><p>Generate a few variations until one feels like you. The avatar is rendered locally without sending your client ID.</p><label>Avatar seed<input id="avatar-micah-seed" value="${escapeAttr(micahSeed)}" oninput="updateMicahPreview()"></label><button type="button" class="secondary" onclick="randomizeMicahAvatar()"><i class="bi bi-shuffle"></i> Try another look</button><small style="display:block;margin-top:10px;color:var(--muted)">Micah avatar style by Micah Lanier, available through <a href="https://www.dicebear.com/styles/micah/" target="_blank" rel="noopener">DiceBear</a> under CC BY 4.0.</small></div>
+      <div id="avatar-seeded-panel" class="avatar-micah-panel" style="display:${avatarStyle!=="openPeeps"?"grid":"none"}">
+        <div class="avatar-micah-preview"><img id="avatar-seeded-image" alt="Avatar preview"></div>
+        <div><h3 id="avatar-seeded-title">${escapeHtml(availableAvatars.find(x=>x[0]===avatarStyle)?.[1]||"Avatar")} portrait</h3><p>Generate a few variations until one feels like you. The avatar is rendered locally without sending your client ID.</p><label>Avatar seed<input id="avatar-seeded-seed" value="${escapeAttr(avatarSeed)}" oninput="updateSeededAvatarPreview()"></label><button type="button" class="secondary" onclick="randomizeSeededAvatar()"><i class="bi bi-shuffle"></i> Try another look</button><small style="display:block;margin-top:10px;color:var(--muted)">Avatar styles are provided through <a id="avatar-style-credit" href="https://www.dicebear.com/styles/${avatarStyle.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())}/" target="_blank" rel="noopener">DiceBear</a>; creator and license details are available on the linked style page.</small></div>
       </div>
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <button onclick="saveAvatarSettings()"><i class="bi bi-check-circle-fill"></i> Save Avatar</button>
@@ -206,6 +206,7 @@ async function saveYouthExperienceSettings() {
     if(typeof applyYouthPreferences==="function")applyYouthPreferences(result.preferences||payload);
     setStatus("st-youth-status","Saved—your portal has been updated.","success");
     if(typeof showToast==="function")showToast("Your experience is ready.","success");
+    setTimeout(()=>initSettingsSection(document.getElementById("section-settings")),500);
   }catch(e){setStatus("st-youth-status","Error: "+e.message,"error");}
 }
 
@@ -242,7 +243,7 @@ async function saveAvatarSettings() {
   const style=document.querySelector(".avatar-style-choice.selected")?.dataset.avatarStyle||"openPeeps";
   const creator = document.getElementById("settings-avatar-creator");
   let state;
-  if(style==="micah") state={style:"micah",seed:(document.getElementById("avatar-micah-seed")?.value||("avatar-"+Math.random().toString(36).slice(2,10))).trim()};
+  if(style!=="openPeeps") state={style:style,seed:(document.getElementById("avatar-seeded-seed")?.value||("avatar-"+Math.random().toString(36).slice(2,10))).trim()};
   else {if (!creator) { setStatus("st-avatar-status", "Avatar creator not found.", "error"); return; }state=creator._state;if(state)state=Object.assign({},state,{style:"openPeeps"});}
   if (!state) { setStatus("st-avatar-status", "No avatar data yet — design your character first.", "error"); return; }
   setStatus("st-avatar-status", "Saving…", "loading");
@@ -261,7 +262,7 @@ function restoreAvatarCreator(savedJson) {
   if (!savedJson) return;
   let state;
   try { state = JSON.parse(savedJson); } catch (_) { return; }
-  if(state.style==="micah"){selectAvatarStyle("micah");const seed=document.getElementById("avatar-micah-seed");if(seed)seed.value=state.seed||("avatar-"+Math.random().toString(36).slice(2,10));updateMicahPreview();return;}
+  if(state.style&&state.style!=="openPeeps"){selectAvatarStyle(state.style);const seed=document.getElementById("avatar-seeded-seed");if(seed)seed.value=state.seed||("avatar-"+Math.random().toString(36).slice(2,10));updateSeededAvatarPreview();return;}
   const tryRestore = (attempts = 0) => {
     const el = document.getElementById("settings-avatar-creator");
     if (el && el._state) {
@@ -273,9 +274,9 @@ function restoreAvatarCreator(savedJson) {
   tryRestore();
 }
 
-function selectAvatarStyle(style){document.querySelectorAll(".avatar-style-choice").forEach(btn=>btn.classList.toggle("selected",btn.dataset.avatarStyle===style));const peeps=document.getElementById("avatar-open-peeps-panel"),micah=document.getElementById("avatar-micah-panel");if(peeps)peeps.style.display=style==="openPeeps"?"block":"none";if(micah)micah.style.display=style==="micah"?"grid":"none";if(style==="micah")updateMicahPreview();}
-async function updateMicahPreview(){const img=document.getElementById("avatar-micah-image"),seed=document.getElementById("avatar-micah-seed")?.value.trim()||("avatar-"+Math.random().toString(36).slice(2,10));if(!img)return;try{const svg=await renderAvatarSvg({style:"micah",seed});if(svg)img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);}catch(_){}}
-function randomizeMicahAvatar(){const input=document.getElementById("avatar-micah-seed");if(!input)return;input.value="avatar-"+Math.random().toString(36).slice(2,10);updateMicahPreview();}
+function selectAvatarStyle(style){const choice=[...document.querySelectorAll(".avatar-style-choice")].find(btn=>btn.dataset.avatarStyle===style);if(!choice)return;document.querySelectorAll(".avatar-style-choice").forEach(btn=>btn.classList.toggle("selected",btn===choice));const peeps=document.getElementById("avatar-open-peeps-panel"),panel=document.getElementById("avatar-seeded-panel");if(peeps)peeps.style.display=style==="openPeeps"?"block":"none";if(panel)panel.style.display=style!=="openPeeps"?"grid":"none";const title=document.getElementById("avatar-seeded-title"),credit=document.getElementById("avatar-style-credit");if(title)title.textContent=(choice.dataset.avatarLabel||"Avatar")+" portrait";if(credit)credit.href=`https://www.dicebear.com/styles/${style.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())}/`;if(style!=="openPeeps")updateSeededAvatarPreview();}
+async function updateSeededAvatarPreview(){const img=document.getElementById("avatar-seeded-image"),style=document.querySelector(".avatar-style-choice.selected")?.dataset.avatarStyle||"micah",seed=document.getElementById("avatar-seeded-seed")?.value.trim()||("avatar-"+Math.random().toString(36).slice(2,10));if(!img||style==="openPeeps")return;try{const svg=await renderAvatarSvg({style,seed});if(svg)img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);}catch(_){}}
+function randomizeSeededAvatar(){const input=document.getElementById("avatar-seeded-seed");if(!input)return;input.value="avatar-"+Math.random().toString(36).slice(2,10);updateSeededAvatarPreview();}
 
 // Load and display avatar in the portal header
 async function loadHeaderAvatar() {

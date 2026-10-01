@@ -294,8 +294,8 @@ let _dicebearPromise = null;
 function _loadDicebear() {
   if (!_dicebearPromise) {
     _dicebearPromise = Promise.all([
-      import("https://esm.sh/@dicebear/core@9"),
-      import("https://esm.sh/@dicebear/collection@9")
+      import("https://esm.sh/@dicebear/core@10"),
+      import("https://esm.sh/@dicebear/collection@10")
     ]);
   }
   return _dicebearPromise;
@@ -306,8 +306,10 @@ async function renderAvatarSvg(avatarJson) {
   let state;
   try { state = typeof avatarJson === "string" ? JSON.parse(avatarJson) : avatarJson; } catch (_) { return null; }
   try {
-    const [{ createAvatar }, { openPeeps, micah }] = await _loadDicebear();
-    if(state.style==="micah") return createAvatar(micah,{seed:[state.seed||"micah"],randomizeIds:true,backgroundColor:["transparent"]}).toString();
+    const [{ createAvatar }, styles] = await _loadDicebear();
+    const seededStyles={dylan:styles.dylan,cutouts:styles.cutouts,adventurer:styles.adventurer,micah:styles.micah};
+    if(seededStyles[state.style]) return createAvatar(seededStyles[state.style],{seed:[state.seed||"avatar"],randomizeIds:true}).toString();
+    const openPeeps=styles.openPeeps;
     return createAvatar(openPeeps, {
       seed: state.seed || "peep",
       randomizeIds: true,
