@@ -14,6 +14,8 @@ function initHomeSection(root) {
       </div>
     </div>
 
+    ${isClient ? `<div id="home-consent-alert"></div>` : ""}
+
     ${isClient ? `<div id="home-youth-today"></div>` : ""}
 
     <div class="card home-insights-card">
@@ -61,6 +63,7 @@ function initHomeSection(root) {
 
   loadHomeStats();
   if (isClient) loadHomeProgramPanels();
+  if (isClient && typeof refreshConsentAttentionUI==="function") refreshConsentAttentionUI();
   if (!isClient) loadClientAccessToggles();
 }
 

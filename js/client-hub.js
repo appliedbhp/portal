@@ -11,7 +11,7 @@ const HUB_TYPES = {
 
 async function initClientHubSection(root) {
   root.innerHTML = `<div class="card"><div class="portal-loading-status"><div class="pls-spinner"></div><span>Loading Client Hub…</span></div></div>`;
-  try { _hubData = await apiCall("getClientHub", {}); hubRender(root); }
+  try { _hubData = await apiCall("getClientHub", {}); hubRender(root); if(typeof refreshConsentAttentionUI==="function")refreshConsentAttentionUI(); }
   catch(e) { root.innerHTML=`<div class="card"><div class="alert alert-error"><i class="bi bi-exclamation-triangle-fill"></i><span>${escapeHtml(e.message)}</span></div></div>`; }
 }
 
@@ -20,6 +20,7 @@ function hubRender(root) {
   const docs=_hubData.documents.filter(d=>provider||d.visible), pendingDocs=docs.filter(d=>(d.requireAck||d.requireSignature)&&!d.acknowledgedAt);
   root.innerHTML=`
     <div class="hub-hero"><div><span class="hub-eyebrow">Connected care workspace</span><h1><i class="bi bi-grid-1x2-fill"></i> Client Hub</h1><p>Documents, requests, resources, forms, plans, and next steps in one place.</p></div>${provider&&_hubData.folderUrl?`<a class="secondary button" href="${escapeAttr(_hubData.folderUrl)}" target="_blank" rel="noopener noreferrer"><i class="bi bi-google"></i> Open Drive Folder</a>`:""}</div>
+    ${provider?"":`<div id="hub-consent-alert"></div>`}
     <div class="hub-stats"><button onclick="hubSetTab('actions')"><strong>${required.length}</strong><span>Action required</span></button><button onclick="hubSetTab('documents')"><strong>${docs.length}</strong><span>Shared documents</span></button><button onclick="hubSetTab('documents')"><strong>${pendingDocs.length}</strong><span>Need acknowledgment</span></button><button onclick="hubSetTab('actions')"><strong>${open.length}</strong><span>Open items</span></button></div>
     <div class="hub-tabs"><button class="${_hubTab==='overview'?'active':''}" onclick="hubSetTab('overview')"><i class="bi bi-stars"></i> Overview</button><button class="${_hubTab==='documents'?'active':''}" onclick="hubSetTab('documents')"><i class="bi bi-folder2-open"></i> Documents</button><button class="${_hubTab==='actions'?'active':''}" onclick="hubSetTab('actions')"><i class="bi bi-list-check"></i> Action Center</button>${provider?`<button class="${_hubTab==='create'?'active':''}" onclick="hubSetTab('create')"><i class="bi bi-plus-circle-fill"></i> Assign</button>`:""}</div>
     <div id="hub-panel">${hubPanelHtml(provider)}</div>`;
