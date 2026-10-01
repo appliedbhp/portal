@@ -306,7 +306,8 @@ async function renderAvatarSvg(avatarJson) {
   let state;
   try { state = typeof avatarJson === "string" ? JSON.parse(avatarJson) : avatarJson; } catch (_) { return null; }
   try {
-    const [{ createAvatar }, { openPeeps }] = await _loadDicebear();
+    const [{ createAvatar }, { openPeeps, micah }] = await _loadDicebear();
+    if(state.style==="micah") return createAvatar(micah,{seed:[state.seed||"micah"],randomizeIds:true,backgroundColor:["transparent"]}).toString();
     return createAvatar(openPeeps, {
       seed: state.seed || "peep",
       randomizeIds: true,

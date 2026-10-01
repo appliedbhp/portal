@@ -18,6 +18,7 @@ async function initSettingsSection(root) {
       youth: youthRes.preferences || {}
     });
     if (avatarJson) restoreAvatarCreator(avatarJson);
+    else updateMicahPreview();
   } catch (e) {
     root.innerHTML = `<div class="card"><div class="alert alert-error">
       <i class="bi bi-exclamation-triangle-fill"></i>
@@ -27,6 +28,9 @@ async function initSettingsSection(root) {
 }
 
 function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone, youth }) {
+  let savedAvatar={};try{savedAvatar=avatarJson?JSON.parse(avatarJson):{};}catch(_){}
+  const avatarStyle=savedAvatar.style==="micah"?"micah":"openPeeps";
+  const micahSeed=savedAvatar.style==="micah"&&savedAvatar.seed?savedAvatar.seed:"avatar-"+Math.random().toString(36).slice(2,10);
   youth = Object.assign({ mode:"teen", accent:"#6366f1", goalLabel:"Goals", reducedMotion:false, celebrations:true }, youth || {});
   const timeZones = [
     ["America/Los_Angeles", "Pacific Time"], ["America/Denver", "Mountain Time"],
@@ -65,11 +69,20 @@ function renderSettingsSection(root, { phone, smsConsent, avatarJson, timeZone, 
       <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
         Design your character — it appears next to your name in the portal.
       </p>
-      <open-peeps-creator id="settings-avatar-creator" seed="${escapeHtml(getClientId() || 'peep')}"></open-peeps-creator>
+      <div class="avatar-style-picker">
+        <button type="button" class="avatar-style-choice ${avatarStyle==="openPeeps"?"selected":""}" data-avatar-style="openPeeps" onclick="selectAvatarStyle('openPeeps')"><i class="bi bi-person-arms-up"></i><span><strong>Open Peeps</strong><small>Hand-drawn, playful character</small></span></button>
+        <button type="button" class="avatar-style-choice ${avatarStyle==="micah"?"selected":""}" data-avatar-style="micah" onclick="selectAvatarStyle('micah')"><i class="bi bi-person-circle"></i><span><strong>Micah</strong><small>Clean, colorful portrait</small></span></button>
+      </div>
+      <div id="avatar-open-peeps-panel" style="display:${avatarStyle==="openPeeps"?"block":"none"}"><open-peeps-creator id="settings-avatar-creator" seed="${escapeHtml(getClientId() || 'peep')}"></open-peeps-creator></div>
+      <div id="avatar-micah-panel" class="avatar-micah-panel" style="display:${avatarStyle==="micah"?"grid":"none"}">
+        <div class="avatar-micah-preview"><img id="avatar-micah-image" alt="Micah avatar preview"></div>
+        <div><h3>Micah portrait</h3><p>Generate a few variations until one feels like you. The avatar is rendered locally without sending your client ID.</p><label>Avatar seed<input id="avatar-micah-seed" value="${escapeAttr(micahSeed)}" oninput="updateMicahPreview()"></label><button type="button" class="secondary" onclick="randomizeMicahAvatar()"><i class="bi bi-shuffle"></i> Try another look</button><small style="display:block;margin-top:10px;color:var(--muted)">Micah avatar style by Micah Lanier, available through <a href="https://www.dicebear.com/styles/micah/" target="_blank" rel="noopener">DiceBear</a> under CC BY 4.0.</small></div>
+      </div>
       <div style="margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
         <button onclick="saveAvatarSettings()"><i class="bi bi-check-circle-fill"></i> Save Avatar</button>
         <div id="st-avatar-status"></div>
       </div>
+      <style>.avatar-style-picker{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.avatar-style-choice{display:flex;align-items:center;gap:11px;text-align:left;padding:13px;border:1.5px solid var(--border);border-radius:13px;background:var(--card,#fff);color:var(--text)}.avatar-style-choice>i{font-size:25px;color:var(--primary)}.avatar-style-choice strong,.avatar-style-choice small{display:block}.avatar-style-choice small{margin-top:2px;color:var(--muted);font-weight:400}.avatar-style-choice.selected{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent);background:color-mix(in srgb,var(--primary) 5%,var(--card,#fff))}.avatar-micah-panel{grid-template-columns:220px 1fr;align-items:center;gap:24px;padding:20px;border:1px solid var(--border);border-radius:16px;background:linear-gradient(135deg,#f8faff,#eff6ff)}.avatar-micah-preview{width:200px;height:200px;border-radius:28px;overflow:hidden;background:#dbeafe;box-shadow:0 16px 36px rgba(49,133,252,.15)}.avatar-micah-preview img{width:100%;height:100%;display:block}.avatar-micah-panel label{display:grid;gap:6px;font-size:12px;font-weight:700;margin:12px 0}.avatar-micah-panel input{width:100%}@media(max-width:640px){.avatar-style-picker,.avatar-micah-panel{grid-template-columns:1fr}.avatar-micah-preview{width:160px;height:160px;margin:auto}}</style>
     </div>
 
     <!-- Time Zone -->
@@ -226,9 +239,11 @@ async function saveSettingsSmsConsent() {
 }
 
 async function saveAvatarSettings() {
+  const style=document.querySelector(".avatar-style-choice.selected")?.dataset.avatarStyle||"openPeeps";
   const creator = document.getElementById("settings-avatar-creator");
-  if (!creator) { setStatus("st-avatar-status", "Avatar creator not found.", "error"); return; }
-  const state = creator._state;
+  let state;
+  if(style==="micah") state={style:"micah",seed:(document.getElementById("avatar-micah-seed")?.value||("avatar-"+Math.random().toString(36).slice(2,10))).trim()};
+  else {if (!creator) { setStatus("st-avatar-status", "Avatar creator not found.", "error"); return; }state=creator._state;if(state)state=Object.assign({},state,{style:"openPeeps"});}
   if (!state) { setStatus("st-avatar-status", "No avatar data yet — design your character first.", "error"); return; }
   setStatus("st-avatar-status", "Saving…", "loading");
   try {
@@ -246,6 +261,7 @@ function restoreAvatarCreator(savedJson) {
   if (!savedJson) return;
   let state;
   try { state = JSON.parse(savedJson); } catch (_) { return; }
+  if(state.style==="micah"){selectAvatarStyle("micah");const seed=document.getElementById("avatar-micah-seed");if(seed)seed.value=state.seed||("avatar-"+Math.random().toString(36).slice(2,10));updateMicahPreview();return;}
   const tryRestore = (attempts = 0) => {
     const el = document.getElementById("settings-avatar-creator");
     if (el && el._state) {
@@ -257,6 +273,10 @@ function restoreAvatarCreator(savedJson) {
   tryRestore();
 }
 
+function selectAvatarStyle(style){document.querySelectorAll(".avatar-style-choice").forEach(btn=>btn.classList.toggle("selected",btn.dataset.avatarStyle===style));const peeps=document.getElementById("avatar-open-peeps-panel"),micah=document.getElementById("avatar-micah-panel");if(peeps)peeps.style.display=style==="openPeeps"?"block":"none";if(micah)micah.style.display=style==="micah"?"grid":"none";if(style==="micah")updateMicahPreview();}
+async function updateMicahPreview(){const img=document.getElementById("avatar-micah-image"),seed=document.getElementById("avatar-micah-seed")?.value.trim()||("avatar-"+Math.random().toString(36).slice(2,10));if(!img)return;try{const svg=await renderAvatarSvg({style:"micah",seed});if(svg)img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);}catch(_){}}
+function randomizeMicahAvatar(){const input=document.getElementById("avatar-micah-seed");if(!input)return;input.value="avatar-"+Math.random().toString(36).slice(2,10);updateMicahPreview();}
+
 // Load and display avatar in the portal header
 async function loadHeaderAvatar() {
   try {
@@ -264,28 +284,7 @@ async function loadHeaderAvatar() {
     if (!res.avatarJson) return;
     let state;
     try { state = JSON.parse(res.avatarJson); } catch (_) { return; }
-    // Render a small SVG via DiceBear (same path the creator uses)
-    const [{ createAvatar }, { openPeeps }] = await Promise.all([
-      import("https://esm.sh/@dicebear/core@9"),
-      import("https://esm.sh/@dicebear/collection@9")
-    ]);
-    const opts = {
-      seed: state.seed || "peep",
-      randomizeIds: true,
-      head: [state.head], headContrastColor: [state.headContrastColor],
-      face: [state.face],
-      facialHair: [state.facialHair || "chin"],
-      facialHairProbability: state.facialHair ? 100 : 0,
-      accessories: [state.accessories || "glasses"],
-      accessoriesProbability: state.accessories ? 100 : 0,
-      mask: [state.mask || "medicalMask"],
-      maskProbability: state.mask ? 100 : 0,
-      skinColor: [state.skinColor],
-      clothingColor: [state.clothingColor],
-      backgroundType: ["solid"],
-      backgroundColor: ["transparent"]
-    };
-    const svg = createAvatar(openPeeps, opts).toString();
+    const svg = await renderAvatarSvg(state); if(!svg)return;
     const whoami = document.getElementById("whoami");
     if (!whoami) return;
     let avatarEl = document.getElementById("header-avatar");
