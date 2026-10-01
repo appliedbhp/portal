@@ -99,6 +99,27 @@
   visibility: hidden;
   transform: scale(1.025);
 }
+.comet-loader-logo {
+  width: min(350px, 78vw);
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 18px 44px rgba(2, 20, 54, .24));
+  animation: comet-loader-in 600ms cubic-bezier(.22,1,.36,1) both;
+}
+.comet-loader-label {
+  margin: -24px 0 0;
+  color: rgba(255,255,255,.92);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.comet-loading-dots { display:inline-flex; width:1.7em; letter-spacing:0; }
+.comet-loading-dots span { animation:comet-loading-dot 1.4s infinite; opacity:.22; }
+.comet-loading-dots span:nth-child(2) { animation-delay:.2s; }
+.comet-loading-dots span:nth-child(3) { animation-delay:.4s; }
+@keyframes comet-loader-in { from { opacity:0; transform:translateY(16px) scale(.94); } to { opacity:1; transform:none; } }
+@keyframes comet-loading-dot { 0%,70%,100% { opacity:.22; } 35% { opacity:1; } }
 .splash-logo {
   width: min(240px, 62vw);
   height: auto;
