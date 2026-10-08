@@ -35,6 +35,8 @@ const REPORT_RESOURCES = [
   { id: "book-adhd-guide",     label: "Book: Step-by-Step Help for Children with ADHD (2nd ed.)",   url: "https://www.amazon.com/dp/1805011073" },
 ];
 
+let _reportAssessmentResults = [];
+
 function initReportsSection(root) {
   root.innerHTML = `
     <style>
@@ -55,7 +57,8 @@ function initReportsSection(root) {
       <h1><i class="bi bi-file-earmark-medical-fill"></i>Assessment Report</h1>
       <p style="color:var(--muted);font-size:14px;margin:0 0 20px;line-height:1.6;">
         Generates a comprehensive <strong>Executive Function and Functional Behavior Assessment</strong>
-        report integrating all assessment data on file — FBA, WIN, Roadmap, BRIEF-2, and ESQ-R.
+        report integrating all assessment data on file — FBA, WIN, Roadmap, BRIEF-2, ESQ-R,
+        Vanderbilt, and any custom assessments you select below.
         The report is created as a formatted Google Doc saved to the client's folder in Drive.
       </p>
 
@@ -79,6 +82,17 @@ function initReportsSection(root) {
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">Checked resources will appear in Appendix C of the generated report.</div>
       </div>
 
+      <div style="margin-bottom:20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+          <div style="font-weight:600;font-size:14px;"><i class="bi bi-clipboard2-data-fill"></i> Completed Assessments to Include</div>
+          <button class="secondary" style="font-size:11px;padding:3px 8px;" onclick="loadReportAssessments()"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+        </div>
+        <div id="report-assessment-picker" style="background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:12px 14px;">
+          <span style="font-size:13px;color:var(--muted);">Loading completed assessments…</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">Selected results will be summarized in the clinical narrative and listed in the generated report.</div>
+      </div>
+
       <button onclick="doGenerateReport()">
         <i class="bi bi-file-earmark-plus-fill"></i> Generate Report
       </button>
@@ -86,7 +100,33 @@ function initReportsSection(root) {
     </div>
     <div id="reports-history-area"></div>
   `;
+  loadReportAssessments();
   loadReports();
+}
+
+async function loadReportAssessments() {
+  const el = document.getElementById("report-assessment-picker");
+  if (!el) return;
+  try {
+    const data = await apiCall("getCompletedAssessments", {});
+    _reportAssessmentResults = (data.results || []).filter(r => /^(data_assessment_responses|data_guest_assessment_responses|vanderbilt|standalone):/.test(String(r.id || "")));
+    if (!_reportAssessmentResults.length) {
+      el.innerHTML = '<span style="font-size:13px;color:var(--muted);">No custom or Vanderbilt results are available for this client yet.</span>';
+      return;
+    }
+    el.innerHTML = _reportAssessmentResults.map((r, i) => {
+      const d = r.completedAt ? new Date(r.completedAt) : null;
+      const when = d && !isNaN(d.getTime()) ? d.toLocaleDateString() : (r.completedAt || "Date not recorded");
+      return `<div class="res-item">
+        <input type="checkbox" id="report-assessment-${i}" value="${escapeHtml(r.id)}" checked>
+        <label for="report-assessment-${i}"><strong>${escapeHtml(r.name || "Assessment")}</strong>
+          <span style="display:block;color:var(--muted);font-size:11px;">${escapeHtml(when)}${r.rater ? " · " + escapeHtml(r.rater) : ""}</span>
+        </label>
+      </div>`;
+    }).join("");
+  } catch (e) {
+    el.innerHTML = `<span style="font-size:13px;color:#b91c1c;">Could not load completed assessments: ${escapeHtml(e.message)}</span>`;
+  }
 }
 
 function reportSelectAllResources(checked) {
@@ -124,9 +164,12 @@ async function doGenerateReport() {
   const selectedResources = REPORT_RESOURCES
     .filter(r => { const cb = document.getElementById("res-" + r.id); return cb && cb.checked; })
     .map(r => ({ label: r.label, url: r.url }));
+  const selectedAssessmentIds = _reportAssessmentResults
+    .filter((r, i) => { const cb = document.getElementById("report-assessment-" + i); return cb && cb.checked; })
+    .map(r => r.id);
   startReportAnimation();
   try {
-    const { docUrl } = await apiCall("generateReport", { selectedResources });
+    const { docUrl } = await apiCall("generateReport", { selectedResources, selectedAssessmentIds });
     stopReportAnimation();
     const statusEl = document.getElementById("report-gen-status");
     statusEl.innerHTML = `
