@@ -108,7 +108,7 @@ function renderDashboard(root, data) {
       : "";
 
     return `
-      <tr class="dash-client-row" data-search="${escapeAttr((c.clientId + " " + c.email + " " + (c.programModel || "")).toLowerCase())}" data-state="${!c.active ? "inactive" : c.onTrack === false ? "attention" : "active"}">
+      <tr class="dash-client-row" data-search="${escapeAttr((c.clientId + " " + c.email + " " + (c.programModel || "")).toLowerCase())}" data-state="${!c.active ? "inactive" : c.onTrack === false ? "attention" : "active"}" ${!c.active ? 'style="display:none;"' : ""}>
         <td style="font-weight:700;">
           <div style="display:flex;align-items:center;gap:8px;">
             <div class="client-avatar-cell" data-avatar='${escapeAttr(c.avatarJson || "")}' data-label="${escapeAttr(c.clientId)}"
@@ -177,7 +177,8 @@ function renderDashboard(root, data) {
         <h2 style="margin:0;"><i class="bi bi-grid-3x3-gap-fill"></i> Caseload Explorer</h2>
         <div style="display:flex;gap:7px;flex-wrap:wrap;">
           <div style="position:relative;"><i class="bi bi-search" style="position:absolute;left:10px;top:9px;color:var(--muted);"></i><input id="dash-search" placeholder="Search clients…" oninput="dashFilterClients()" style="width:210px;padding-left:31px;"></div>
-          <select id="dash-filter" onchange="dashFilterClients()" style="width:145px;"><option value="all">All clients</option><option value="active">Active</option><option value="attention">Needs attention</option><option value="inactive">Inactive</option></select>
+          <select id="dash-filter" onchange="dashFilterClients()" style="width:145px;"><option value="all">All clients</option><option value="active">Active</option><option value="attention">Needs attention</option></select>
+          <label class="inactive-client-toggle" style="margin:0;"><input id="dash-show-inactive" type="checkbox" role="switch" onchange="dashFilterClients()"><span>Show inactive clients</span></label>
         </div>
       </div>
       <div style="overflow-x:auto;">
@@ -222,6 +223,8 @@ function renderDashboard(root, data) {
       @media (max-width: 700px) { .dash-grid { grid-template-columns: 1fr !important; } }
     </style>`;
 
+  dashFilterClients();
+
   // Hydrate avatar cells asynchronously so the table appears instantly
   if (typeof buildAvatarEl === "function") {
     root.querySelectorAll(".client-avatar-cell").forEach(async (cell) => {
@@ -237,10 +240,11 @@ function renderDashboard(root, data) {
 function dashFilterClients() {
   const query = (document.getElementById("dash-search")?.value || "").trim().toLowerCase();
   const state = document.getElementById("dash-filter")?.value || "all";
+  const showInactive = document.getElementById("dash-show-inactive")?.checked || false;
   document.querySelectorAll(".dash-client-row").forEach(row => {
     const matchesText = !query || (row.dataset.search || "").includes(query);
     const matchesState = state === "all" || row.dataset.state === state;
-    row.style.display = matchesText && matchesState ? "" : "none";
+    row.style.display = matchesText && matchesState && (showInactive || row.dataset.state !== "inactive") ? "" : "none";
   });
 }
 
