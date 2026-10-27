@@ -614,3 +614,12 @@ body.portal-page { padding-top:65px; }
   .chart-wrap { height: 280px; }
   .chart-wrap.wide { height: 260px; }
 }
+
+/* Accessible inactive-client switches shared by the roster and dashboard. */
+.inactive-client-toggle { display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin:0 0 12px; }
+.inactive-client-toggle input { appearance:none;width:36px;height:20px;flex-shrink:0;padding:2px;margin:0;border:1px solid var(--border);border-radius:999px;background:var(--muted);cursor:pointer; }
+.inactive-client-toggle input::before { content:"";display:block;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s; }
+.inactive-client-toggle input:checked { background:var(--primary); }
+.inactive-client-toggle input:checked::before { transform:translateX(16px); }
+.inactive-client-toggle input:focus-visible { outline:2px solid var(--primary);outline-offset:3px; }
+.client-roster-row[hidden] { display:none; }

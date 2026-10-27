@@ -131,6 +131,7 @@
           <i class="bi bi-person-plus-fill"></i> Add New Client
         </button>
       </div>
+      <label class="inactive-client-toggle"><input id="show-inactive-clients" type="checkbox" role="switch" onchange="filterClientList()"><span>Show inactive clients</span></label>
       <div id="client-list-area">
         <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">
           <i class="bi bi-arrow-repeat"></i> Loading clients…
@@ -426,6 +427,17 @@ async function openClient(clientId) {
   }
 }
 
+function filterClientList() {
+  const showInactive = document.getElementById("show-inactive-clients")?.checked || false;
+  let visible = 0;
+  document.querySelectorAll(".client-roster-row").forEach(row => {
+    row.hidden = !showInactive && row.dataset.inactive === "true";
+    if (!row.hidden) visible++;
+  });
+  const empty = document.getElementById("client-list-empty");
+  if (empty) empty.hidden = visible > 0;
+}
+
 async function loadClientList() {
   const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
   const listEl = document.getElementById("client-list-area");
@@ -443,7 +455,7 @@ async function loadClientList() {
     listEl.innerHTML = `
       <div style="display:flex;flex-direction:column;gap:8px;">
         ${clients.map(c => `
-          <div style="background:var(--surface);border-radius:8px;border:1.5px solid var(--border);overflow:hidden;">
+          <div class="client-roster-row" data-inactive="${!c.active}" ${!c.active && !document.getElementById("show-inactive-clients")?.checked ? "hidden" : ""} style="background:var(--surface);border-radius:8px;border:1.5px solid var(--border);overflow:hidden;">
             <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;">
               <div style="cursor:pointer;flex:1;" onclick="openClient('${escapeHtml(c.clientId)}')">
                 <div style="display:flex;align-items:center;gap:10px;min-width:0;">
@@ -508,7 +520,9 @@ async function loadClientList() {
               <div id="action-status-${escapeHtml(c.clientId)}" style="font-size:12px;margin-top:4px;"></div>
             </div>
           </div>`).join("")}
-      </div>`;
+      </div>
+      <div id="client-list-empty" hidden style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">No active clients. Turn on <strong>Show inactive clients</strong> to view inactive clients.</div>`;
+    filterClientList();
     if (typeof buildAvatarEl === "function") {
       listEl.querySelectorAll(".login-client-avatar").forEach(async cell => {
         const avatar = await buildAvatarEl(cell.dataset.avatar || null, cell.dataset.label || "?", 42);
