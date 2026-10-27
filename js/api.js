@@ -78,6 +78,7 @@ function setProviderClient(clientId) {
   const c = JSON.parse(raw);
   c.clientId = clientId;
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(c));
+  if (typeof updateProviderClientDriveButton === "function") updateProviderClientDriveButton();
 }
 
 function getAssessorName() {
