@@ -623,3 +623,15 @@ body.portal-page { padding-top:65px; }
 .inactive-client-toggle input:checked::before { transform:translateX(16px); }
 .inactive-client-toggle input:focus-visible { outline:2px solid var(--primary);outline-offset:3px; }
 .client-roster-row[hidden] { display:none; }
+
+/* Provider landing page and inquiry shortcuts. */
+.pipeline-overview-head { display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px; }
+.pipeline-overview-head h1 { margin:0; }
+.provider-overview-clients { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px;margin-top:14px;max-height:340px;overflow-y:auto; }
+.provider-overview-client { display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface); }
+.provider-overview-client div { min-width:0;overflow-wrap:anywhere; }
+.provider-overview-client small { display:block;color:var(--muted);margin-top:4px; }
+.provider-overview-client button { flex-shrink:0; }
+.provider-overview-client[hidden] { display:none; }
+.pipeline-inquiry-links { display:flex;flex-wrap:wrap;gap:6px;margin:10px 0; }
+.pipeline-inquiry-links a { font-size:12px;text-decoration:none; }
