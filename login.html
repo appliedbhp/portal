@@ -132,6 +132,7 @@
         </button>
       </div>
       <label class="inactive-client-toggle"><input id="show-inactive-clients" type="checkbox" role="switch" onchange="filterClientList()"><span>Show inactive clients</span></label>
+      <a class="button secondary" href="portal.html?view=provider" style="display:block;text-align:center;margin-bottom:12px;">View Clients &amp; Journeys</a>
       <div id="client-list-area">
         <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">
           <i class="bi bi-arrow-repeat"></i> Loading clients…
@@ -380,8 +381,7 @@ async function providerLogin() {
     await apiCallNoCreds("providerLogin", { providerId, providerPassword });
     setCreds({ asProvider: true, providerId, providerPassword, clientId: "" });
     setStatus("status", "", null);
-    document.getElementById("clientPicker").style.display = "block";
-    loadClientList();
+    await openPortalWithTransition("Opening Clients & Journeys…");
   } catch (e) {
     setStatus("status", e.message, "error");
   }
@@ -408,8 +408,7 @@ async function providerSetupPassword() {
     await apiCallNoCreds("providerSetupPassword", { providerId, licenseKey, pin, newPassword });
     setCreds({ asProvider: true, providerId, providerPassword: newPassword, clientId: "" });
     setStatus("status", "", null);
-    document.getElementById("clientPicker").style.display = "block";
-    loadClientList();
+    await openPortalWithTransition("Opening Clients & Journeys…");
   } catch (e) {
     setStatus("status", e.message, "error");
   }

@@ -61,7 +61,7 @@
   <aside class="sidebar no-print" id="sidebar">
     <button class="sidebar-link" data-section="home" onclick="showSection('home')"><i class="bi bi-house-fill"></i> Home</button>
     <button class="sidebar-link" data-section="dashboard" onclick="showSection('dashboard')" id="dashboardNavBtn" style="display:none;"><i class="bi bi-speedometer2"></i> Dashboard</button>
-    <button class="sidebar-link" data-section="pipeline" onclick="showSection('pipeline')" id="pipelineNavBtn" style="display:none;"><i class="bi bi-funnel-fill"></i> Client Journey</button>
+    <button class="sidebar-link" data-section="pipeline" onclick="showSection('pipeline')" id="pipelineNavBtn" style="display:none;"><i class="bi bi-funnel-fill"></i> Clients &amp; Journeys</button>
 
     <div class="sidebar-group">
       <div class="sidebar-group-title" onclick="toggleSidebarGroup(this)">Assessments<i class="bi bi-chevron-down sg-chevron"></i></div>
@@ -261,9 +261,7 @@ requireLogin();
 // guarantees a recoverable UI even if a later optional widget fails to load.
 window.addEventListener("load", () => setTimeout(finishPortalEntry, 420), { once: true });
 setTimeout(finishPortalEntry, 3500);
-if (isProvider() && !getClientId()) {
-  window.location.href = "login.html";
-}
+
 if (typeof isLinkedAdult === "function" && isLinkedAdult()) {
   const eff = typeof getEffectiveClientId === "function" ? getEffectiveClientId() : getClientId();
   document.getElementById("whoami").textContent = `${getAssessorName()} — viewing ${eff}`;
@@ -273,11 +271,12 @@ if (typeof isLinkedAdult === "function" && isLinkedAdult()) {
   banner.innerHTML = `<i class="bi bi-link-45deg" style="font-size:15px;"></i>Viewing <strong>${eff}</strong>'s account`;
   document.querySelector(".portal-header").insertAdjacentElement("afterend", banner);
 } else {
-  document.getElementById("whoami").textContent = `${getClientId()} — ${getAssessorName()} (${getRole()})`;
+  document.getElementById("whoami").textContent = isProvider() && !getClientId() ? `${getAssessorName()} — Provider overview` : `${getClientId()} — ${getAssessorName()} (${getRole()})`;
 }
 if (isProvider()) document.getElementById("switchClientBtn").style.display = "inline-block";
 updateProviderClientDriveButton();
-if (isProvider()) document.getElementById("sessionNotesPipBtn").style.display = "inline-flex";
+if (isProvider() && !getClientId()) document.getElementById("header-progress-btn").style.display = "none";
+if (isProvider() && getClientId()) document.getElementById("sessionNotesPipBtn").style.display = "inline-flex";
 const _role = getRole();
 if (_role !== "provider") document.getElementById("recNavBtn").style.display = "none";
 if (_role !== "provider") document.getElementById("reportsNavBtn").style.display = "none";
@@ -314,14 +313,14 @@ if (_role === "adult") {
   document.getElementById("bfaNavBtn").style.display = "none";
 }
 
-loadBroadcastBanner();
-if (typeof updateBellBadge === "function") updateBellBadge();
-if (typeof updateBellBadge === "function") setInterval(updateBellBadge, 60000);
+if (!isProvider() || getClientId()) loadBroadcastBanner();
+if ((!isProvider() || getClientId()) && typeof updateBellBadge === "function") updateBellBadge();
+if (typeof updateBellBadge === "function") setInterval(() => { if (!isProvider() || getClientId()) updateBellBadge(); }, 60000);
 if (typeof applyClientAccessRestrictions === "function" && getRole() !== "provider") applyClientAccessRestrictions();
 
 function switchClient() {
   setProviderClient("");
-  window.location.href = "login.html";
+  window.location.href = "portal.html?view=provider";
 }
 
 function openSessionNotesPip() {
@@ -485,6 +484,11 @@ const SECTION_INIT = {
 const initialized = {};
 
 function showSection(name) {
+  if (name === "pipeline" && !isProvider()) return;
+  if (isProvider() && !getClientId() && !["pipeline", "dashboard", "assessments-library", "assessments-assign"].includes(name)) {
+    showToast("Select an active client from Clients & Journeys first.", "info");
+    name = "pipeline";
+  }
   if (name === "notifications") {
     toggleNotificationsPopout(true);
     return;
@@ -502,7 +506,7 @@ function showSection(name) {
   document.body.classList.remove("sidebar-open");
   // Home is a live overview and should rebuild whenever it is selected. This
   // also prevents a transient initialization error from leaving Home blank.
-  if (!initialized[name] || name === "home") {
+  if (!initialized[name] || name === "home" || name === "pipeline") {
     try {
       initializer(section);
       initialized[name] = true;
@@ -514,14 +518,14 @@ function showSection(name) {
   }
 }
 
-showSection("home");
+showSection(_role === "provider" && (!getClientId() || new URLSearchParams(window.location.search).get("view") === "provider") ? "pipeline" : "home");
 if (_role !== "provider" && typeof refreshConsentAttentionUI === "function") refreshConsentAttentionUI();
 if (_role !== "provider" && typeof refreshConsentAttentionUI === "function") setInterval(refreshConsentAttentionUI, 60000);
 if (_role !== "provider" && typeof loadHeaderAvatar === "function") loadHeaderAvatar();
-if (_role === "provider") checkProgressReportDue();
-checkGradesAlert();
+if (_role === "provider" && getClientId()) checkProgressReportDue();
+if (!isProvider() || getClientId()) checkGradesAlert();
 startTimeoutWatcher();
-initTodayVideoSessionButton();
+if (!isProvider() || getClientId()) initTodayVideoSessionButton();
 </script>
 </body>
 </html>
