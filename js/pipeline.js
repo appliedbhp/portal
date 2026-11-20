@@ -53,7 +53,7 @@ function pipelineColumn(stage, leads) {
 function pipelineCard(lead) {
   const searchable = [lead.name,lead.email,lead.clientId,lead.source,(lead.tags||[]).join(" ")].join(" ").toLowerCase();
   return `<article class="pipeline-card${lead.leaking?" leaking":""}" data-search="${escapeAttr(searchable)}" data-stage="${escapeAttr(lead.stage)}" data-leak="${lead.leaking?"1":"0"}">
-    <div class="pipeline-card-top"><div class="pipeline-avatar">${escapeHtml((lead.name||"?").slice(0,2).toUpperCase())}</div><div><strong>${escapeHtml(lead.name)}</strong><small>${escapeHtml(lead.clientId || lead.email || "Inquiry")}</small></div><button class="pipeline-more" onclick="pipelineOpenEditor('${escapeAttr(lead.leadId)}')" title="Edit journey"><i class="bi bi-three-dots"></i></button></div>
+    <div class="pipeline-card-top"><div class="pipeline-avatar">${escapeHtml((lead.name||"?").slice(0,2).toUpperCase())}</div><div><strong>${escapeHtml(lead.name)}</strong>${lead.clientId?`<small>${escapeHtml(lead.clientId)}</small>`:""}<small style="overflow-wrap:anywhere;">${escapeHtml(lead.email || "No email on file")}</small></div><button class="pipeline-more" onclick="pipelineOpenEditor('${escapeAttr(lead.leadId)}')" title="Edit journey"><i class="bi bi-three-dots"></i></button></div>
     ${lead.source?`<div class="pipeline-source"><i class="bi bi-signpost-split-fill"></i>${escapeHtml(lead.source)}</div>`:""}
     <div class="pipeline-tags">${(lead.tags||[]).slice(0,4).map(t=>`<span>${escapeHtml(t)}</span>`).join("")}</div>
     ${lead.leaking?`<div class="pipeline-leak"><i class="bi bi-droplet-fill"></i> No movement for ${lead.ageHours} hours</div>`:""}
