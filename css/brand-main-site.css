@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
+
+/* Brand alignment with getadhd.care. Loaded after the portal's feature CSS. */
+:root {
+  --primary: #20594f;
+  --primary-dark: #173f38;
+  --accent: #5ba69e;
+  --gradient: linear-gradient(135deg, #20594f 0%, #397c72 58%, #5ba69e 100%);
+  --bg: #fbf7f8;
+  --card: #ffffff;
+  --surface: #eff4f3;
+  --border: #d2dade;
+  --text: #352a40;
+  --muted: #756d79;
+  --radius: 14px;
+  --brand-plum: #392c43;
+  --brand-teal: #20594f;
+  --brand-mint: #dce8ec;
+  --brand-rose: #d97386;
+  --brand-ochre: #b58a24;
+}
+
+html { color-scheme: light; }
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+}
+body.portal-page {
+  background-image:
+    radial-gradient(ellipse at 4% 18%, rgba(91,166,158,.12), transparent 42%),
+    radial-gradient(ellipse at 96% 78%, rgba(217,115,134,.09), transparent 44%);
+  background-attachment: fixed;
+}
+
+h1, h2, .brand-title, .portal-header .brand-title,
+.dashboard-welcome h1, .home-hero h1, .program-studio-title {
+  font-family: "Fraunces", Georgia, serif;
+  font-optical-sizing: auto;
+  font-weight: 500;
+  letter-spacing: -.025em;
+}
+h1 { color: var(--brand-plum); }
+h2 { color: var(--brand-plum); }
+
+.card {
+  border-color: var(--border);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(57,44,67,.065);
+}
+.card:hover { border-color: color-mix(in srgb, var(--primary) 23%, var(--border)); }
+
+button:not(.secondary):not(.icon-btn):not(.header-bell-btn):not(.header-plain-icon):not(.sidebar-link),
+.btn-primary {
+  background: var(--gradient);
+  box-shadow: 0 7px 18px rgba(32,89,79,.16);
+}
+button.secondary {
+  background: rgba(255,255,255,.86);
+  color: var(--brand-plum);
+  border-color: var(--border);
+}
+button.secondary:hover { background: var(--surface); border-color: #aebfbe; }
+input, select, textarea { background: rgba(255,255,255,.82); border-color: var(--border); color: var(--text); }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(32,89,79,.14);
+}
+
+.portal-header {
+  background: linear-gradient(115deg, #173f38 0%, #20594f 50%, #397c72 100%);
+  box-shadow: 0 8px 28px rgba(32,89,79,.22);
+}
+.portal-header .portal-nav-toggle {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  margin: 0;
+  padding: 0!important;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.38);
+  background: rgba(255,255,255,.12)!important;
+  color: #fff;
+  line-height: 1;
+  box-shadow: none;
+}
+.portal-header .portal-nav-toggle .bi { display:block; margin:0!important; font-size:21px; line-height:1; }
+.portal-header .header-action-btn::after { background: var(--brand-plum); }
+.portal-header #bell-badge { border-color: #20594f; background: var(--brand-rose); }
+.portal-header .video-session-btn { background: rgba(220,232,236,.18)!important; border-color: rgba(220,232,236,.5)!important; }
+
+.sidebar { background: rgba(255,255,255,.91); border-color: var(--border); backdrop-filter: blur(15px); }
+.sidebar-group-title { color: #706579; }
+.sidebar-link {
+  background: #fff!important;
+  color: #4b4054;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  box-shadow: none;
+}
+.sidebar-link:hover, .sidebar-arrange-btn:hover, .sidebar-reset-btn:hover {
+  background: #eff4f3!important;
+  color: var(--primary);
+  border-color: #dce8e6;
+}
+.sidebar-link.active,
+.sidebar-link.active:hover {
+  background: #20594f!important;
+  border-color: #20594f;
+  color: #fff;
+  box-shadow: 0 6px 15px rgba(32,89,79,.16);
+}
+.sidebar-link.active i,
+.sidebar-link.active:is([data-section="discharge"],[data-section="reminders"],[data-section="broadcasts"],[data-section="assessments-library"],[data-section="assessments-assign"],[data-section="vanderbilt"],[data-section="client-billing"],[data-section="superbill"]) i {
+  background: none!important;
+  color: #fff!important;
+  -webkit-text-fill-color: #fff!important;
+  filter: none!important;
+}
+.sidebar-link[data-section="appointments"] i,
+.sidebar-link[data-section="programs"] i,
+.sidebar-link[data-section="client-program"] i { background-image: linear-gradient(135deg,#20594f,#5ba69e,#7cbfb5); }
+.sidebar-link[data-section*="billing"] i,
+.sidebar-link[data-section="superbill"] i { background-image: linear-gradient(135deg,#8e6819,#b58a24,#d3ad55); }
+
+.alert-info { background: #e6f1ef; color: #174b43; }
+.alert-success { background: #e8f2e8; color: #25643f; }
+.alert-error { background: #fbe9ed; color: #943c52; }
+.stat-card, .summary-table th, .chart-wrap, .cal-cell { background: rgba(239,244,243,.72); }
+.cal-cell.has-sessions { border-color: var(--primary); background: #e6f1ef; }
+.cal-cell.has-sessions:hover { background: #dcebe8; }
+.cal-badge.prog-badge { background: #f5e7eb; color: #93475b; }
+
+.sess-progress-launch,
+.sess-pip-header,
+.welcome-video-head {
+  background: linear-gradient(120deg,#173f38,#20594f 55%,#5ba69e)!important;
+}
+.sess-pip-chart-toolbar button.active { border-color: var(--primary); background: var(--gradient); box-shadow: 0 4px 12px rgba(32,89,79,.2); }
+.sess-pip-axis { background: color-mix(in srgb,var(--card,#fff) 86%,#e6f1ef); }
+.sess-pip-axis summary { color: var(--primary); }
+.sess-pip-chart { background: linear-gradient(145deg,#fff,#f1f6f5); }
+.sess-pip-days label span { background: linear-gradient(135deg,#e6f1ef,#f5e7eb); color: var(--primary-dark); }
+
+.pipeline-avatar { background: linear-gradient(135deg,var(--primary),var(--brand-rose)); }
+.pipeline-hero { background: linear-gradient(135deg,#e6f1ef,var(--card,#fff) 50%,#f5e7eb); }
+.pipeline-tags span { color: var(--primary); background:#e6f1ef; }
+
+.login-page { background: linear-gradient(145deg,#173f38 0%,#20594f 48%,#5ba69e 100%); }
+.login-page .card { box-shadow: 0 22px 65px rgba(23,63,56,.28); }
+.login-page .brand-title { color: var(--brand-plum); font-size: 24px; }
+.login-auth-success {
+  position: fixed;
+  z-index: 100001;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(390px, calc(100vw - 32px));
+  padding: 18px 20px;
+  border: 1px solid rgba(220,232,236,.68);
+  border-radius: 18px;
+  background: rgba(255,255,255,.97);
+  color: #352a40;
+  box-shadow: 0 24px 70px rgba(23,63,56,.32);
+  opacity: 0;
+  transform: translate(-50%,-44%) scale(.94);
+  pointer-events: none;
+  transition: opacity .24s ease, transform .36s cubic-bezier(.22,1,.36,1);
+}
+.login-auth-success.visible { opacity:1; transform:translate(-50%,-50%) scale(1); }
+.login-auth-check { display:grid; place-items:center; flex:0 0 48px; width:48px; height:48px; border-radius:50%; background:#20594f; color:#fff; font-size:24px; box-shadow:0 0 0 8px rgba(32,89,79,.09); }
+.login-auth-success strong,.login-auth-success small { display:block; }
+.login-auth-success strong { font:500 21px/1.2 "Fraunces",Georgia,serif; color:#392c43; }
+.login-auth-success small { margin-top:4px; color:#756d79; font-size:12px; }
+.login-splash,
+.portal-transition {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(220,232,236,.24), transparent 31%),
+    radial-gradient(circle at 82% 84%, rgba(217,115,134,.16), transparent 35%),
+    linear-gradient(145deg, #173f38 0%, #20594f 50%, #397c72 100%);
+}
+.comet-loader-logo { filter: drop-shadow(0 18px 44px rgba(23,63,56,.34)); }
+.login-strategy-ticker { background: rgba(53,42,64,.9)!important; }
+.login-strategy-ticker .ticker-label { color: #dce8ec!important; }
+.login-strategy-ticker .ticker-label i { background: linear-gradient(135deg,#20594f,#5ba69e)!important; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto!important; }
+}

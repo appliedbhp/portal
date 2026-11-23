@@ -15,7 +15,7 @@ function playPortalEntry(label = "Preparing your space…") {
     curtain.className = "portal-transition";
     curtain.setAttribute("role", "status");
     curtain.setAttribute("aria-live", "polite");
-    curtain.innerHTML = `<div class="brand-motion" aria-hidden="true"><span></span><span></span><span></span></div><strong>${escapeHtml(label)}</strong>`;
+    curtain.innerHTML = `<div class="portal-transition-panel"><div class="brand-motion" aria-hidden="true"><span></span><span></span><span></span></div><strong>${escapeHtml(label)}</strong></div>`;
     document.body.appendChild(curtain);
   }
   requestAnimationFrame(() => curtain.classList.add("visible"));
@@ -41,9 +41,8 @@ function setStatus(id, msg, type) {
   if (!msg) { el.innerHTML = ""; return; }
   if (type === "loading") {
     el.innerHTML = `<div class="portal-loading-status">
-      <div class="pls-spinner"></div>
-      <span style="flex:0 0 auto">${msg}</span>
-      <div class="pls-bar-wrap"><div class="pls-bar" style="width:60%"></div></div>
+      <div class="pls-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <span>${msg}</span>
     </div>`;
   } else {
     el.innerHTML = `<div class="alert alert-${type}"><i class="bi bi-${STATUS_ICONS[type] || "info-circle-fill"}"></i><span>${msg}</span></div>`;
@@ -55,7 +54,7 @@ function setStatus(id, msg, type) {
 // Counts concurrent calls so it stays up until every one finishes.
 const portalProgress = (function() {
   let count = 0, bar = null, finishTimer = null, startedAt = 0, busyTimer = null;
-  const MIN_MS = 600; // always visible for at least this long
+  const MIN_MS = 250; // visible long enough to register without slowing cached work
   function getBar() {
     if (!bar) {
       bar = document.createElement("div");
@@ -294,8 +293,8 @@ let _dicebearPromise = null;
 function _loadDicebear() {
   if (!_dicebearPromise) {
     _dicebearPromise = Promise.all([
-      import("https://esm.sh/@dicebear/core@9"),
-      import("https://esm.sh/@dicebear/collection@9")
+      import("https://esm.sh/@dicebear/core@10"),
+      import("https://esm.sh/@dicebear/styles@10")
     ]);
   }
   return _dicebearPromise;
@@ -306,7 +305,10 @@ async function renderAvatarSvg(avatarJson) {
   let state;
   try { state = typeof avatarJson === "string" ? JSON.parse(avatarJson) : avatarJson; } catch (_) { return null; }
   try {
-    const [{ createAvatar }, { openPeeps }] = await _loadDicebear();
+    const [{ createAvatar }, styles] = await _loadDicebear();
+    const seededStyles={dylan:styles.dylan,cutouts:styles.cutouts,adventurer:styles.adventurer,micah:styles.micah};
+    if(seededStyles[state.style]) return createAvatar(seededStyles[state.style],{seed:[state.seed||"avatar"],randomizeIds:true}).toString();
+    const openPeeps=styles.openPeeps;
     return createAvatar(openPeeps, {
       seed: state.seed || "peep",
       randomizeIds: true,
@@ -323,7 +325,12 @@ async function renderAvatarSvg(avatarJson) {
       backgroundType: ["solid"],
       backgroundColor: ["transparent"]
     }).toString();
-  } catch (_) { return null; }
+  } catch (_) {
+    if(["dylan","cutouts","adventurer","micah"].includes(state.style)){
+      try{const raw=new TextEncoder().encode(String(state.seed||"avatar")),digest=await crypto.subtle.digest("SHA-256",raw),seed=[...new Uint8Array(digest)].slice(0,12).map(b=>b.toString(16).padStart(2,"0")).join(""),response=await fetch(`https://api.dicebear.com/10.x/${state.style}/svg?seed=${seed}`);if(response.ok)return await response.text();}catch(__){}
+    }
+    return null;
+  }
 }
 
 // Builds a circular avatar <div> element. Pass size in px (default 36).

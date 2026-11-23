@@ -6,16 +6,33 @@ const API_URL = "https://script.google.com/macros/s/AKfycbwtKb9UqSeBy4FKiI-VZK2E
 // Posting with text/plain avoids a CORS preflight request, which Apps
 // Script Web Apps cannot answer (no OPTIONS handler available).
 async function apiCall(action, params) {
-  const body = Object.assign({ action }, getCreds(), params || {});
-  const res = await fetch(API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.error || "Request failed");
-  return data;
+  if (typeof portalProgress !== "undefined") portalProgress.start();
+  const startedAt = performance.now();
+  try {
+    const body = Object.assign({ action }, getCreds(), params || {});
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Request failed");
+    if (!/^(get|check|lookup)/i.test(action)) clearPortalBootstrapCache();
+    if (performance.now() - startedAt > 1200) console.info(`[portal timing] ${action}: ${Math.round(performance.now() - startedAt)}ms`);
+    return data;
+  } finally {
+    if (typeof portalProgress !== "undefined") portalProgress.done();
+  }
 }
+
+const PORTAL_BOOTSTRAP_STORAGE_KEY = "portalBootstrapCache:v1";
+let _portalBootstrapPromise = null;
+function portalBootstrapIdentity_(){const c=getCreds();return[c.asProvider?"provider":"client",c.providerId||"",c.clientId||""].join(":");}
+function clearPortalBootstrapCache(){_portalBootstrapPromise=null;try{sessionStorage.removeItem(PORTAL_BOOTSTRAP_STORAGE_KEY);}catch(_){}}
+function readPortalBootstrapCache_(){try{const saved=JSON.parse(sessionStorage.getItem(PORTAL_BOOTSTRAP_STORAGE_KEY)||"null");if(!saved||saved.identity!==portalBootstrapIdentity_())return null;const ttl=Math.max(10,Number(saved.data?.cacheSeconds||45))*1000;return Date.now()-Number(saved.savedAt||0)<ttl?saved.data:null;}catch(_){return null;}}
+function getPortalBootstrap(options){const force=!!(options&&options.force);if(!force){const cached=readPortalBootstrapCache_();if(cached)return Promise.resolve(cached);if(_portalBootstrapPromise)return _portalBootstrapPromise;}_portalBootstrapPromise=apiCall("getPortalBootstrap",{}).then(data=>{try{sessionStorage.setItem(PORTAL_BOOTSTRAP_STORAGE_KEY,JSON.stringify({identity:portalBootstrapIdentity_(),savedAt:Date.now(),data}));}catch(_){}window.portalBootstrapData=data;return data;}).finally(()=>{_portalBootstrapPromise=null;});return _portalBootstrapPromise;}
+let _portalStatusPromise=null;
+function getPortalStatusSnapshot(){if(_portalStatusPromise)return _portalStatusPromise;_portalStatusPromise=apiCall("getPortalStatus",{}).finally(()=>{_portalStatusPromise=null;});return _portalStatusPromise;}
 
 // ---- Session credentials (License Key + Client ID + PIN + Assessor Name).
 // Held in sessionStorage so they clear when the tab closes, but survive
@@ -26,18 +43,36 @@ function setCreds(creds) {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(creds));
 }
 
-// Two kinds of session: a client session (clientId+password, scoped to one
-// client) or a provider session (providerId+providerPassword, plus whichever
-// clientId they've currently selected to view/edit — switchable without
-// re-login via setProviderClient()).
+// Only the short-lived opaque session token is reused after login. Passwords
+// are never persisted in browser storage or retransmitted with API requests.
 function getCreds() {
   const raw = sessionStorage.getItem(SESSION_KEY);
   if (!raw) return {};
   const c = JSON.parse(raw);
   if (c.asProvider) {
-    return { asProvider: true, providerId: c.providerId, providerPassword: c.providerPassword, clientId: c.clientId };
+    if (c.sessionToken) return { sessionToken: c.sessionToken, asProvider: true, providerId: c.providerId, clientId: c.clientId };
+    return { asProvider:true, providerId:c.providerId, providerPassword:c.providerPassword, clientId:c.clientId };
   }
-  return { clientId: c.clientId, password: c.password, assessorName: c.assessorName };
+  // Always authenticate with the account that logged in (authClientId).
+  // The backend resolves the effective child clientId server-side.
+  if (c.sessionToken) return { sessionToken:c.sessionToken, clientId:c.authClientId || c.clientId, assessorName:c.assessorName };
+  return { clientId:c.authClientId || c.clientId, password:c.password, assessorName:c.assessorName };
+}
+
+// Returns the child's client ID when logged in as a linked adult, otherwise own ID.
+function getEffectiveClientId() {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return "";
+  const c = JSON.parse(raw);
+  return c.effectiveClientId || c.clientId || "";
+}
+
+// Returns true if this login is an adult linked to a child account.
+function isLinkedAdult() {
+  const raw = sessionStorage.getItem(SESSION_KEY);
+  if (!raw) return false;
+  const c = JSON.parse(raw);
+  return !!(c.linkedClientId && c.linkedClientId !== c.clientId);
 }
 
 function isProvider() {
@@ -81,7 +116,79 @@ function requireLogin() {
   }
 }
 
-function logout() {
+async function logout() {
+  try { await apiCall("logoutPortalSession", {}); } catch (_) {}
   clearCreds();
+  _stopTimeoutWatcher();
   window.location.href = "login.html";
+}
+
+// ── Session timeout (provider only) ──────────────────────────────────────────
+// 15 min inactivity → auto-logout. Warning banner at 13 min.
+
+const TIMEOUT_MS      = 15 * 60 * 1000;
+const WARN_MS         = 13 * 60 * 1000;
+let   _lastActivity   = Date.now();
+let   _timeoutTicker  = null;
+let   _warnShown      = false;
+
+function _resetActivity() {
+  _lastActivity = Date.now();
+  if (_warnShown) _dismissTimeoutWarning();
+}
+
+function _stopTimeoutWatcher() {
+  if (_timeoutTicker) { clearInterval(_timeoutTicker); _timeoutTicker = null; }
+  _dismissTimeoutWarning();
+}
+
+function _dismissTimeoutWarning() {
+  _warnShown = false;
+  const el = document.getElementById("_timeout-banner");
+  if (el) el.remove();
+}
+
+function _showTimeoutWarning(secsLeft) {
+  let el = document.getElementById("_timeout-banner");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "_timeout-banner";
+    el.style.cssText = "position:fixed;bottom:20px;right:20px;z-index:9999;background:#1e40af;color:#fff;" +
+      "padding:14px 20px;border-radius:12px;font-size:13px;box-shadow:0 8px 32px rgba(0,0,0,.3);" +
+      "display:flex;align-items:center;gap:12px;max-width:340px;";
+    el.innerHTML = `<i class="bi bi-clock-fill" style="font-size:20px;flex-shrink:0;"></i>
+      <span id="_timeout-msg"></span>
+      <button onclick="_resetActivity()" style="background:#fff;color:#1e40af;border:none;padding:5px 12px;
+        border-radius:8px;font-weight:700;font-size:12px;cursor:pointer;flex-shrink:0;">Stay logged in</button>`;
+    document.body.appendChild(el);
+  }
+  document.getElementById("_timeout-msg").textContent =
+    `You'll be logged out in ${secsLeft} second${secsLeft !== 1 ? "s" : ""} due to inactivity.`;
+  _warnShown = true;
+}
+
+function startTimeoutWatcher() {
+  if (!isProvider()) return; // only enforce for providers
+  _stopTimeoutWatcher();
+  _lastActivity = Date.now();
+
+  ["click","keydown","mousemove","touchstart","scroll"].forEach(evt =>
+    document.addEventListener(evt, _resetActivity, { passive: true })
+  );
+
+  _timeoutTicker = setInterval(() => {
+    const idle = Date.now() - _lastActivity;
+    if (idle >= TIMEOUT_MS) {
+      _stopTimeoutWatcher();
+      clearCreds();
+      window.location.href = "login.html?reason=timeout";
+      return;
+    }
+    if (idle >= WARN_MS) {
+      const secsLeft = Math.ceil((TIMEOUT_MS - idle) / 1000);
+      _showTimeoutWarning(secsLeft);
+    } else {
+      _dismissTimeoutWarning();
+    }
+  }, 5000);
 }

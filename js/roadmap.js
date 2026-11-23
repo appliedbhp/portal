@@ -182,7 +182,7 @@ async function rmLoadV3Items(level) {
   const form = definitions[level] || {};
   return ROADMAP_DOMAINS.flatMap(group => group.sections.flatMap((section, index) =>
     (form[section] || []).map((description, itemIndex) => ({
-      id:`${section}-${itemIndex}`, domain:group.name, subdomain:group.subdomains[index],
+      id:`${section}-${itemIndex}`, domain:group.name, subdomain:`${section}. ${group.subdomains[index]}`,
       item:(section.charCodeAt(0)-65)*5+itemIndex+1, description
     }))
   ));

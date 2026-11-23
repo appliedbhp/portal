@@ -5,17 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Applied Behavioral Health Practice — Log In</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=20261123-hipaa1">
+<link rel="stylesheet" href="css/effects-20261019.css?v=20261123-hipaa1">
+<link rel="stylesheet" href="css/brand-main-site.css?v=20261123-brand5">
 <style>
   body {
     min-height: 100vh;
     background: var(--gradient);
     display: flex;
     align-items: center;
+    padding-bottom: 76px;
   }
+  .login-strategy-ticker{position:fixed;z-index:1200;left:14px;right:14px;bottom:12px;display:none;align-items:center;gap:12px;min-height:54px;padding:9px 14px;border:1px solid rgba(255,255,255,.26);border-radius:16px;background:rgba(15,23,42,.82);color:#fff;box-shadow:0 12px 34px rgba(15,23,42,.28);backdrop-filter:blur(15px)}
+  .login-strategy-ticker.visible{display:flex;animation:ticker-in .42s cubic-bezier(.22,1,.36,1) both}.ticker-label{display:flex;align-items:center;gap:7px;flex:0 0 auto;font-size:10px;font-weight:900;letter-spacing:.11em;color:#bfdbfe}.ticker-label i{width:29px;height:29px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,#4f46e5,#2563eb);color:#fff;font-size:14px}.login-strategy-ticker.announcement .ticker-label{color:#fed7aa}.login-strategy-ticker.announcement .ticker-label i{background:linear-gradient(135deg,#f59e0b,#ea580c)}.ticker-copy{min-width:0;flex:1;opacity:1;transform:translateY(0);transition:opacity .22s ease,transform .22s ease}.ticker-copy.changing{opacity:0;transform:translateY(5px)}.ticker-copy strong{font-size:12px;margin-right:7px}.ticker-copy span{font-size:12px;color:#e2e8f0}.ticker-controls{display:flex;align-items:center;gap:5px}.ticker-controls button{width:27px;height:27px;padding:0;border-radius:8px;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.15);box-shadow:none}.ticker-count{font-size:10px;color:#94a3b8;white-space:nowrap}@keyframes ticker-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}@media(max-width:650px){body{padding-bottom:105px}.login-strategy-ticker{align-items:flex-start}.ticker-label span{display:none}.ticker-copy strong,.ticker-copy span{display:block}.ticker-controls{margin-left:auto}}@media(prefers-reduced-motion:reduce){.login-strategy-ticker.visible{animation:none}.ticker-copy{transition:none}}
 </style>
 </head>
-<body>
+<body class="login-page">
+<div id="login-splash" class="login-splash" role="status" aria-label="Loading Applied Behavioral Health Practice">
+  <img class="comet-loader-logo" src="assets/logo-loader-white.svg" alt="" aria-hidden="true">
+  <p class="comet-loader-label">Loading<span class="comet-loading-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span></p>
+</div>
 <div class="page" style="max-width:480px;">
   <div class="login-logo-wrap">
     <img class="brand-logo" src="https://d1yei2z3i6k35z.cloudfront.net/15694166/695009dabcbb1_LogoWhite.png" alt="Applied Behavioral Health Practice">
@@ -28,10 +37,13 @@
     <input type="text" name="username" autocomplete="username" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
     <input type="password" name="password" autocomplete="new-password" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
 
-    <div class="btn-row" style="margin-bottom:20px;">
+    <div class="btn-row login-mode-switch" style="margin-bottom:20px;">
       <button id="mode-client" onclick="setMode('client')">I'm a Client</button>
       <button id="mode-provider" class="secondary" onclick="setMode('provider')">I'm a Provider</button>
     </div>
+    <button id="loginWelcomeVideoBtn" class="secondary" type="button" onclick="openWelcomeVideo(false)" style="width:100%;margin:-8px 0 18px;justify-content:center;">
+      <i class="bi bi-play-btn-fill"></i> Watch the account setup guide
+    </button>
 
     <div class="checkbox-row" style="margin-bottom:20px;">
       <input type="checkbox" id="privacyAck">
@@ -42,7 +54,7 @@
     <div id="clientMode">
       <div class="row">
         <label>Client ID</label>
-        <div style="display:flex;gap:8px;">
+        <div class="login-inline-action" style="display:flex;gap:8px;">
           <input id="clientId" type="text" placeholder="e.g. C-1042" style="flex:1;"
             onkeydown="if(event.key==='Enter')checkStatus()">
           <button type="button" class="secondary" onclick="checkStatus()" style="white-space:nowrap;"><i class="bi bi-search"></i> Look Up</button>
@@ -54,7 +66,7 @@
           <label>Password</label>
           <input id="loginPassword" type="password" placeholder="Your password" autocomplete="current-password">
         </div>
-        <button onclick="login()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
+        <button class="login-primary-action" onclick="login()"><i class="bi bi-box-arrow-in-right"></i> Log In</button>
       </div>
 
       <div id="setupFields" style="display:none;">
@@ -65,6 +77,22 @@
           <input id="pin" class="pin" type="text" inputmode="numeric" pattern="\d*" maxlength="5" placeholder="•••••"
             autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
             data-lpignore="true" data-1p-ignore="true" data-bwignore="true">
+        </div>
+        <div id="setupPinDelivery" style="display:none;margin:-4px 0 16px;padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--bg);">
+          <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Don't have your PIN?</div>
+          <div class="row" style="margin-bottom:8px;">
+            <label for="setupPinPhone">Mobile number for SMS</label>
+            <input id="setupPinPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(555) 555-1234">
+          </div>
+          <div class="checkbox-row" style="margin:4px 0 10px;align-items:flex-start;">
+            <input type="checkbox" id="setupPinSmsConsent">
+            <label for="setupPinSmsConsent" style="font-size:11px;line-height:1.4;">I agree to receive this account setup PIN by text message. Message and data rates may apply.</label>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <button id="requestPinEmail" type="button" class="secondary" onclick="requestSetupPin('email')"><i class="bi bi-envelope-fill"></i> Email my PIN</button>
+            <button id="requestPinSms" type="button" class="secondary" onclick="requestSetupPin('sms')"><i class="bi bi-chat-dots-fill"></i> Text my PIN</button>
+          </div>
+          <div id="pinDeliveryStatus" style="font-size:12px;margin-top:8px;color:var(--muted);"></div>
         </div>
         <div class="row"><label>New Password</label><input id="newPassword" type="password" placeholder="Choose a password" autocomplete="new-password"></div>
         <div class="row"><label>Confirm Password</label><input id="confirmPassword" type="password" placeholder="Re-enter password" autocomplete="new-password"></div>
@@ -81,7 +109,7 @@
     <div id="providerMode" style="display:none;">
       <div class="row">
         <label>Provider ID</label>
-        <div style="display:flex;gap:8px;">
+        <div class="login-inline-action" style="display:flex;gap:8px;">
           <input id="providerId" type="text" placeholder="e.g. your username" style="flex:1;"
             onkeydown="if(event.key==='Enter')checkProviderStatus()">
           <button type="button" class="secondary" onclick="checkProviderStatus()" style="white-space:nowrap;"><i class="bi bi-search"></i> Look Up</button>
@@ -111,25 +139,126 @@
       </div>
     </div>
 
-    <!-- ===== Provider: pick which client to view (shown after provider login) ===== -->
+    <!-- ===== Provider: client roster (shown after provider login) ===== -->
     <div id="clientPicker" style="display:none;">
       <div class="divider"></div>
-      <h2><i class="bi bi-people-fill"></i>Open a Client</h2>
-      <div class="row">
-        <label>Client ID</label>
-        <input id="pickClientId" type="text" placeholder="e.g. C-1042">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
+        <h2 style="margin:0;"><i class="bi bi-people-fill"></i> Clients</h2>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--muted);font-weight:650;">
+            <input id="showInactiveClients" type="checkbox" onchange="toggleInactiveClients(this.checked)" style="width:17px;height:17px;">
+            Show inactive clients
+          </label>
+          <button class="secondary" onclick="showAddClientForm()" style="padding:6px 12px;font-size:13px;">
+            <i class="bi bi-person-plus-fill"></i> Add New Client
+          </button>
+        </div>
       </div>
-      <button onclick="pickClient()"><i class="bi bi-folder2-open"></i> Open</button>
+      <div id="client-list-area">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">
+          <i class="bi bi-arrow-repeat"></i> Loading clients…
+        </div>
+      </div>
+
+      <!-- Add New Client inline form -->
+      <div id="add-client-form" style="display:none;margin-top:16px;padding:16px;background:var(--surface);border-radius:10px;border:1.5px solid var(--border);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="font-weight:700;font-size:14px;color:var(--primary);">
+            <i class="bi bi-person-plus-fill"></i> New Client
+          </div>
+          <button class="secondary" onclick="ncGenerate()" style="font-size:12px;padding:5px 12px;">
+            <i class="bi bi-stars"></i> Auto-fill
+          </button>
+        </div>
+        <div class="row">
+          <label>Client Type</label>
+          <select id="nc-clientType" onchange="ncUpdateIdPrefix()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:#fff;">
+            <option value="child">Child / Adolescent</option>
+            <option value="adult">Adult</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>Client ID</label>
+          <div style="display:flex;gap:6px;">
+            <input id="nc-clientId" type="text" placeholder="e.g. C-1043" style="flex:1;">
+            <button class="secondary" onclick="ncGenId()" style="font-size:12px;padding:5px 10px;white-space:nowrap;">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+        </div>
+        <div class="row"><label>Email (optional)</label><input id="nc-email" type="email" placeholder="client@email.com"></div>
+        <div class="row">
+          <label>License Key</label>
+          <div style="display:flex;gap:6px;">
+            <input id="nc-licenseKey" type="text" placeholder="License key" style="flex:1;font-family:monospace;">
+            <button class="secondary" onclick="ncGenKey()" style="font-size:12px;padding:5px 10px;white-space:nowrap;">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+        </div>
+        <div class="row">
+          <label>5-Digit PIN</label>
+          <div style="display:flex;gap:6px;align-items:center;">
+            <input id="nc-pin" class="pin" type="text" inputmode="numeric" pattern="\d*" maxlength="5"
+              placeholder="•••••" autocomplete="off" data-lpignore="true" data-1p-ignore="true" style="flex:1;">
+            <button class="secondary" onclick="ncGenPin()" style="font-size:12px;padding:5px 10px;white-space:nowrap;">
+              <i class="bi bi-arrow-clockwise"></i> Random
+            </button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+            Client can change this after first login.
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:4px;">
+          <div class="row" style="flex:1;margin:0;">
+            <label>License Start</label>
+            <input id="nc-dateStart" type="date">
+          </div>
+          <div class="row" style="flex:1;margin:0;">
+            <label>License Expiry</label>
+            <input id="nc-dateExp" type="date">
+          </div>
+        </div>
+        <div class="row">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:normal;">
+            <input type="checkbox" id="nc-sendWelcome" checked />
+            Send welcome email to client when created
+          </label>
+        </div>
+        <div id="add-client-status" style="margin:8px 0;"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="secondary" onclick="hideAddClientForm()" style="flex:1;">Cancel</button>
+          <button onclick="submitAddClient()" style="flex:2;"><i class="bi bi-check-lg"></i> Create Client</button>
+        </div>
+      </div>
     </div>
 
     <div id="status"></div>
   </div>
 </div>
 
-<script src="js/common.js"></script>
-<script src="js/api.js"></script>
+<aside id="login-strategy-ticker" class="login-strategy-ticker" aria-label="Practice strategies and announcements" aria-live="polite">
+  <div class="ticker-label"><i id="ticker-type-icon" class="bi bi-lightbulb-fill"></i><span id="ticker-type-label">TIP &amp; STRATEGY</span></div>
+  <div id="ticker-copy" class="ticker-copy"></div>
+  <div class="ticker-controls">
+    <button type="button" onclick="moveLoginTicker(-1)" aria-label="Previous strategy"><i class="bi bi-chevron-left"></i></button>
+    <span id="ticker-count" class="ticker-count"></span>
+    <button type="button" onclick="moveLoginTicker(1)" aria-label="Next strategy"><i class="bi bi-chevron-right"></i></button>
+  </div>
+</aside>
+
+<script src="js/common-20261019b.js?v=20261123-hipaa1"></script>
+<script src="js/api.js?v=20261123-hipaa1"></script>
+<script src="js/welcome-video.js?v=20260930-2"></script>
 <script>
 let statusKnown = false;
+let loginTickerItems = [], loginTickerIndex = 0, loginTickerTimer = null;
+
+async function loadLoginTicker(){try{const res=await apiCallNoCreds("getLoginBroadcasts",{});loginTickerItems=(res.broadcasts||[]).filter(b=>b.title||b.message);if(!loginTickerItems.length)return;document.getElementById("login-strategy-ticker").classList.add("visible");renderLoginTicker();startLoginTicker();const ticker=document.getElementById("login-strategy-ticker");ticker.addEventListener("mouseenter",stopLoginTicker);ticker.addEventListener("mouseleave",startLoginTicker);ticker.addEventListener("focusin",stopLoginTicker);ticker.addEventListener("focusout",startLoginTicker);}catch(_){}}
+function renderLoginTicker(){const item=loginTickerItems[loginTickerIndex]||{},copy=document.getElementById("ticker-copy"),isTip=item.category==="tip",ticker=document.getElementById("login-strategy-ticker");copy.classList.add("changing");setTimeout(()=>{copy.innerHTML=`<strong>${escapeHtml(item.title||(isTip?"Strategy":"Announcement"))}</strong><span>${escapeHtml(item.message||"")}</span>`;document.getElementById("ticker-type-label").textContent=isTip?"TIP & STRATEGY":"ANNOUNCEMENT";document.getElementById("ticker-type-icon").className=`bi ${isTip?"bi-lightbulb-fill":"bi-megaphone-fill"}`;ticker.classList.toggle("announcement",!isTip);document.getElementById("ticker-count").textContent=`${loginTickerIndex+1} / ${loginTickerItems.length}`;copy.classList.remove("changing");},180);}
+function moveLoginTicker(direction){if(!loginTickerItems.length)return;loginTickerIndex=(loginTickerIndex+direction+loginTickerItems.length)%loginTickerItems.length;renderLoginTicker();startLoginTicker();}
+function startLoginTicker(){stopLoginTicker();if(loginTickerItems.length>1&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches)loginTickerTimer=setInterval(()=>moveLoginTicker(1),7000);}
+function stopLoginTicker(){if(loginTickerTimer){clearInterval(loginTickerTimer);loginTickerTimer=null;}}
 
 function setMode(mode) {
   document.getElementById("clientMode").style.display = mode === "client" ? "block" : "none";
@@ -137,6 +266,8 @@ function setMode(mode) {
   document.getElementById("clientPicker").style.display = "none";
   document.getElementById("mode-client").className = mode === "client" ? "" : "secondary";
   document.getElementById("mode-provider").className = mode === "provider" ? "" : "secondary";
+  document.getElementById("loginWelcomeVideoBtn").style.display = mode === "client" ? "flex" : "none";
+  if (mode === "provider") closeWelcomeVideo(false);
   setStatus("status", "", null);
 }
 
@@ -158,6 +289,8 @@ async function checkStatus() {
   document.getElementById("loginFields").style.display = "none";
   document.getElementById("setupFields").style.display = "none";
   document.getElementById("assessorRow").style.display = "none";
+  const delivery = document.getElementById("setupPinDelivery");
+  if (delivery) delivery.style.display = "none";
   statusKnown = false;
   if (!clientId) return;
 
@@ -168,8 +301,39 @@ async function checkStatus() {
     statusKnown = true;
     document.getElementById("assessorRow").style.display = "block";
     document.getElementById(res.hasPassword ? "loginFields" : "setupFields").style.display = "block";
+
+    if (delivery) delivery.style.display = res.hasPassword ? "none" : "block";
+    const emailBtn = document.getElementById("requestPinEmail");
+    const smsBtn = document.getElementById("requestPinSms");
+    if (emailBtn) { emailBtn.disabled = !res.canRequestEmail; emailBtn.title = res.canRequestEmail ? "Send a new PIN to the email on file" : "No email is on file"; }
+    if (smsBtn) { smsBtn.disabled = !res.canRequestSms; smsBtn.title = res.canRequestSms ? "Send a new PIN to the mobile number entered above" : "SMS PIN delivery is unavailable"; }
   } catch (e) {
     setStatus("status", e.message, "error");
+  }
+}
+
+async function requestSetupPin(channel) {
+  const clientId = document.getElementById("clientId").value.trim();
+  const licenseKey = document.getElementById("licenseKey").value.trim();
+  const phone = document.getElementById("setupPinPhone").value.trim();
+  const smsConsent = document.getElementById("setupPinSmsConsent").checked;
+  const status = document.getElementById("pinDeliveryStatus");
+  const buttons = [document.getElementById("requestPinEmail"), document.getElementById("requestPinSms")];
+  if (!clientId) { if (status) status.textContent = "Enter and look up your Client ID first."; return; }
+  if (!licenseKey) { if (status) { status.style.color = "#b91c1c"; status.textContent = "Enter your license key first."; } return; }
+  if (channel === "sms" && !phone) { if (status) { status.style.color = "#b91c1c"; status.textContent = "Enter the mobile number that should receive the PIN."; } return; }
+  if (channel === "sms" && !smsConsent) { if (status) { status.style.color = "#b91c1c"; status.textContent = "Check the SMS consent box before requesting a text."; } return; }
+  buttons.forEach(btn => { if (btn) btn.disabled = true; });
+  if (status) { status.style.color = "var(--muted)"; status.textContent = "Sending a new PIN…"; }
+  try {
+    const result = await apiCallNoCreds("requestSetupPin", {clientId, channel, licenseKey, phone, smsConsent});
+    if (status) { status.style.color = "#047857"; status.textContent = result.message || "PIN sent."; }
+    const pin = document.getElementById("pin");
+    if (pin) pin.focus();
+  } catch (error) {
+    if (status) { status.style.color = "#b91c1c"; status.textContent = error.message; }
+  } finally {
+    window.setTimeout(checkStatus, 1200);
   }
 }
 
@@ -196,8 +360,13 @@ async function login() {
   setStatus("status", "Logging in...", "loading");
   try {
     const res = await apiCallNoCreds("login", { clientId, password });
-    setCreds({ clientId, password, assessorName, role: res.role });
-    window.location.href = "portal.html";
+    setCreds({
+      clientId, authClientId: clientId,
+      linkedClientId: res.linkedClientId || null,
+      effectiveClientId: res.linkedClientId || clientId,
+      sessionToken: res.sessionToken || "", password: res.sessionToken ? "" : password, assessorName, role: res.role
+    });
+    await openPortalWithTransition();
   } catch (e) {
     setStatus("status", e.message, "error");
   }
@@ -216,15 +385,20 @@ async function setupPassword() {
     return;
   }
   if (!/^\d{5}$/.test(pin)) { setStatus("status", "PIN must be exactly 5 digits.", "error"); return; }
-  if (newPassword.length < 8) { setStatus("status", "Password must be at least 8 characters.", "error"); return; }
+  if (newPassword.length < 12) { setStatus("status", "Password must be at least 12 characters.", "error"); return; }
   if (newPassword !== confirmPassword) { setStatus("status", "Passwords do not match.", "error"); return; }
   if (!requirePrivacyAck()) return;
 
   setStatus("status", "Setting up your password...", "loading");
   try {
     const res = await apiCallNoCreds("setupPassword", { clientId, licenseKey, pin, newPassword });
-    setCreds({ clientId, password: newPassword, assessorName, role: res.role });
-    window.location.href = "portal.html";
+    setCreds({
+      clientId, authClientId: clientId,
+      linkedClientId: res.linkedClientId || null,
+      effectiveClientId: res.linkedClientId || clientId,
+      sessionToken: res.sessionToken || "", password: res.sessionToken ? "" : newPassword, assessorName, role: res.role
+    });
+    await openPortalWithTransition();
   } catch (e) {
     setStatus("status", e.message, "error");
   }
@@ -258,10 +432,18 @@ async function providerLogin() {
   if (!requirePrivacyAck()) return;
   setStatus("status", "Logging in...", "loading");
   try {
-    await apiCallNoCreds("providerLogin", { providerId, providerPassword });
-    setCreds({ asProvider: true, providerId, providerPassword, clientId: "" });
-    setStatus("status", "", null);
+    const res = await apiCallNoCreds("providerLogin", { providerId, providerPassword });
+    let authenticated = res;
+    if (res.mfaRequired) {
+      const code = window.prompt(`Enter the 6-digit verification code sent to ${res.maskedEmail || "your provider email"}.`);
+      if (!code) throw new Error("Verification is required to continue.");
+      authenticated = await apiCallNoCreds("providerVerifyMfa", {challengeId:res.challengeId,code:String(code).trim()});
+    }
+    setCreds({ asProvider: true, providerId, sessionToken: authenticated.sessionToken || "", providerPassword: authenticated.sessionToken || providerPassword, clientId: "" });
+    await showLoginSuccess_("Provider account verified", 650);
+    setStatus("status", "Signed in — choose a client to continue.", "success");
     document.getElementById("clientPicker").style.display = "block";
+    loadClientList();
   } catch (e) {
     setStatus("status", e.message, "error");
   }
@@ -279,38 +461,700 @@ async function providerSetupPassword() {
     return;
   }
   if (!/^\d{5}$/.test(pin)) { setStatus("status", "PIN must be exactly 5 digits.", "error"); return; }
-  if (newPassword.length < 8) { setStatus("status", "Password must be at least 8 characters.", "error"); return; }
+  if (newPassword.length < 12) { setStatus("status", "Password must be at least 12 characters.", "error"); return; }
   if (newPassword !== confirmPassword) { setStatus("status", "Passwords do not match.", "error"); return; }
   if (!requirePrivacyAck()) return;
 
   setStatus("status", "Setting up your password...", "loading");
   try {
-    await apiCallNoCreds("providerSetupPassword", { providerId, licenseKey, pin, newPassword });
-    setCreds({ asProvider: true, providerId, providerPassword: newPassword, clientId: "" });
-    setStatus("status", "", null);
+    const res = await apiCallNoCreds("providerSetupPassword", { providerId, licenseKey, pin, newPassword });
+    let authenticated = res;
+    if (res.mfaRequired) {
+      const code = window.prompt(`Enter the 6-digit verification code sent to ${res.maskedEmail || "your provider email"}.`);
+      if (!code) throw new Error("Verification is required to continue.");
+      authenticated = await apiCallNoCreds("providerVerifyMfa", {challengeId:res.challengeId,code:String(code).trim()});
+    }
+    setCreds({ asProvider: true, providerId, sessionToken: authenticated.sessionToken || "", providerPassword: authenticated.sessionToken || newPassword, clientId: "" });
+    await showLoginSuccess_("Provider account verified", 650);
+    setStatus("status", "Signed in — choose a client to continue.", "success");
     document.getElementById("clientPicker").style.display = "block";
+    loadClientList();
   } catch (e) {
     setStatus("status", e.message, "error");
   }
 }
 
-async function pickClient() {
-  const clientId = document.getElementById("pickClientId").value.trim();
-  if (!clientId) { setStatus("status", "Enter a Client ID.", "error"); return; }
+async function openClient(clientId) {
   setProviderClient(clientId);
-  setStatus("status", "Opening client...", "loading");
+  setStatus("status", "Opening " + clientId + "…", "loading");
   try {
     await apiCall("lookupClient", {});
-    window.location.href = "portal.html";
+    await openPortalWithTransition("Opening " + clientId + "…");
   } catch (e) {
     setProviderClient("");
     setStatus("status", e.message, "error");
   }
 }
 
+async function loadClientList() {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const listEl = document.getElementById("client-list-area");
+  if (!listEl) return;
+  try {
+    const res = await apiCall("getProviderClients", {});
+    const clients = res.clients || [];
+    const showInactive = localStorage.getItem("providerShowInactiveClients") === "true";
+    const inactiveToggle = document.getElementById("showInactiveClients");
+    if (inactiveToggle) inactiveToggle.checked = showInactive;
+    const visibleClients = showInactive ? clients : clients.filter(c => c.active);
+    if (!clients.length) {
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">No clients yet. Use <strong>Add New Client</strong> to create one.</div>`;
+      return;
+    }
+    if (!visibleClients.length) {
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px;">No active clients. Turn on <strong>Show inactive clients</strong> to view archived accounts.</div>`;
+      return;
+    }
+    listEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${visibleClients.map(c => `
+          <div style="background:var(--surface);border-radius:8px;border:1.5px solid var(--border);overflow:hidden;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;">
+              <div style="cursor:pointer;flex:1;" onclick="openClient('${escapeHtml(c.clientId)}')">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                  <div class="login-client-avatar" data-avatar='${escapeAttr(c.avatarJson || "")}' data-label="${escapeAttr(c.clientId)}"
+                       style="width:42px;height:42px;border-radius:50%;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--primary);color:#fff;font-size:13px;font-weight:800;">
+                    ${escapeHtml((c.clientId || "?").slice(0,2).toUpperCase())}
+                  </div>
+                  <div style="min-width:0;">
+                    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">
+                      <span style="font-weight:700;font-size:14px;">${escapeHtml(c.clientId)}</span>
+                      <span style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:8px;
+                        ${c.role === 'adult'
+                          ? 'background:#dbeafe;color:#1e40af;'
+                          : 'background:#ede9fe;color:#5b21b6;'}">
+                        ${c.role === 'adult' ? 'Adult' : 'Child'}
+                      </span>
+                      ${!c.active ? `<span style="font-size:11px;background:#fee2e2;color:#991b1b;padding:1px 7px;border-radius:8px;font-weight:700;">Inactive</span>` : ""}
+                      ${!c.hasPassword ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 7px;border-radius:8px;font-weight:700;">No password</span>` : ""}
+                    </div>
+                    ${c.email ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(c.email)}</div>` : ""}
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;margin-left:10px;">
+                <button class="secondary" style="font-size:11px;padding:3px 8px;"
+                  onclick="toggleClientActions('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-three-dots"></i>
+                </button>
+                <button style="font-size:11px;padding:3px 8px;"
+                  onclick="openClient('${escapeHtml(c.clientId)}')">
+                  Open <i class="bi bi-chevron-right"></i>
+                </button>
+              </div>
+            </div>
+            <div id="actions-${escapeHtml(c.clientId)}" style="display:none;border-top:1px solid var(--border);padding:10px 14px;background:var(--bg);">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                <button class="secondary" style="font-size:12px;" onclick="showEditClient('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-pencil-fill"></i> Edit
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="showChangePinClient('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-key-fill"></i> Change PIN
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="doResetPassword('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-lock-fill"></i> Reset Password
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="viewClientResponses('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-chat-square-text-fill"></i> View Responses
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="showLinkedAdults('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-people-fill"></i> Linked Adults
+                </button>
+                <button class="secondary" style="font-size:12px;" onclick="showScheduleSession('${escapeHtml(c.clientId)}')">
+                  <i class="bi bi-calendar-plus-fill"></i> Schedule Session
+                </button>
+                <button class="secondary" style="font-size:12px;${!c.active ? 'color:#16a34a;' : 'color:#dc2626;'}"
+                  onclick="doArchiveClient('${escapeHtml(c.clientId)}', ${c.active})">
+                  <i class="bi bi-${c.active ? 'archive-fill' : 'arrow-counterclockwise'}"></i>
+                  ${c.active ? 'Deactivate' : 'Reactivate'}
+                </button>
+              </div>
+              <div id="inline-form-${escapeHtml(c.clientId)}" style="display:none;"></div>
+              <div id="action-status-${escapeHtml(c.clientId)}" style="font-size:12px;margin-top:4px;"></div>
+            </div>
+          </div>`).join("")}
+      </div>`;
+    if (typeof buildAvatarEl === "function") {
+      listEl.querySelectorAll(".login-client-avatar").forEach(async cell => {
+        const avatar = await buildAvatarEl(cell.dataset.avatar || null, cell.dataset.label || "?", 42);
+        avatar.classList.add("login-client-avatar");
+        cell.replaceWith(avatar);
+      });
+    }
+  } catch (e) {
+    listEl.innerHTML = `<div style="color:#dc2626;font-size:13px;padding:8px;">Could not load clients: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+function toggleInactiveClients(show) {
+  localStorage.setItem("providerShowInactiveClients", show ? "true" : "false");
+  loadClientList();
+}
+
+// ── Client roster action helpers ──────────────────────────────────────────────
+
+function toggleClientActions(clientId) {
+  const el = document.getElementById("actions-" + clientId);
+  if (!el) return;
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
+
+function setActionStatus(clientId, msg, type) {
+  const el = document.getElementById("action-status-" + clientId);
+  if (!el) return;
+  el.style.color = type === "error" ? "#dc2626" : type === "success" ? "#16a34a" : "var(--muted)";
+  el.textContent = msg;
+}
+
+function showEditClient(clientId) {
+  const el = document.getElementById("inline-form-" + clientId);
+  if (!el) return;
+  if (el.dataset.open === "edit") { el.style.display = "none"; el.dataset.open = ""; return; }
+  el.dataset.open = "edit";
+  // Find current data from the card DOM
+  el.innerHTML = `
+    <div style="padding:10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);margin-top:6px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Edit Client</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <div style="flex:1;min-width:160px;">
+          <label style="font-size:12px;color:var(--muted);">Email</label>
+          <input id="edit-email-${clientId}" type="email" style="width:100%;font-size:13px;" placeholder="email@example.com">
+        </div>
+        <div style="flex:1;min-width:130px;">
+          <label style="font-size:12px;color:var(--muted);">Type</label>
+          <select id="edit-type-${clientId}" style="width:100%;font-size:13px;">
+            <option value="child">Child (parent account)</option>
+            <option value="adult">Adult</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <label style="font-size:12px;color:var(--muted);">Start Date</label>
+          <input id="edit-start-${clientId}" type="date" style="width:100%;font-size:13px;">
+        </div>
+        <div style="flex:1;min-width:120px;">
+          <label style="font-size:12px;color:var(--muted);">Expiry Date</label>
+          <input id="edit-exp-${clientId}" type="date" style="width:100%;font-size:13px;">
+        </div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <button style="font-size:12px;" onclick="doEditClient('${clientId}')"><i class="bi bi-save-fill"></i> Save</button>
+        <button class="secondary" style="font-size:12px;" onclick="closeInlineForm('${clientId}')">Cancel</button>
+      </div>
+    </div>`;
+  el.style.display = "block";
+}
+
+function showChangePinClient(clientId) {
+  const el = document.getElementById("inline-form-" + clientId);
+  if (!el) return;
+  if (el.dataset.open === "pin") { el.style.display = "none"; el.dataset.open = ""; return; }
+  el.dataset.open = "pin";
+  el.innerHTML = `
+    <div style="padding:10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);margin-top:6px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:8px;">Change PIN</div>
+      <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap;">
+        <div>
+          <label style="font-size:12px;color:var(--muted);">New 5-digit PIN</label>
+          <input id="edit-pin-${clientId}" type="text" maxlength="5" pattern="\\d{5}"
+            style="width:110px;font-size:13px;letter-spacing:4px;" placeholder="12345">
+        </div>
+        <button style="font-size:12px;" onclick="doChangePin('${clientId}')"><i class="bi bi-save-fill"></i> Save</button>
+        <button class="secondary" style="font-size:12px;" onclick="closeInlineForm('${clientId}')">Cancel</button>
+      </div>
+    </div>`;
+  el.style.display = "block";
+}
+
+function closeInlineForm(clientId) {
+  const el = document.getElementById("inline-form-" + clientId);
+  if (el) { el.style.display = "none"; el.dataset.open = ""; }
+}
+
+async function doEditClient(clientId) {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const email     = (document.getElementById("edit-email-" + clientId) || {}).value || "";
+  const clientType = (document.getElementById("edit-type-"  + clientId) || {}).value || "";
+  const dateStart = (document.getElementById("edit-start-"  + clientId) || {}).value || "";
+  const dateExp   = (document.getElementById("edit-exp-"    + clientId) || {}).value || "";
+  setActionStatus(clientId, "Saving…", "loading");
+  try {
+    await apiCallNoCreds("updateClient", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      clientId, email, clientType, dateStart, dateExp
+    });
+    setActionStatus(clientId, "Saved.", "success");
+    closeInlineForm(clientId);
+    loadClientList();
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+  }
+}
+
+async function doChangePin(clientId) {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const pin = (document.getElementById("edit-pin-" + clientId) || {}).value || "";
+  if (!/^\d{5}$/.test(pin)) { setActionStatus(clientId, "PIN must be exactly 5 digits.", "error"); return; }
+  setActionStatus(clientId, "Saving…", "loading");
+  try {
+    await apiCallNoCreds("changeClientPin", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      clientId, pin
+    });
+    setActionStatus(clientId, "PIN updated.", "success");
+    closeInlineForm(clientId);
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+  }
+}
+
+async function doResetPassword(clientId) {
+  if (!confirm(`Reset password for ${clientId}? They will need to set a new password on next login.`)) return;
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  setActionStatus(clientId, "Resetting…", "loading");
+  try {
+    await apiCallNoCreds("resetClientPassword", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      clientId
+    });
+    setActionStatus(clientId, "Password cleared — client must set a new one.", "success");
+    loadClientList();
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+  }
+}
+
+async function doArchiveClient(clientId, isCurrentlyActive) {
+  const action = isCurrentlyActive ? "deactivate" : "reactivate";
+  if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${clientId}?`)) return;
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  setActionStatus(clientId, "Updating…", "loading");
+  try {
+    const res = await apiCallNoCreds("archiveClient", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      clientId
+    });
+    setActionStatus(clientId, res.nowActive ? "Client reactivated." : "Client deactivated.", "success");
+    loadClientList();
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+  }
+}
+
+async function showLinkedAdults(childId) {
+  const el = document.getElementById("inline-form-" + childId);
+  if (!el) return;
+  el.style.display = "block";
+  el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:6px 0;">Loading linked adults…</div>`;
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  try {
+    const res = await apiCallNoCreds("getLinkedAccounts", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      childClientId: childId
+    });
+    const adults = res.adults || [];
+    el.innerHTML = `
+      <div style="font-weight:700;font-size:12px;margin-bottom:8px;color:var(--muted);">LINKED ADULT ACCOUNTS — viewing ${escapeHtml(childId)}'s data</div>
+      ${adults.length ? adults.map(a => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 10px;
+                    background:var(--bg-alt,#f8fafc);border-radius:8px;margin-bottom:6px;font-size:13px;">
+          <div>
+            <strong>${escapeHtml(a.clientId)}</strong>
+            ${a.email ? `<span style="color:var(--muted);margin-left:6px;">${escapeHtml(a.email)}</span>` : ""}
+            ${!a.hasPassword ? `<span style="font-size:11px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;margin-left:6px;">No password</span>` : ""}
+          </div>
+          <button class="secondary" style="font-size:11px;padding:3px 8px;color:#dc2626;"
+            onclick="doUnlinkAdult('${escapeHtml(a.clientId)}','${escapeHtml(childId)}')">
+            <i class="bi bi-x-lg"></i> Unlink
+          </button>
+        </div>`).join("") : `<div style="font-size:13px;color:var(--muted);margin-bottom:8px;">No adults linked yet.</div>`}
+      <div style="font-size:12px;line-height:1.45;color:var(--muted);background:var(--bg-alt,#f8fafc);border-radius:8px;padding:8px 10px;margin-bottom:8px;">
+        First create the adult through <strong>Add New Client</strong> and choose <strong>Adult</strong>. Then enter that adult's Client ID below. When the adult signs in, they will securely view ${escapeHtml(childId)}'s portal.
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:8px;">
+        <input id="link-adult-input-${escapeHtml(childId)}" type="text" placeholder="Adult Client ID (e.g. C-1042-P1)"
+               style="flex:1;font-size:12px;padding:5px 10px;">
+        <button style="font-size:12px;padding:5px 12px;" onclick="doLinkAdult('${escapeHtml(childId)}')">
+          <i class="bi bi-link-45deg"></i> Link
+        </button>
+      </div>
+      <div id="link-status-${escapeHtml(childId)}" style="font-size:12px;margin-top:4px;"></div>`;
+  } catch (e) {
+    el.innerHTML = `<div style="color:#dc2626;font-size:12px;">Error: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function doLinkAdult(childId) {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const adultId = (document.getElementById("link-adult-input-" + childId) || {}).value?.trim();
+  const statusEl = document.getElementById("link-status-" + childId);
+  if (!adultId) { if (statusEl) statusEl.textContent = "Enter an Adult Client ID."; return; }
+  if (statusEl) statusEl.textContent = "Linking…";
+  try {
+    await apiCallNoCreds("linkAccount", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      adultClientId: adultId, childClientId: childId
+    });
+    if (statusEl) { statusEl.style.color = "#16a34a"; statusEl.textContent = `${adultId} linked.`; }
+    showLinkedAdults(childId);
+  } catch (e) {
+    if (statusEl) { statusEl.style.color = "#dc2626"; statusEl.textContent = "Error: " + e.message; }
+  }
+}
+
+async function doUnlinkAdult(adultId, childId) {
+  if (!confirm(`Unlink ${adultId} from ${childId}?`)) return;
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  try {
+    await apiCallNoCreds("unlinkAccount", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      adultClientId: adultId
+    });
+    showLinkedAdults(childId);
+  } catch (e) {
+    setActionStatus(childId, "Error: " + e.message, "error");
+  }
+}
+
+async function showScheduleSession(clientId) {
+  const el = document.getElementById("inline-form-" + clientId);
+  if (!el) return;
+  if (el.dataset.open === "schedule") { el.style.display = "none"; el.dataset.open = ""; return; }
+  el.dataset.open = "schedule";
+  el.style.display = "block";
+  el.innerHTML = `<div style="font-size:12px;color:var(--muted);padding:6px 0;">Loading next appointment…</div>`;
+
+  const creds  = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+
+  // Fetch next appointment and client email in parallel
+  let nextAppt = null;
+  let clientEmail = "";
+  let smsConsent  = false;
+  try {
+    const [apptRes, emailRes] = await Promise.all([
+      apiCallNoCreds("getAppointments", {
+        providerId: creds.providerId, providerPassword: creds.providerPassword, asProvider: true, clientId
+      }),
+      apiCallNoCreds("getClientEmail", {
+        providerId: creds.providerId, providerPassword: creds.providerPassword, asProvider: true, clientId
+      })
+    ]);
+    const events = (apptRes.events || []).sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    nextAppt    = events[0] || null;
+    clientEmail = emailRes.email || "";
+    smsConsent  = emailRes.smsConsent || false;
+  } catch(_) {}
+
+  const pacificParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(new Date()).reduce((out, part) => {
+    if (part.type !== "literal") out[part.type] = part.value;
+    return out;
+  }, {});
+  const now = new Date(Number(pacificParts.year), Number(pacificParts.month) - 1,
+    Number(pacificParts.day), Number(pacificParts.hour), Number(pacificParts.minute), 0, 0);
+  now.setDate(now.getDate() + 7);
+  const end   = new Date(now.getTime() + 30 * 60 * 1000);
+  const toLocal = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+  const nextApptHtml = nextAppt
+    ? `<div style="background:var(--bg-alt,#f8f9fa);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Next Appointment</div>
+        <div style="font-size:13px;font-weight:600;">${escapeHtml(nextAppt.name || "Appointment")}</div>
+        <div style="font-size:12px;color:var(--muted);">
+          ${new Date(nextAppt.start_time).toLocaleDateString(undefined,{weekday:"long",month:"long",day:"numeric"})}
+          at ${new Date(nextAppt.start_time).toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit"})}
+        </div>
+      </div>`
+    : `<div style="font-size:12px;color:var(--muted);margin-bottom:10px;">No upcoming appointments on file.</div>`;
+
+  el.innerHTML = `
+    <div style="padding:10px;background:var(--surface);border-radius:6px;border:1px solid var(--border);margin-top:6px;">
+      <div style="font-weight:600;font-size:13px;margin-bottom:10px;">Schedule Session</div>
+      ${nextApptHtml}
+      <div style="display:grid;gap:8px;">
+        <input type="text" id="ls-title-${clientId}" value="Session — ${escapeHtml(clientId)}"
+               placeholder="Title" style="font-size:13px;" />
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Start (Pacific)</div>
+            <input type="datetime-local" id="ls-start-${clientId}" value="${toLocal(now)}" style="font-size:12px;width:100%;"
+                   onchange="syncLoginSessionEnd('${escapeHtml(clientId)}')" />
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">End (Pacific)</div>
+            <input type="datetime-local" id="ls-end-${clientId}"   value="${toLocal(end)}"  style="font-size:12px;width:100%;" />
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">Google Meet Link (optional)</div>
+          <input type="url" id="ls-meet-${clientId}" placeholder="https://meet.google.com/xxx-xxxx-xxx"
+                 style="font-size:12px;width:100%;" />
+        </div>
+        ${smsConsent ? `
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" id="ls-sms-${clientId}" checked />
+          Send SMS reminder to client
+        </label>` : `
+        <div style="font-size:11px;color:var(--muted);">SMS reminder unavailable — client not opted in.</div>`}
+        <div style="font-size:11px;color:var(--muted);">
+          Invite will be sent to: <strong>${escapeHtml(clientEmail || "no email on file")}</strong>
+        </div>
+        <div id="ls-status-${clientId}" style="font-size:12px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button style="font-size:12px;" onclick="doScheduleSession('${escapeHtml(clientId)}')">
+            <i class="bi bi-calendar-plus-fill"></i> Schedule
+          </button>
+          <button class="secondary" style="font-size:12px;"
+                  onclick="document.getElementById('inline-form-${escapeHtml(clientId)}').style.display='none'">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function syncLoginSessionEnd(clientId) {
+  const startEl = document.getElementById("ls-start-" + clientId);
+  const endEl = document.getElementById("ls-end-" + clientId);
+  if (!startEl?.value || !endEl) return;
+  const end = new Date(new Date(startEl.value).getTime() + 30 * 60 * 1000);
+  endEl.value = new Date(end.getTime() - end.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+async function doScheduleSession(clientId) {
+  const title = document.getElementById("ls-title-" + clientId)?.value?.trim();
+  const start = document.getElementById("ls-start-" + clientId)?.value;
+  const end   = document.getElementById("ls-end-"   + clientId)?.value;
+  const meetUrl = document.getElementById("ls-meet-" + clientId)?.value?.trim() || "";
+  const smsEl = document.getElementById("ls-sms-"   + clientId);
+  const sendSms = smsEl ? smsEl.checked : false;
+  const statusEl = document.getElementById("ls-status-" + clientId);
+
+  const setS = (msg, color) => {
+    if (!statusEl) return;
+    statusEl.style.color = color;
+    statusEl.textContent = msg;
+  };
+
+  if (!title || !start || !end) { setS("All fields required.", "#dc2626"); return; }
+  if (meetUrl && !/^https:\/\/meet\.google\.com\/[a-z0-9-]+(?:[/?#].*)?$/i.test(meetUrl)) {
+    setS("Enter a valid Google Meet link.", "#dc2626"); return;
+  }
+  if (new Date(end) <= new Date(start)) { setS("End must be after start.", "#dc2626"); return; }
+
+  setS("Scheduling…", "var(--muted)");
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  try {
+    const res = await apiCallNoCreds("createAppointment", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword, asProvider: true, clientId,
+      title, startLocal: start, endLocal: end, timeZone: "America/Los_Angeles",
+      startTime: new Date(start).toISOString(), endTime: new Date(end).toISOString(), meetUrl, sendSms
+    });
+    let msg = "Scheduled in Google Calendar in Pacific Time.";
+    if (res.clientEmail) msg += ` Invite → ${res.clientEmail}.`;
+    if (res.meetUrl)     msg += ` Meet: ${res.meetUrl}.`;
+    if (res.smsSent)     msg += " SMS sent.";
+    setS(msg, "#059669");
+  } catch(e) {
+    setS("Error: " + e.message, "#dc2626");
+  }
+}
+
+async function viewClientResponses(clientId) {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  setActionStatus(clientId, "Loading responses…", "loading");
+
+  let data;
+  try {
+    data = await apiCallNoCreds("getClientProgramProgress", {
+      providerId: creds.providerId, providerPassword: creds.providerPassword,
+      asProvider: true, clientId
+    });
+    setActionStatus(clientId, "", "");
+  } catch (e) {
+    setActionStatus(clientId, "Error: " + e.message, "error");
+    return;
+  }
+
+  // Build modal content
+  const steps = data.steps || [];
+  const completed = steps.filter(s => s.status === "completed");
+
+  let bodyHtml = "";
+  if (!data.assignment) {
+    bodyHtml = `<p style="color:var(--muted);font-size:14px;">No program assigned to this client.</p>`;
+  } else if (completed.length === 0) {
+    bodyHtml = `<p style="color:var(--muted);font-size:14px;">No activities completed yet.</p>`;
+  } else {
+    const FIELD_LABELS = {
+      reflection:       "Reflection",
+      moment1_context:  "Home moment #1 — context",
+      moment1_without:  "What happens without support",
+      moment1_prompt:   "Prompt approach",
+      moment2_context:  "Home moment #2 — context",
+      moment2_without:  "What happens without support",
+      moment2_prompt:   "Prompt approach"
+    };
+    bodyHtml = completed.map(step => {
+      let responseHtml = "";
+      if (step.response) {
+        try {
+          const saved = JSON.parse(step.response);
+          const entries = Object.entries(saved).filter(([, v]) => String(v).trim() !== "");
+          if (entries.length) {
+            responseHtml = entries.map(([k, v]) => `
+              <div style="margin-bottom:12px;">
+                <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">
+                  ${escapeHtml(FIELD_LABELS[k] || k.replace(/_/g, " "))}
+                </div>
+                <div style="font-size:13px;line-height:1.6;white-space:pre-wrap;color:#111827;">${escapeHtml(String(v))}</div>
+              </div>`).join("");
+          } else {
+            responseHtml = `<div style="font-size:13px;color:#6b7280;font-style:italic;">No text responses captured.</div>`;
+          }
+        } catch (_) {
+          responseHtml = `<div style="font-size:13px;color:#6b7280;font-style:italic;">Could not parse response.</div>`;
+        }
+      } else {
+        responseHtml = `<div style="font-size:13px;color:#6b7280;font-style:italic;">No response data.</div>`;
+      }
+      const completedDate = step.completedAt ? new Date(step.completedAt).toLocaleDateString() : "";
+      return `
+        <div style="border:1.5px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:12px;">
+          <div style="background:#f9fafb;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e5e7eb;">
+            <div style="font-weight:700;font-size:13px;">Step ${step.stepNum}: ${escapeHtml(step.title)}</div>
+            ${completedDate ? `<div style="font-size:11px;color:#6b7280;"><i class="bi bi-check-circle-fill" style="color:#059669;"></i> ${escapeHtml(completedDate)}</div>` : ""}
+          </div>
+          <div style="padding:12px 14px;">${responseHtml}</div>
+        </div>`;
+    }).join("");
+  }
+
+  const programName = data.assignment ? escapeHtml(data.assignment.programName) : "Program";
+  const modal = document.createElement("div");
+  modal.id = "responses-modal";
+  modal.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;";
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:680px;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid #e5e7eb;">
+        <div>
+          <div style="font-weight:700;font-size:16px;">${clientId} — Program Responses</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">${programName}</div>
+        </div>
+        <button class="secondary" style="font-size:13px;padding:4px 10px;" onclick="document.getElementById('responses-modal').remove()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+      <div style="padding:20px;">${bodyHtml}</div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener("click", e => { if (e.target === modal) modal.remove(); });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── New client auto-fill helpers ──────────────────────────────────────────────
+
+function ncGenId() {
+  const type   = document.getElementById("nc-clientType")?.value || "child";
+  const prefix = type === "adult" ? "A" : "C";
+  const num    = String(Math.floor(Math.random() * 9000) + 1000);
+  const el     = document.getElementById("nc-clientId");
+  if (el) el.value = prefix + "-" + num;
+}
+
+function ncGenKey() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ0123456789"; // no I/O to avoid confusion
+  let key = "";
+  for (let i = 0; i < 7; i++) key += chars[Math.floor(Math.random() * chars.length)];
+  const el = document.getElementById("nc-licenseKey");
+  if (el) el.value = key;
+}
+
+function ncGenPin() {
+  const pin = String(Math.floor(Math.random() * 90000) + 10000);
+  const el  = document.getElementById("nc-pin");
+  if (el) el.value = pin;
+}
+
+function ncUpdateIdPrefix() {
+  const el = document.getElementById("nc-clientId");
+  if (!el || !el.value) return;
+  // If the ID still looks auto-generated, swap the prefix to match the new type
+  const type   = document.getElementById("nc-clientType")?.value || "child";
+  const prefix = type === "adult" ? "A" : "C";
+  el.value = el.value.replace(/^[AC]-/, prefix + "-");
+}
+
+function ncGenerate() {
+  ncGenId();
+  ncGenKey();
+  ncGenPin();
+  // Default license start = today, expiry = +1 year
+  const today = new Date().toISOString().slice(0, 10);
+  const expiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const startEl  = document.getElementById("nc-dateStart");
+  const expiryEl = document.getElementById("nc-dateExp");
+  if (startEl  && !startEl.value)  startEl.value  = today;
+  if (expiryEl && !expiryEl.value) expiryEl.value = expiry;
+}
+
+function showAddClientForm() {
+  document.getElementById("add-client-form").style.display = "block";
+  document.getElementById("nc-clientId").focus();
+}
+
+function hideAddClientForm() {
+  document.getElementById("add-client-form").style.display = "none";
+  setStatus("add-client-status", "", null);
+}
+
+async function submitAddClient() {
+  const creds = JSON.parse(sessionStorage.getItem("portalSession") || "{}");
+  const clientId   = document.getElementById("nc-clientId").value.trim();
+  const clientType = document.getElementById("nc-clientType").value;
+  const email      = document.getElementById("nc-email").value.trim();
+  const licenseKey = document.getElementById("nc-licenseKey").value.trim();
+  const pin        = document.getElementById("nc-pin").value.trim();
+  const dateStart  = document.getElementById("nc-dateStart").value;
+  const dateExp    = document.getElementById("nc-dateExp").value;
+  const sendWelcome = document.getElementById("nc-sendWelcome")?.checked && !!email;
+
+  if (!clientId || !licenseKey || !pin) {
+    setStatus("add-client-status", "Client ID, License Key, and PIN are required.", "error");
+    return;
+  }
+  setStatus("add-client-status", "Creating client…", "loading");
+  try {
+    await apiCallNoCreds("createClient", {
+      providerId: creds.providerId,
+      providerPassword: creds.providerPassword,
+      clientId, clientType, email, licenseKey, pin, dateStart, dateExp, sendWelcome
+    });
+    hideAddClientForm();
+    ["nc-clientId","nc-email","nc-licenseKey","nc-pin","nc-dateStart","nc-dateExp"]
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    const note = sendWelcome ? ` Welcome email sent to ${email}.` : "";
+    setStatus("status", "Client " + clientId + " created." + note, "success");
+    loadClientList();
+  } catch (e) {
+    setStatus("add-client-status", e.message, "error");
+  }
+}
+
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
-  if (document.getElementById("clientPicker").style.display === "block") { pickClient(); return; }
   if (document.getElementById("providerMode").style.display === "block") {
     if (document.getElementById("providerLoginFields").style.display === "block") providerLogin();
     else if (document.getElementById("providerSetupFields").style.display === "block") providerSetupPassword();
@@ -321,12 +1165,75 @@ document.addEventListener("keydown", (e) => {
   else setupPassword();
 });
 
+async function openPortalWithTransition(label = "Preparing your portal…") {
+  await showLoginSuccess_("You’re securely signed in");
+  await playPortalEntry(label === "Preparing your portal…" ? "Signed in — opening your portal…" : label);
+  if (typeof getRole === "function" && getRole() !== "provider") {
+    try {
+      const res = await apiCall("getBroadcasts", {});
+      const unread = (res.broadcasts || []).filter(b => !b.isRead);
+      if (unread.length) {
+        const broadcast = unread[0];
+        const curtain = document.getElementById("portal-transition");
+        if (curtain) {
+          curtain.innerHTML = `
+            <div class="login-broadcast-icon"><i class="bi bi-megaphone-fill"></i></div>
+            <div class="login-broadcast-copy">
+              <small>MESSAGE FROM YOUR CARE TEAM</small>
+              <strong>${escapeHtml(broadcast.title || "New announcement")}</strong>
+              <p>${escapeHtml(broadcast.message || "")}</p>
+              ${unread.length > 1 ? `<span>+${unread.length - 1} more announcement${unread.length === 2 ? "" : "s"} in your portal</span>` : ""}
+            </div>`;
+        }
+        await new Promise(resolve => setTimeout(resolve, 2600));
+      }
+    } catch (_) {}
+  }
+  window.location.href = "portal.html";
+}
+
+function showLoginSuccess_(message, holdMs = 700) {
+  let feedback = document.getElementById("login-auth-success");
+  if (!feedback) {
+    feedback = document.createElement("div");
+    feedback.id = "login-auth-success";
+    feedback.className = "login-auth-success";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
+    feedback.innerHTML = '<span class="login-auth-check"><i class="bi bi-check-lg"></i></span><div><strong></strong><small>Your password was accepted.</small></div>';
+    document.body.appendChild(feedback);
+  }
+  feedback.querySelector("strong").textContent = message || "You’re signed in";
+  feedback.classList.remove("visible");
+  void feedback.offsetWidth;
+  feedback.classList.add("visible");
+  setStatus("status", message || "You’re signed in.", "success");
+  return new Promise(resolve => setTimeout(() => {
+    feedback.classList.remove("visible");
+    resolve();
+  }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 80 : holdMs));
+}
+
 if (isProvider()) {
   setMode("provider");
   document.getElementById("clientPicker").style.display = "block";
+  loadClientList();
 } else {
   setMode("client");
 }
+
+// Show session-expired banner if redirected from portal after timeout
+if (new URLSearchParams(window.location.search).get("reason") === "timeout") {
+  const banner = document.createElement("div");
+  banner.style.cssText = "position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:9999;" +
+    "background:#1e40af;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;font-weight:600;" +
+    "box-shadow:0 4px 20px rgba(0,0,0,.25);display:flex;align-items:center;gap:10px;";
+  banner.innerHTML = `<i class="bi bi-clock-fill"></i> Your session expired due to inactivity. Please log in again.`;
+  document.body.appendChild(banner);
+  setTimeout(() => banner.remove(), 6000);
+}
+
+window.addEventListener("load", () => { setTimeout(dismissSplash, 520); loadLoginTicker(); }, { once: true });
 </script>
 </body>
 </html>

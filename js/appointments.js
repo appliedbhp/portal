@@ -1,60 +1,255 @@
-// Appointments section — Calendly booking widget + upcoming appointments
+// Appointments section — Google Calendar Appointment Scheduling iframe + upcoming appointments
 // + a month-view calendar showing both appointments and program activity dates.
 
-const CALENDLY_BOOKING_URL = "https://calendly.com/appliedbhp/30min";
+const GCAL_BOOKING_IFRAME = `https://calendar.google.com/calendar/appointments/schedules/AcZssZ02i845ZrVqhR2CyB_5PqHv6WbWssmJ3p8ghbxUZCvZl5dngh3tQuAdOgy2FnVXm4v_yZl0LPe1?gv=true`;
 
 let calViewDate  = new Date();
 let calAppts     = [];
 let calProgSteps = [];
+let appointmentTimeZone = "America/Los_Angeles";
 
-function initAppointmentsSection(root) {
-  loadCalendlyWidget();
-  root.innerHTML = `
-    <div class="card no-print">
-      <h1><i class="bi bi-calendar-check-fill"></i>Appointments</h1>
-      <p style="color:var(--muted);font-size:14px;margin:0 0 20px;">
-        Book a 30-minute session. Your email is pre-filled automatically.
-      </p>
-      <button onclick="openBooking()"><i class="bi bi-calendar-plus"></i> Book Appointment</button>
+const APPOINTMENT_TIME_ZONES = [
+  ["America/Los_Angeles", "Pacific Time"], ["America/Denver", "Mountain Time"],
+  ["America/Phoenix", "Arizona Time"], ["America/Chicago", "Central Time"],
+  ["America/New_York", "Eastern Time"], ["America/Anchorage", "Alaska Time"],
+  ["Pacific/Honolulu", "Hawaii Time"], ["America/Puerto_Rico", "Atlantic Time"],
+  ["UTC", "UTC"]
+];
+
+function appointmentTimeZoneControls() {
+  const options = APPOINTMENT_TIME_ZONES.map(([value, label]) =>
+    `<option value="${value}" ${value === appointmentTimeZone ? "selected" : ""}>${label}</option>`
+  ).join("");
+  return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+    <span style="font-size:12px;color:var(--muted);">Shown in ${escapeHtml(appointmentTimeZone)}</span>
+    <button class="secondary" style="font-size:12px;padding:6px 10px;" onclick="toggleAppointmentTimeZone()">
+      <i class="bi bi-globe-americas"></i> Change time zone
+    </button>
+    <div id="appt-timezone-editor" style="display:none;align-items:center;gap:6px;">
+      <select id="appt-timezone-select" style="font-size:12px;padding:6px 8px;">${options}</select>
+      <button style="font-size:12px;padding:6px 10px;" onclick="saveAppointmentTimeZone()">Save</button>
     </div>
-    <div id="appt-status"></div>
-    <div class="card" id="cal-card">
-      <div id="cal-widget"><p style="color:var(--muted);font-size:14px;">Loading calendar…</p></div>
-    </div>
-    <div class="card">
-      <h2><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
-      <div id="appt-list"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
-    </div>
-  `;
+  </div>`;
+}
+
+async function initAppointmentsSection(root) {
+  const isProvider = getRole() === "provider";
+  try {
+    const tzRes = await apiCall("getClientTimeZone", {});
+    appointmentTimeZone = tzRes.timeZone || "America/Los_Angeles";
+  } catch (_) {
+    appointmentTimeZone = "America/Los_Angeles";
+  }
+
+  if (isProvider) {
+    // Provider view: scheduling form + appointment list
+    let clientEmail = "";
+    let smsConsent  = false;
+    try {
+      const res = await apiCall("getClientEmail", {});
+      clientEmail = res.email || "";
+      smsConsent  = res.smsConsent || false;
+    } catch(_) {}
+
+    root.innerHTML = `
+      <div class="card no-print">
+        <h1><i class="bi bi-calendar-plus-fill"></i> Schedule Appointment</h1>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:560px;">
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Title</label>
+            <input type="text" id="appt-title" placeholder="e.g. Session — ${escapeHtml(getClientId())}"
+                   value="Session — ${escapeHtml(getClientId())}" style="width:100%;" />
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; Start Time (Pacific)</label>
+            <input type="datetime-local" id="appt-start" style="width:100%;" onchange="apptSyncEndTime()" />
+          </div>
+          <div>
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Date &amp; End Time (Pacific)</label>
+            <input type="datetime-local" id="appt-end" style="width:100%;" />
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Notes (optional)</label>
+            <textarea id="appt-notes" rows="2" placeholder="Visible in calendar invite"
+                      style="width:100%;resize:vertical;"></textarea>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Google Meet Link (optional)</label>
+            <input type="url" id="appt-meet-url" placeholder="https://meet.google.com/xxx-xxxx-xxx" style="width:100%;" />
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+              Saved as the Calendar event location so clients can join from the portal and invitation.
+            </div>
+          </div>
+          <div style="grid-column:1/-1;">
+            <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;">Client Email</label>
+            <input type="email" id="appt-email" value="${escapeHtml(clientEmail)}"
+                   placeholder="auto-filled from client record" style="width:100%;" readonly />
+            <div style="font-size:11px;color:var(--muted);margin-top:3px;">
+              Invite sent automatically when appointment is created.
+            </div>
+          </div>
+          ${smsConsent ? `
+          <div style="grid-column:1/-1;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="appt-sms" checked />
+              Send SMS reminder to client now (opted in)
+            </label>
+          </div>` : `
+          <div style="grid-column:1/-1;">
+            <div style="font-size:12px;color:var(--muted);">
+              <i class="bi bi-chat-dots"></i> SMS reminder not available — client has not opted in.
+            </div>
+          </div>`}
+        </div>
+        <div id="appt-create-status" style="margin:12px 0;"></div>
+        <button onclick="apptCreate()" style="margin-top:4px;">
+          <i class="bi bi-calendar-plus-fill"></i> Create Appointment
+        </button>
+      </div>
+      <div id="appt-status"></div>
+      <div class="card" id="cal-card">
+        <div id="cal-widget"><p style="color:var(--muted);font-size:14px;">Loading calendar…</p></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <h2 style="margin:0;"><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
+          ${appointmentTimeZoneControls()}
+        </div>
+        <div id="appt-list"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
+      </div>`;
+  } else {
+    // Client view: booking iframe with email pre-filled
+    let iframeSrc = GCAL_BOOKING_IFRAME;
+    try {
+      const res = await apiCall("getClientEmail", {});
+      if (res.email) iframeSrc += "&email=" + encodeURIComponent(res.email);
+    } catch(_) {}
+
+    root.innerHTML = `
+      <div class="card no-print">
+        <h1><i class="bi bi-calendar-check-fill"></i>Book an Appointment</h1>
+        <p style="color:var(--muted);font-size:14px;margin:0 0 16px;">
+          Select a 30-minute session below. A confirmation will be sent to your email automatically.
+        </p>
+        <iframe src="${iframeSrc}"
+          style="border:0;border-radius:12px;display:block;max-width:100%;"
+          width="100%" height="600" frameborder="0" loading="lazy"></iframe>
+      </div>
+      <div id="appt-status"></div>
+      <div class="card" id="cal-card">
+        <div id="cal-widget"><p style="color:var(--muted);font-size:14px;">Loading calendar…</p></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+          <h2 style="margin:0;"><i class="bi bi-calendar2-week"></i>Upcoming Appointments</h2>
+          ${appointmentTimeZoneControls()}
+        </div>
+        <div id="appt-list"><p style="color:var(--muted);font-size:14px;">Loading…</p></div>
+      </div>`;
+  }
+
+  if (isProvider) apptSetDefaultTimes();
   loadAppointmentsData();
 }
 
-function loadCalendlyWidget() {
-  if (document.getElementById("calendly-widget-css")) return;
-  const link = document.createElement("link");
-  link.id   = "calendly-widget-css";
-  link.rel  = "stylesheet";
-  link.href = "https://assets.calendly.com/assets/external/widget.css";
-  document.head.appendChild(link);
-  const script  = document.createElement("script");
-  script.id     = "calendly-widget-js";
-  script.src    = "https://assets.calendly.com/assets/external/widget.js";
-  document.head.appendChild(script);
+function toggleAppointmentTimeZone() {
+  const editor = document.getElementById("appt-timezone-editor");
+  if (editor) editor.style.display = editor.style.display === "flex" ? "none" : "flex";
 }
 
-async function openBooking() {
-  let prefill = {};
+async function saveAppointmentTimeZone() {
+  const select = document.getElementById("appt-timezone-select");
+  if (!select?.value) return;
   try {
-    const data = await apiCall("getClientEmail", {});
-    if (data.email) prefill.email = data.email;
-  } catch (_) {}
-  if (typeof Calendly !== "undefined") {
-    Calendly.initPopupWidget({ url: CALENDLY_BOOKING_URL, prefill });
-  } else {
-    const qs = prefill.email ? "?email=" + encodeURIComponent(prefill.email) : "";
-    window.open(CALENDLY_BOOKING_URL + qs, "_blank");
+    const res = await apiCall("saveClientTimeZone", { timeZone: select.value });
+    appointmentTimeZone = res.timeZone || select.value;
+    if (typeof showToast === "function") showToast("Appointment time zone saved.", "success");
+    const root = document.getElementById("section-appointments");
+    if (root) initAppointmentsSection(root);
+  } catch (e) {
+    if (typeof showToast === "function") showToast("Could not save time zone: " + e.message, "error");
   }
 }
+
+function apptToLocalInput(d) {
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+
+function apptPacificNowAsWallDate() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+  }).formatToParts(new Date()).reduce((out, part) => {
+    if (part.type !== "literal") out[part.type] = part.value;
+    return out;
+  }, {});
+  return new Date(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), 0, 0);
+}
+
+function apptSetDefaultTimes() {
+  const startEl = document.getElementById("appt-start");
+  const endEl = document.getElementById("appt-end");
+  if (!startEl || !endEl) return;
+  const start = apptPacificNowAsWallDate();
+  start.setDate(start.getDate() + 7);
+  start.setSeconds(0, 0);
+  startEl.value = apptToLocalInput(start);
+  endEl.value = apptToLocalInput(new Date(start.getTime() + 30 * 60000));
+}
+
+function apptSyncEndTime() {
+  const startEl = document.getElementById("appt-start");
+  const endEl = document.getElementById("appt-end");
+  if (!startEl?.value || !endEl) return;
+  const start = new Date(startEl.value);
+  if (!isNaN(start)) endEl.value = apptToLocalInput(new Date(start.getTime() + 30 * 60000));
+}
+
+async function apptCreate() {
+  const title = document.getElementById("appt-title")?.value?.trim();
+  const start = document.getElementById("appt-start")?.value;
+  const end   = document.getElementById("appt-end")?.value;
+  const notes = document.getElementById("appt-notes")?.value?.trim() || "";
+  const meetUrl = document.getElementById("appt-meet-url")?.value?.trim() || "";
+  const smsEl = document.getElementById("appt-sms");
+  const sendSms = smsEl ? smsEl.checked : false;
+
+  if (!title) { setStatus("appt-create-status", "Title is required.", "error"); return; }
+  if (!start) { setStatus("appt-create-status", "Start time is required.", "error"); return; }
+  if (!end)   { setStatus("appt-create-status", "End time is required.", "error"); return; }
+  if (meetUrl && !/^https:\/\/meet\.google\.com\/[a-z0-9-]+(?:[/?#].*)?$/i.test(meetUrl)) {
+    setStatus("appt-create-status", "Enter a valid Google Meet link.", "error"); return;
+  }
+  if (new Date(end) <= new Date(start)) {
+    setStatus("appt-create-status", "End time must be after start time.", "error"); return;
+  }
+
+  setStatus("appt-create-status", "Creating appointment…", "loading");
+  try {
+    const res = await apiCall("createAppointment", {
+      title,
+      startLocal: start,
+      endLocal: end,
+      timeZone: "America/Los_Angeles",
+      startTime: new Date(start).toISOString(),
+      endTime:   new Date(end).toISOString(),
+      notes, meetUrl, sendSms
+    });
+
+    let msg = "Appointment added to Google Calendar in Pacific Time.";
+    if (res.clientEmail) msg += ` Invite sent to ${res.clientEmail}.`;
+    if (res.meetUrl) msg += ` Meet: ${res.meetUrl}`;
+    if (res.smsSent)     msg += " SMS reminder sent.";
+    if (res.smsSkipped)  msg += " (SMS skipped — client not opted in.)";
+    if (res.smsError)    msg += ` SMS failed: ${res.smsError}`;
+
+    setStatus("appt-create-status", msg, "success");
+    loadAppointmentsData(); // refresh the list
+  } catch(e) {
+    setStatus("appt-create-status", "Error: " + e.message, "error");
+  }
+}
+
 
 async function loadAppointmentsData() {
   setStatus("appt-status", "Loading…", "loading");
@@ -105,7 +300,9 @@ function renderCalendar() {
 
   // Build date → events map (key = "YYYY-MM-DD")
   const dayMap = {};
-  const toKey  = d => d.toLocaleDateString("en-CA"); // locale-independent YYYY-MM-DD
+  const toKey  = d => new Intl.DateTimeFormat("en-CA", {
+    timeZone: appointmentTimeZone, year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(d);
 
   calAppts.forEach(ev => {
     const k = toKey(new Date(ev.start_time));
@@ -187,17 +384,31 @@ function renderAppointments(events) {
   el.innerHTML = events.map(ev => {
     const start = new Date(ev.start_time);
     const end   = new Date(ev.end_time);
-    const date  = start.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-    const time  = start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-                + " – " + end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    const date  = start.toLocaleDateString(undefined, {
+      timeZone: appointmentTimeZone, weekday: "long", year: "numeric", month: "long", day: "numeric"
+    });
+    const time  = start.toLocaleTimeString(undefined, {
+      timeZone: appointmentTimeZone, hour: "numeric", minute: "2-digit"
+    }) + " – " + end.toLocaleTimeString(undefined, {
+      timeZone: appointmentTimeZone, hour: "numeric", minute: "2-digit", timeZoneName: "short"
+    });
+    const joinUrl = ev.joinUrl || ev.meetUrl || "";
+    const joinLabel = /zoom\.us/i.test(joinUrl) ? "Join Zoom"
+      : /teams\.(microsoft|live)\.com/i.test(joinUrl) ? "Join Microsoft Teams"
+      : /webex\.com/i.test(joinUrl) ? "Join Webex"
+      : "Join Google Meet";
     return `
       <div class="appt-card">
         <div class="appt-info">
           <div class="appt-name">${escapeHtml(ev.name || "Appointment")}</div>
           <div class="appt-meta"><i class="bi bi-calendar3"></i>${escapeHtml(date)}</div>
           <div class="appt-meta"><i class="bi bi-clock"></i>${escapeHtml(time)}</div>
+          ${ev.location ? `<div class="appt-meta"><i class="bi bi-geo-alt-fill"></i>${escapeHtml(ev.location)}</div>` : ""}
         </div>
         <div class="appt-actions">
+          ${joinUrl ? `<a href="${escapeHtml(joinUrl)}" target="_blank" rel="noopener noreferrer"
+            style="font-size:12px;padding:6px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;border-radius:8px;background:#0f9d58;color:white;font-weight:700;">
+            <i class="bi bi-camera-video-fill"></i> ${joinLabel}</a>` : ""}
           ${ev.reschedule_url ? `<a href="${escapeHtml(ev.reschedule_url)}" target="_blank"
             class="secondary" style="font-size:12px;padding:6px 14px;text-decoration:none;display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);border-radius:8px;color:var(--text);">
             <i class="bi bi-arrow-clockwise"></i> Reschedule</a>` : ""}
