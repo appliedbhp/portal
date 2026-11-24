@@ -395,7 +395,13 @@ body.portal-page { padding-top:65px; }
 .sidebar-link:is([data-section="discharge"],[data-section="reminders"],[data-section="broadcasts"],[data-section="assessments-library"],[data-section="assessments-assign"],[data-section="vanderbilt"],[data-section="client-billing"],[data-section="superbill"]) i { background:none!important; color:hsl(var(--nav-icon-hue,215) 78% 45%)!important; -webkit-text-fill-color:currentColor!important; }
 .sidebar-link.active:is([data-section="discharge"],[data-section="reminders"],[data-section="broadcasts"],[data-section="assessments-library"],[data-section="assessments-assign"],[data-section="vanderbilt"],[data-section="client-billing"],[data-section="superbill"]) i { color:#fff!important; -webkit-text-fill-color:#fff!important; }
 .main-content { flex: 1; min-width: 0; }
-.main-content .page { max-width: 880px; }
+.main-content .page {
+  max-width: 1280px;
+  margin-left: 0;
+  margin-right: auto;
+  padding-left: 20px;
+  padding-right: 20px;
+}
 .section { display: none; }
 .section.active { display: block; }
 .home-tile {
