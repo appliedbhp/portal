@@ -7,11 +7,65 @@ let winDomainOrder = [];
 let winLastSummary = [];
 let winDomainNumberMap = null;
 
+function winSessionIdentity_() {
+  try { return JSON.parse(sessionStorage.getItem("portalSession") || "{}"); } catch (_) { return {}; }
+}
+
+function winDraftKey_() {
+  const session = winSessionIdentity_();
+  return "winDraft:v2:" + String(session.authClientId || session.clientId || "unknown") + ":" + String(getEffectiveClientId() || getClientId() || "unknown");
+}
+
+function winIsUnlinkedAdult_() {
+  const session = winSessionIdentity_();
+  return getRole() === "adult" && !(session.linkedClientId && session.linkedClientId !== (session.authClientId || session.clientId));
+}
+
+function winTargetNotice_() {
+  const target = getEffectiveClientId() || getClientId();
+  if (winIsUnlinkedAdult_()) return `<div class="alert alert-error win-target-warning"><i class="bi bi-link-45deg"></i><span><strong>This adult account is not linked to a child.</strong> Assessment submission is disabled so results cannot be filed under the wrong account. Ask the provider to link this account first.</span></div>`;
+  return `<div class="alert alert-info win-target-confirm"><i class="bi bi-person-check-fill"></i><span>This assessment will be saved to <strong>${escapeHtml(target)}</strong>.</span></div>`;
+}
+
+function winSaveDraft_() {
+  const body = document.getElementById("win-formBody");
+  if (!body) return;
+  const answers = [...body.querySelectorAll(".pills")].map(group => ({
+    item: group.closest(".item")?.querySelector("span")?.textContent || "",
+    domainNumber: group.dataset.domainNumber || "",
+    value: group.dataset.value || ""
+  }));
+  const comments = [...body.querySelectorAll(".win-domain-comments")].map(input => ({domainNumber:input.dataset.domainNumber || "",value:input.value || ""}));
+  try { sessionStorage.setItem(winDraftKey_(), JSON.stringify({savedAt:new Date().toISOString(),answers,comments})); } catch (_) {}
+}
+
+function winRestoreDraft_() {
+  let draft;
+  try { draft = JSON.parse(sessionStorage.getItem(winDraftKey_()) || "null"); } catch (_) { draft = null; }
+  if (!draft) return false;
+  const groups = [...document.querySelectorAll("#win-formBody .pills")];
+  (draft.answers || []).forEach(saved => {
+    const group = groups.find(item => item.dataset.domainNumber === saved.domainNumber && (item.closest(".item")?.querySelector("span")?.textContent || "") === saved.item);
+    if (!group || !saved.value) return;
+    group.dataset.value = saved.value;
+    group.querySelectorAll(".pill").forEach(pill => pill.classList.toggle("active", pill.dataset.val === saved.value));
+  });
+  (draft.comments || []).forEach(saved => {
+    const input = document.querySelector(`#win-formBody .win-domain-comments[data-domain-number="${CSS.escape(saved.domainNumber)}"]`);
+    if (input) input.value = saved.value || "";
+  });
+  setStatus("win-status", `Restored your saved draft${draft.savedAt ? " from " + new Date(draft.savedAt).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"}) : ""}.`, "success");
+  return true;
+}
+
+function winClearDraft_() { try { sessionStorage.removeItem(winDraftKey_()); } catch (_) {} }
+
 function initWinSection(root) {
   root.innerHTML = `
     <div class="card">
       <h1><i class="bi bi-heart-pulse-fill"></i>What I Need (WIN) Assessment</h1>
-      <button onclick="winStart()"><i class="bi bi-play-fill"></i> Start / Restart Assessment</button>
+      ${winTargetNotice_()}
+      <button onclick="winStart()" ${winIsUnlinkedAdult_() ? "disabled" : ""}><i class="bi bi-play-fill"></i> Start / Restart Assessment</button>
       <div id="win-status"></div>
     </div>
 
@@ -32,18 +86,19 @@ function initWinSection(root) {
         </div>
       </div>
       <div id="win-formBody"></div>
-      <div class="btn-row"><button onclick="winReview()"><i class="bi bi-clipboard2-check-fill"></i> Review &amp; Submit</button></div>
+      <div class="btn-row"><button onclick="winReview()"><i class="bi bi-clipboard2-check-fill"></i> Review Answers</button></div>
     </div>
 
     <div id="win-review" class="card" style="display:none;">
       <h2><i class="bi bi-clipboard2-data-fill"></i>Review Scores</h2>
+      <div id="win-reviewTarget">${winTargetNotice_()}</div>
       <table class="summary-table">
         <thead><tr><th>Domain</th><th>Total (4-20)</th><th>Mean (1-5)</th><th>Comments</th></tr></thead>
         <tbody id="win-reviewBody"></tbody>
       </table>
       <div class="btn-row no-print">
         <button class="secondary" onclick="winBackToForm()"><i class="bi bi-arrow-left"></i> Back</button>
-        <button onclick="winSubmit()"><i class="bi bi-cloud-upload-fill"></i> Submit</button>
+        <button class="win-final-submit" onclick="winSubmit()" ${winIsUnlinkedAdult_() ? "disabled" : ""}><i class="bi bi-cloud-upload-fill"></i> Submit Assessment</button>
       </div>
       <div id="win-submitStatus"></div>
     </div>
@@ -139,12 +194,17 @@ async function getWinDomainNumberMap() {
 }
 
 async function winStart() {
+  if (winIsUnlinkedAdult_()) {
+    setStatus("win-status", "This adult account must be linked to a child before an assessment can be started.", "error");
+    return;
+  }
   setStatus("win-status", "Loading items...", "loading");
   try {
     const { items } = await apiCall("getWinItems", {});
     winItems = items.slice().sort((a, b) => parseFloat(a.item) - parseFloat(b.item));
     setStatus("win-status", "", null);
     winRenderForm();
+    winRestoreDraft_();
     winShow("win-assessment");
   } catch (e) {
     setStatus("win-status", "Error: " + e.message, "error");
@@ -185,6 +245,11 @@ document.addEventListener("click", (e) => {
   const group = pill.closest(".pills");
   group.dataset.value = pill.dataset.val;
   group.querySelectorAll(".pill").forEach(p => p.classList.toggle("active", p === pill));
+  winSaveDraft_();
+});
+
+document.addEventListener("input", (e) => {
+  if (e.target.matches("#win-formBody .win-domain-comments")) winSaveDraft_();
 });
 
 function winCollectScores() {
@@ -221,10 +286,15 @@ function winReview() {
 function winBackToForm() { winShow("win-assessment"); }
 
 async function winSubmit() {
+  if (winIsUnlinkedAdult_()) {
+    setStatus("win-submitStatus", "Submission blocked: this adult account is not linked to a child.", "error");
+    return;
+  }
   setStatus("win-submitStatus", "Submitting...", "loading");
   try {
-    const { assessmentKey, date } = await apiCall("submitWin", { summary: winLastSummary });
-    setStatus("win-submitStatus", `Saved! Assessment key: ${assessmentKey}`, "success");
+    const { assessmentKey, date, targetClientId, savedRows } = await apiCall("submitWin", { summary: winLastSummary });
+    winClearDraft_();
+    setStatus("win-submitStatus", `Saved ${savedRows || winLastSummary.length} domains to ${targetClientId || getEffectiveClientId() || getClientId()}. Assessment key: ${assessmentKey}`, "success");
     await winShowResults(assessmentKey, date);
     winLoadHistory();
   } catch (e) {

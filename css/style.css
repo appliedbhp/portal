@@ -175,6 +175,9 @@ button.secondary:hover { background: #f5f6fa; filter: none; }
 .cal-badge.prog-badge .bi { margin-right: 0; font-size: 11px; }
 #portal-tooltip { display: none; position: fixed; background: #1e293b; color: #fff; font-size: 12px; font-weight: 500; padding: 5px 10px; border-radius: 6px; pointer-events: none; z-index: 9999; max-width: 240px; line-height: 1.4; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
 .note-text { white-space: pre-wrap; }
+.win-target-confirm,.win-target-warning { margin:14px 0; align-items:flex-start; }
+.win-final-submit { min-height:48px; padding:11px 20px; font-size:14px; font-weight:800; box-shadow:0 9px 22px rgba(57,44,67,.2); }
+.win-final-submit:disabled,#section-win button:disabled { cursor:not-allowed; opacity:.5; box-shadow:none; }
 .sess-progress-launch {
   background:linear-gradient(135deg,#4f46e5,#3185fc 55%,#06b6d4);
   box-shadow:0 8px 22px rgba(49,133,252,.24);
