@@ -440,6 +440,7 @@ async function providerLogin() {
       authenticated = await apiCallNoCreds("providerVerifyMfa", {challengeId:res.challengeId,code:String(code).trim()});
     }
     setCreds({ asProvider: true, providerId, sessionToken: authenticated.sessionToken || "", providerPassword: authenticated.sessionToken || providerPassword, clientId: "" });
+    setAuthenticatedLoginState_(true);
     await showLoginSuccess_("Provider account verified", 650);
     setStatus("status", "Signed in — choose a client to continue.", "success");
     document.getElementById("clientPicker").style.display = "block";
@@ -475,6 +476,7 @@ async function providerSetupPassword() {
       authenticated = await apiCallNoCreds("providerVerifyMfa", {challengeId:res.challengeId,code:String(code).trim()});
     }
     setCreds({ asProvider: true, providerId, sessionToken: authenticated.sessionToken || "", providerPassword: authenticated.sessionToken || newPassword, clientId: "" });
+    setAuthenticatedLoginState_(true);
     await showLoginSuccess_("Provider account verified", 650);
     setStatus("status", "Signed in — choose a client to continue.", "success");
     document.getElementById("clientPicker").style.display = "block";
@@ -1166,6 +1168,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 async function openPortalWithTransition(label = "Preparing your portal…") {
+  setAuthenticatedLoginState_(false);
   await showLoginSuccess_("You’re securely signed in");
   await playPortalEntry(label === "Preparing your portal…" ? "Signed in — opening your portal…" : label);
   if (typeof getRole === "function" && getRole() !== "provider") {
@@ -1192,6 +1195,23 @@ async function openPortalWithTransition(label = "Preparing your portal…") {
   window.location.href = "portal.html";
 }
 
+function setAuthenticatedLoginState_(showClientPicker) {
+  [
+    document.querySelector(".login-mode-switch"),
+    document.getElementById("loginWelcomeVideoBtn"),
+    document.getElementById("privacyAck")?.closest(".checkbox-row"),
+    document.getElementById("clientMode"),
+    document.getElementById("providerMode")
+  ].forEach(el => {
+    if (el) {
+      el.style.display = "none";
+      el.setAttribute("aria-hidden", "true");
+    }
+  });
+  const picker = document.getElementById("clientPicker");
+  if (picker) picker.style.display = showClientPicker ? "block" : "none";
+}
+
 function showLoginSuccess_(message, holdMs = 700) {
   let feedback = document.getElementById("login-auth-success");
   if (!feedback) {
@@ -1216,7 +1236,7 @@ function showLoginSuccess_(message, holdMs = 700) {
 
 if (isProvider()) {
   setMode("provider");
-  document.getElementById("clientPicker").style.display = "block";
+  setAuthenticatedLoginState_(true);
   loadClientList();
 } else {
   setMode("client");
